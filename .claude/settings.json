@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Task",
+      "mcp__serena__list_dir",
+      "mcp__serena__find_file",
+      "mcp__serena__search_for_pattern",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__find_symbol",
+      "mcp__serena__find_referencing_symbols",
+      "mcp__serena__read_memory",
+      "mcp__serena__list_memories",
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__think_about_collected_information",
+      "mcp__serena__think_about_task_adherence",
+      "mcp__serena__think_about_whether_you_are_done",
+      "mcp__serena__initial_instructions",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs"
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-mobile-development@claude-code-workflows": true,
+    "frontend-mobile-security@claude-code-workflows": true,
+    "javascript-typescript@claude-code-workflows": true,
+    "accessibility-compliance@claude-code-workflows": true,
+    "seo-technical-optimization@claude-code-workflows": true,
+    "code-review-ai@claude-code-workflows": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "supabase@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "commit-commands@claude-code-plugins": true,
+    "pr-review-toolkit@claude-code-plugins": true,
+    "document-skills@anthropic-agent-skills": true,
+    "example-skills@anthropic-agent-skills": true
+  }
+}

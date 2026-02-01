@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-highlight: #f59e0b;
+  --color-highlight-dark: #d97706;
+  --color-surface: #ffffff;
+  --color-surface-dim: #f5f5f5;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #6b7280;
+  --color-border: #e5e7eb;
+}
+
+/* 모바일 전용 레이아웃 */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family:
+    "Pretendard Variable",
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 네이버 지도 마커 스타일 */
+.marker-default {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50% 50% 50% 0;
+  background-color: var(--color-primary);
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.marker-default::after {
+  content: "";
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: white;
+  transform: rotate(45deg);
+}
+
+.marker-highlight {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50% 50% 50% 0;
+  background-color: var(--color-highlight);
+  transform: rotate(-45deg);
+  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.5);
+  animation: marker-pulse 2s ease-in-out infinite;
+}
+
+.marker-highlight::after {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: white;
+  transform: rotate(45deg);
+}
+
+@keyframes marker-pulse {
+  0%,
+  100% {
+    box-shadow: 0 3px 10px rgba(245, 158, 11, 0.5);
+  }
+  50% {
+    box-shadow: 0 3px 20px rgba(245, 158, 11, 0.8);
+  }
+}
+
+/* Bottom Sheet 슬라이드업 애니메이션 */
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 스크롤바 숨김 */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
