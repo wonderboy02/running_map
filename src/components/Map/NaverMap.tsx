@@ -10,13 +10,15 @@ interface NaverMapProps {
   onMarkerClick: (spot: Spot) => void;
   selectedSpot: Spot | null;
   targetLocation: { lat: number; lng: number } | null;
+  initialCenter: { lat: number; lng: number } | null;
 }
 
-export default function NaverMap({ spots, onMarkerClick, selectedSpot, targetLocation }: NaverMapProps) {
+export default function NaverMap({ spots, onMarkerClick, selectedSpot, targetLocation, initialCenter }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
+  const hasMovedToInitialCenter = useRef(false);
 
   const createMarkerIcon = useCallback((spot: Spot) => {
     return getMarkerIcon(spot.is_highlighted, spot.categories);
@@ -67,6 +69,15 @@ export default function NaverMap({ spots, onMarkerClick, selectedSpot, targetLoc
     if (!map || !selectedSpot) return;
     map.panTo(new naver.maps.LatLng(selectedSpot.latitude, selectedSpot.longitude));
   }, [map, selectedSpot]);
+
+  // 초기 위치로 이동 (핀 없이, 한 번만)
+  useEffect(() => {
+    if (!map || !initialCenter || hasMovedToInitialCenter.current) return;
+
+    const position = new naver.maps.LatLng(initialCenter.lat, initialCenter.lng);
+    map.panTo(position);
+    hasMovedToInitialCenter.current = true;
+  }, [map, initialCenter]);
 
   // 검색 결과 위치로 지도 이동 + 핀 표시
   useEffect(() => {

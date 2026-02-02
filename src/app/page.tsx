@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import NaverMap from '@/components/Map/NaverMap';
 import Header from '@/components/Header';
 import FilterChips from '@/components/FilterChips';
@@ -13,8 +13,26 @@ export default function HomePage() {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [initialCenter, setInitialCenter] = useState<{ lat: number; lng: number } | null>(null);
 
   const { spots } = useSpots();
+
+  // 초기 진입 시 현재 위치로 이동 (핀 없이)
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setInitialCenter({ lat: latitude, lng: longitude });
+      },
+      () => {
+        // 위치 권한 거부 시 기본 위치(서울) 유지
+        console.log('위치 권한이 거부되었습니다. 기본 위치를 표시합니다.');
+      },
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  }, []);
 
   const filteredSpots = spots.filter((spot) => {
     if (spot.is_highlighted) return true;
@@ -47,6 +65,7 @@ export default function HomePage() {
           onMarkerClick={setSelectedSpot}
           selectedSpot={selectedSpot}
           targetLocation={targetLocation}
+          initialCenter={initialCenter}
         />
         <FABMenu />
       </div>
