@@ -1,4 +1,24 @@
 declare namespace naver.maps {
+  // Map Type IDs
+  const MapTypeId: {
+    NORMAL: string;
+    SATELLITE: string;
+    HYBRID: string;
+    TERRAIN: string;
+  };
+
+  // Animation constants
+  const Animation: {
+    BOUNCE: number;
+    DROP: number;
+  };
+
+  // Zoom control styles
+  const ZoomControlStyle: {
+    SMALL: number;
+    LARGE: number;
+  };
+
   interface MapOptions {
     center?: LatLng;
     zoom?: number;
@@ -12,16 +32,21 @@ declare namespace naver.maps {
       position?: number;
       style?: number;
     };
+    mapTypeId?: string;
+    mapTypeControl?: boolean;
+    scaleControl?: boolean;
+    tileTransition?: boolean;
   }
 
   interface MarkerOptions {
     position: LatLng;
     map?: Map | null;
-    icon?: string | ImageIcon | HtmlIcon;
+    icon?: string | ImageIcon | HtmlIcon | SymbolIcon;
     zIndex?: number;
     title?: string;
     clickable?: boolean;
     visible?: boolean;
+    animation?: number;
   }
 
   interface ImageIcon {
@@ -38,6 +63,18 @@ declare namespace naver.maps {
     anchor?: Point;
   }
 
+  interface SymbolIcon {
+    path: string | number;
+    fillColor?: string;
+    fillOpacity?: number;
+    strokeColor?: string;
+    strokeWeight?: number;
+    strokeOpacity?: number;
+    scale?: number;
+    rotation?: number;
+    anchor?: Point;
+  }
+
   class Map {
     constructor(element: HTMLElement | string, options?: MapOptions);
     getCenter(): LatLng;
@@ -48,6 +85,10 @@ declare namespace naver.maps {
     panTo(coord: LatLng, options?: unknown): void;
     destroy(): void;
     setOptions(options: Partial<MapOptions>): void;
+    setMapTypeId(mapTypeId: string): void;
+    getMapTypeId(): string;
+    addControl(control: CustomControl, position: number): void;
+    removeControl(control: CustomControl): void;
   }
 
   class Marker {
@@ -56,9 +97,10 @@ declare namespace naver.maps {
     getMap(): Map | null;
     getPosition(): LatLng;
     setPosition(position: LatLng): void;
-    setIcon(icon: string | ImageIcon | HtmlIcon): void;
+    setIcon(icon: string | ImageIcon | HtmlIcon | SymbolIcon): void;
     setVisible(visible: boolean): void;
     setZIndex(zIndex: number): void;
+    setAnimation(animation: number | null): void;
   }
 
   class LatLng {
@@ -81,14 +123,21 @@ declare namespace naver.maps {
     constructor(width: number, height: number);
   }
 
+  class CustomControl {
+    constructor(html: string, options?: { position?: number });
+    setMap(map: Map | null): void;
+    getElement(): HTMLElement;
+  }
+
   class Event {
     static addListener(
       target: unknown,
       type: string,
-      listener: (...args: unknown[]) => void,
+      listener: (...args: unknown[]) => void
     ): void;
     static removeListener(listener: unknown): void;
     static clearListeners(target: unknown, type: string): void;
+    static trigger(target: unknown, type: string, ...args: unknown[]): void;
   }
 
   // Position constants

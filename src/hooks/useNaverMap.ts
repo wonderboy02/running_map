@@ -1,20 +1,28 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 interface UseNaverMapOptions {
   center?: { lat: number; lng: number };
   zoom?: number;
+  mapTypeId?: string;
+  tileTransition?: boolean;
+  scaleControl?: boolean;
 }
 
 export function useNaverMap(
   containerRef: React.RefObject<HTMLDivElement | null>,
-  options: UseNaverMapOptions = {},
+  options: UseNaverMapOptions = {}
 ) {
   const mapRef = useRef<naver.maps.Map | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  const { center = { lat: 37.5665, lng: 126.978 }, zoom = 13 } = options;
+  const {
+    center = { lat: 37.5665, lng: 126.978 },
+    zoom = 13,
+    tileTransition = true,
+    scaleControl = false,
+  } = options;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -22,7 +30,7 @@ export function useNaverMap(
     function initMap() {
       if (!containerRef.current || !window.naver?.maps) return;
 
-      const map = new naver.maps.Map(containerRef.current, {
+      const mapOptions: naver.maps.MapOptions = {
         center: new naver.maps.LatLng(center.lat, center.lng),
         zoom,
         minZoom: 10,
@@ -30,23 +38,28 @@ export function useNaverMap(
         pinchZoom: true,
         scrollWheel: true,
         disableKineticPan: false,
-        zoomControl: true,
-        zoomControlOptions: {
-          position: naver.maps.Position.RIGHT_CENTER,
-        },
-      });
+        zoomControl: false,
+        tileTransition,
+        scaleControl,
+      };
+
+      if (options.mapTypeId && naver.maps.MapTypeId) {
+        mapOptions.mapTypeId =
+          naver.maps.MapTypeId[options.mapTypeId as keyof typeof naver.maps.MapTypeId] ||
+          options.mapTypeId;
+      }
+
+      const map = new naver.maps.Map(containerRef.current, mapOptions);
 
       mapRef.current = map;
       setIsReady(true);
     }
 
-    // naver.maps가 이미 로드되었으면 바로 초기화
     if (window.naver?.maps) {
       initMap();
       return;
     }
 
-    // 아직 로드 안 됐으면 폴링으로 대기
     const interval = setInterval(() => {
       if (window.naver?.maps) {
         clearInterval(interval);

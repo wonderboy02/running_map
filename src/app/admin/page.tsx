@@ -1,9 +1,24 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
-import type { Spot } from "@/types";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Star, Pencil, Trash2, Plus } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import type { Spot } from '@/types';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -12,9 +27,9 @@ export default function AdminDashboard() {
 
   async function fetchSpots() {
     const { data } = await supabase
-      .from("spots")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .from('spots')
+      .select('*')
+      .order('created_at', { ascending: false });
 
     setSpots((data as Spot[]) ?? []);
     setLoading(false);
@@ -25,16 +40,12 @@ export default function AdminDashboard() {
   }, []);
 
   async function handleDelete(id: string) {
-    if (!confirm("이 장소를 삭제하시겠습니까?")) return;
-    await supabase.from("spots").delete().eq("id", id);
+    await supabase.from('spots').delete().eq('id', id);
     fetchSpots();
   }
 
   async function handleToggleHighlight(spot: Spot) {
-    await supabase
-      .from("spots")
-      .update({ is_highlighted: !spot.is_highlighted })
-      .eq("id", spot.id);
+    await supabase.from('spots').update({ is_highlighted: !spot.is_highlighted }).eq('id', spot.id);
     fetchSpots();
   }
 
@@ -42,84 +53,99 @@ export default function AdminDashboard() {
     <div className="p-4">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold">
-          장소 목록{" "}
-          <span className="text-text-secondary text-sm font-normal">
-            ({spots.length})
-          </span>
+          장소 목록{' '}
+          <span className="text-text-secondary text-sm font-normal">({spots.length})</span>
         </h2>
-        <button
-          onClick={() => router.push("/admin/spots/new")}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white"
-        >
+        <Button size="sm" onClick={() => router.push('/admin/spots/new')}>
+          <Plus className="mr-1 h-4 w-4" />
           장소 추가
-        </button>
+        </Button>
       </div>
 
       {loading ? (
         <p className="text-text-secondary text-sm">불러오는 중...</p>
       ) : spots.length === 0 ? (
-        <p className="text-text-secondary py-8 text-center text-sm">
-          등록된 장소가 없습니다.
-        </p>
+        <p className="text-text-secondary py-8 text-center text-sm">등록된 장소가 없습니다.</p>
       ) : (
         <div className="space-y-3">
           {spots.map((spot) => (
-            <div
-              key={spot.id}
-              className="bg-surface border-border rounded-lg border p-3"
-            >
-              <div className="mb-1 flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">{spot.name}</h3>
-                    {spot.is_highlighted && (
-                      <span className="bg-highlight/10 text-highlight-dark rounded-full px-2 py-0.5 text-xs">
-                        추천
-                      </span>
-                    )}
+            <Card key={spot.id}>
+              <CardContent className="p-3">
+                <div className="mb-1 flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{spot.name}</h3>
+                      {spot.is_highlighted && (
+                        <Badge variant="secondary" className="bg-highlight/10 text-highlight-dark">
+                          추천
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-text-secondary text-xs">{spot.address}</p>
                   </div>
-                  <p className="text-text-secondary text-xs">{spot.address}</p>
                 </div>
-              </div>
 
-              <div className="mb-2 flex flex-wrap gap-1">
-                {spot.categories.map((cat) => (
-                  <span
-                    key={cat}
-                    className="bg-surface-dim text-text-secondary rounded px-1.5 py-0.5 text-xs"
+                <div className="mb-2 flex flex-wrap gap-1">
+                  {spot.categories.map((cat) => (
+                    <Badge
+                      key={cat}
+                      variant="secondary"
+                      className="bg-surface-dim text-text-secondary text-xs"
+                    >
+                      {cat}
+                    </Badge>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant={spot.is_highlighted ? 'secondary' : 'outline'}
+                    size="sm"
+                    onClick={() => handleToggleHighlight(spot)}
+                    className={
+                      spot.is_highlighted ? 'bg-highlight/10 text-highlight-dark' : ''
+                    }
                   >
-                    {cat}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleToggleHighlight(spot)}
-                  className={`rounded px-3 py-1 text-xs font-medium ${
-                    spot.is_highlighted
-                      ? "bg-highlight/10 text-highlight-dark"
-                      : "bg-surface-dim text-text-secondary"
-                  }`}
-                >
-                  {spot.is_highlighted ? "추천 해제" : "추천 설정"}
-                </button>
-                <button
-                  onClick={() =>
-                    router.push(`/admin/spots/${spot.id}/edit`)
-                  }
-                  className="bg-surface-dim text-text-secondary rounded px-3 py-1 text-xs font-medium"
-                >
-                  수정
-                </button>
-                <button
-                  onClick={() => handleDelete(spot.id)}
-                  className="rounded bg-red-50 px-3 py-1 text-xs font-medium text-red-500"
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
+                    <Star className="mr-1 h-3 w-3" />
+                    {spot.is_highlighted ? '추천 해제' : '추천 설정'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/admin/spots/${spot.id}/edit`)}
+                  >
+                    <Pencil className="mr-1 h-3 w-3" />
+                    수정
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600">
+                        <Trash2 className="mr-1 h-3 w-3" />
+                        삭제
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>장소 삭제</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          &quot;{spot.name}&quot;을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수
+                          없습니다.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>취소</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDelete(spot.id)}
+                          className="bg-red-500 hover:bg-red-600"
+                        >
+                          삭제
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

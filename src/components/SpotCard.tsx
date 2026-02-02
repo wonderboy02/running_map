@@ -1,7 +1,9 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import type { Spot } from "@/types";
+import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import type { Spot } from '@/types';
 
 interface SpotCardProps {
   spot: Spot;
@@ -13,9 +15,9 @@ export default function SpotCard({ spot }: SpotCardProps) {
       <div className="mb-1 flex items-start justify-between">
         <h3 className="text-text text-lg font-bold">{spot.name}</h3>
         {spot.is_highlighted && (
-          <span className="bg-highlight/10 text-highlight-dark ml-2 flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium">
+          <Badge variant="secondary" className="bg-highlight/10 text-highlight-dark ml-2 flex-shrink-0">
             추천
-          </span>
+          </Badge>
         )}
       </div>
 
@@ -23,12 +25,9 @@ export default function SpotCard({ spot }: SpotCardProps) {
 
       <div className="mb-3 flex flex-wrap gap-1.5">
         {spot.categories.map((cat) => (
-          <span
-            key={cat}
-            className="bg-surface-dim text-text-secondary rounded-full px-2.5 py-0.5 text-xs"
-          >
+          <Badge key={cat} variant="secondary" className="bg-surface-dim text-text-secondary">
             {cat}
-          </span>
+          </Badge>
         ))}
       </div>
 
@@ -41,12 +40,9 @@ export default function SpotCard({ spot }: SpotCardProps) {
         </p>
       )}
 
-      <Link
-        href={`/spot/${spot.id}`}
-        className="text-primary block text-center text-sm font-medium"
-      >
-        상세 정보 보기
-      </Link>
+      <Button variant="ghost" className="text-primary w-full" asChild>
+        <Link href={`/spot/${spot.id}`}>상세 정보 보기</Link>
+      </Button>
     </div>
   );
 }
