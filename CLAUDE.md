@@ -48,31 +48,40 @@ supabase/migrations/        # DB 마이그레이션 SQL
 - [x] 프로젝트 디렉토리 구조 생성
 - [x] 루트 설정 파일 (gitignore, gitattributes, prettierrc, tsconfig, postcss, next.config, package.json)
 - [x] 환경변수 템플릿 (.env.example)
-- [ ] `npm install` (패키지 설치)
-- [ ] Supabase 프로젝트 연결 및 DB 스키마 생성
-- [ ] Naver Map API 키 발급 및 기본 지도 표시
+- [x] `npm install` (패키지 설치)
+- [x] TypeScript 타입 정의 (`src/types/index.ts`, `src/types/naver-maps.d.ts`)
+- [x] Tailwind CSS v4 글로벌 스타일 (`src/styles/globals.css`)
+- [x] Supabase 클라이언트 (`src/lib/supabase/client.ts`, `server.ts`)
+- [x] DB 마이그레이션 SQL (`supabase/migrations/001_create_spots.sql`)
+- [x] 루트 레이아웃 + Naver Map 스크립트 로딩 (`src/app/layout.tsx`)
+- [ ] Supabase DB에 마이그레이션 적용 (SQL 실행)
+- [ ] Naver Map API 키 발급 및 .env.local 설정
 
 ### Phase 2: 핵심 지도 기능
-- [ ] 마커 표시 (Supabase spots → 마커 렌더링)
-- [ ] 하이라이트 마커 구분 (크기/색상)
-- [ ] 마커 클릭 → Bottom Sheet
-- [ ] Bottom Sheet → 상세 페이지 전환
+- [x] NaverMap 컴포넌트 (`src/components/Map/NaverMap.tsx`)
+- [x] useNaverMap 훅 (`src/hooks/useNaverMap.ts`)
+- [x] useSpots 훅 (`src/hooks/useSpots.ts`)
+- [x] 마커 표시 (일반 + 하이라이트 구분)
+- [x] 마커 클릭 → Bottom Sheet (`src/components/BottomSheet.tsx`)
+- [x] Bottom Sheet → 상세 페이지 전환 (`src/app/spot/[id]/page.tsx`)
 
 ### Phase 3: 검색 & 필터
-- [ ] 헤더 + 검색창
-- [ ] 필터 칩 (카테고리 토글)
-- [ ] 통합 검색 (장소명 + 주소 + 카테고리)
+- [x] 헤더 + 검색창 (`src/components/Header.tsx`, `SearchBar.tsx`)
+- [x] 필터 칩 (카테고리 토글) (`src/components/FilterChips.tsx`)
+- [x] 통합 검색 (장소명 + 주소 + 카테고리) (`src/hooks/useSearch.ts`)
 
 ### Phase 4: FAB 메뉴
-- [ ] FAB 버튼 + dropup 메뉴
-- [ ] 피드백 / 제휴문의 링크
+- [x] FAB 버튼 + dropup 메뉴 (`src/components/FABMenu.tsx`)
+- [x] 피드백 / 제휴문의 링크
 
 ### Phase 5: Admin
-- [ ] Admin 로그인 페이지
-- [ ] Admin 장소 CRUD
-- [ ] 장소 추가/수정 폼 (좌표 선택 포함)
-- [ ] 하이라이트 토글
-- [ ] RLS 정책 적용
+- [x] Admin 레이아웃 + Auth guard (`src/app/admin/layout.tsx`)
+- [x] Admin 로그인 페이지 (`src/app/admin/login/page.tsx`)
+- [x] Admin 장소 목록 + CRUD (`src/app/admin/page.tsx`)
+- [x] 장소 추가/수정 공통 폼 (`src/app/admin/components/SpotForm.tsx`)
+- [x] 하이라이트 토글 (목록에서 바로 토글)
+- [x] RLS 정책 SQL 작성 (`supabase/migrations/001_create_spots.sql`)
+- [ ] Supabase Auth admin 유저 생성
 
 ### Phase 6: 배포 및 마무리
 - [ ] Vercel 배포
