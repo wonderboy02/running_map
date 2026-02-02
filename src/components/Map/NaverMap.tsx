@@ -1,35 +1,25 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef } from "react";
-import { useNaverMap } from "@/hooks/useNaverMap";
-import type { Spot } from "@/types";
+import { useCallback, useEffect, useRef } from 'react';
+import { useNaverMap } from '@/hooks/useNaverMap';
+import { getMarkerIcon } from '@/lib/marker-config';
+import type { Spot } from '@/types';
 
 interface NaverMapProps {
   spots: Spot[];
   onMarkerClick: (spot: Spot) => void;
   selectedSpot: Spot | null;
+  targetLocation: { lat: number; lng: number } | null;
 }
 
-export default function NaverMap({
-  spots,
-  onMarkerClick,
-  selectedSpot,
-}: NaverMapProps) {
+export default function NaverMap({ spots, onMarkerClick, selectedSpot, targetLocation }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
+  const searchPinRef = useRef<naver.maps.Marker | null>(null);
 
   const createMarkerIcon = useCallback((spot: Spot) => {
-    const isHighlight = spot.is_highlighted;
-    return {
-      content: `<div class="${isHighlight ? "marker-highlight" : "marker-default"}"></div>`,
-      size: isHighlight
-        ? new naver.maps.Size(44, 44)
-        : new naver.maps.Size(32, 32),
-      anchor: isHighlight
-        ? new naver.maps.Point(22, 44)
-        : new naver.maps.Point(16, 32),
-    };
+    return getMarkerIcon(spot.is_highlighted, spot.categories);
   }, []);
 
   // 마커 생성 및 업데이트
@@ -52,14 +42,10 @@ export default function NaverMap({
       const existing = existingMarkers.get(spot.id);
 
       if (existing) {
-        // 이미 있으면 위치/아이콘만 업데이트
-        existing.setPosition(
-          new naver.maps.LatLng(spot.latitude, spot.longitude),
-        );
+        existing.setPosition(new naver.maps.LatLng(spot.latitude, spot.longitude));
         existing.setIcon(createMarkerIcon(spot));
         existing.setMap(map);
       } else {
-        // 새 마커 생성
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(spot.latitude, spot.longitude),
           map,
@@ -67,7 +53,7 @@ export default function NaverMap({
           zIndex: spot.is_highlighted ? 100 : 1,
         });
 
-        naver.maps.Event.addListener(marker, "click", () => {
+        naver.maps.Event.addListener(marker, 'click', () => {
           onMarkerClick(spot);
         });
 
@@ -79,13 +65,42 @@ export default function NaverMap({
   // 선택된 마커로 지도 이동
   useEffect(() => {
     if (!map || !selectedSpot) return;
-    map.panTo(
-      new naver.maps.LatLng(selectedSpot.latitude, selectedSpot.longitude),
-    );
+    map.panTo(new naver.maps.LatLng(selectedSpot.latitude, selectedSpot.longitude));
   }, [map, selectedSpot]);
 
+  // 검색 결과 위치로 지도 이동 + 핀 표시
+  useEffect(() => {
+    if (!map || !targetLocation) return;
+
+    // 기존 검색 핀 제거
+    if (searchPinRef.current) {
+      searchPinRef.current.setMap(null);
+      searchPinRef.current = null;
+    }
+
+    const position = new naver.maps.LatLng(targetLocation.lat, targetLocation.lng);
+
+    // 검색 위치에 핀 마커 표시
+    searchPinRef.current = new naver.maps.Marker({
+      position,
+      map,
+      icon: {
+        content: `<div style="display:flex;flex-direction:column;align-items:center;">
+          <div style="width:28px;height:28px;background:#E53E3E;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
+          <div style="width:6px;height:6px;background:rgba(0,0,0,0.2);border-radius:50%;margin-top:2px;"></div>
+        </div>`,
+        size: new naver.maps.Size(28, 38),
+        anchor: new naver.maps.Point(14, 34),
+      },
+      zIndex: 200,
+    });
+
+    map.setZoom(15);
+    map.panTo(position);
+  }, [map, targetLocation]);
+
   return (
-    <div ref={containerRef} className="h-full w-full">
+    <div ref={containerRef} className="relative h-full w-full">
       {!isReady && (
         <div className="flex h-full items-center justify-center bg-surface-dim">
           <p className="text-text-secondary text-sm">지도를 불러오는 중...</p>

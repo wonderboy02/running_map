@@ -1,18 +1,27 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
-import { CATEGORIES } from "@/types";
-import type { Spot, SpotInsert } from "@/types";
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { MapPin, Search, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import { CATEGORIES } from '@/types';
+import type { Spot, SpotInsert } from '@/types';
+import { useGeocode, type GeocodeResult } from '@/hooks/useGeocode';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 interface SpotFormProps {
   spot?: Spot;
 }
 
 const EMPTY_FORM: SpotInsert = {
-  name: "",
-  address: "",
+  name: '',
+  address: '',
   latitude: 37.5665,
   longitude: 126.978,
   categories: [],
@@ -43,16 +52,28 @@ export default function SpotForm({ spot }: SpotFormProps) {
           photos: spot.photos,
           extra_data: spot.extra_data,
         }
-      : EMPTY_FORM,
+      : EMPTY_FORM
   );
 
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [manualCoords, setManualCoords] = useState(false);
+  const [addressQuery, setAddressQuery] = useState(spot?.address ?? '');
+  const [showResults, setShowResults] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  function updateField<K extends keyof SpotInsert>(
-    key: K,
-    value: SpotInsert[K],
-  ) {
+  const { results, loading: geocodeLoading, search, clear } = useGeocode();
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowResults(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function updateField<K extends keyof SpotInsert>(key: K, value: SpotInsert[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -65,188 +86,243 @@ export default function SpotForm({ spot }: SpotFormProps) {
     }));
   }
 
+  function handleAddressInput(value: string) {
+    setAddressQuery(value);
+    updateField('address', value);
+    search(value);
+    setShowResults(true);
+  }
+
+  function handleSelectAddress(result: GeocodeResult) {
+    const address = result.roadAddress || result.jibunAddress;
+    setAddressQuery(address);
+    updateField('address', address);
+    updateField('latitude', result.latitude);
+    updateField('longitude', result.longitude);
+
+    // 장소 검색 결과에서 이름이 있고, 현재 이름이 비어있으면 자동 입력
+    if (result.placeName && !form.name) {
+      updateField('name', result.placeName);
+    }
+    // 장소 검색 결과에서 전화번호가 있고, 현재 비어있으면 자동 입력
+    if (result.phone && !form.phone) {
+      updateField('phone', result.phone);
+    }
+
+    setShowResults(false);
+    clear();
+    toast.success(result.placeName ? `"${result.placeName}" 선택됨` : '주소가 선택되었습니다.');
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
     setSaving(true);
 
     if (form.categories.length === 0) {
-      setError("카테고리를 하나 이상 선택하세요.");
+      toast.error('카테고리를 하나 이상 선택하세요.');
       setSaving(false);
       return;
     }
 
     if (isEdit && spot) {
-      const { error } = await supabase
-        .from("spots")
-        .update(form)
-        .eq("id", spot.id);
+      const { error } = await supabase.from('spots').update(form).eq('id', spot.id);
 
       if (error) {
-        setError("수정에 실패했습니다: " + error.message);
+        toast.error('수정에 실패했습니다: ' + error.message);
         setSaving(false);
         return;
       }
+      toast.success('장소가 수정되었습니다.');
     } else {
-      const { error } = await supabase.from("spots").insert(form);
+      const { error } = await supabase.from('spots').insert(form);
 
       if (error) {
-        setError("추가에 실패했습니다: " + error.message);
+        toast.error('추가에 실패했습니다: ' + error.message);
         setSaving(false);
         return;
       }
+      toast.success('장소가 추가되었습니다.');
     }
 
-    router.push("/admin");
+    router.push('/admin');
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4">
       {/* 장소명 */}
-      <div>
-        <label className="text-text mb-1 block text-sm font-medium">
-          장소명 *
-        </label>
-        <input
+      <div className="space-y-1.5">
+        <Label>장소명 *</Label>
+        <Input
           type="text"
           value={form.name}
-          onChange={(e) => updateField("name", e.target.value)}
+          onChange={(e) => updateField('name', e.target.value)}
           required
-          className="border-border bg-surface h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-primary"
           placeholder="예: 러닝스테이션 강남"
         />
       </div>
 
-      {/* 주소 */}
-      <div>
-        <label className="text-text mb-1 block text-sm font-medium">
-          주소 *
-        </label>
-        <input
-          type="text"
-          value={form.address}
-          onChange={(e) => updateField("address", e.target.value)}
-          required
-          className="border-border bg-surface h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-primary"
-          placeholder="예: 서울시 강남구 테헤란로 123"
-        />
+      {/* 주소 검색 */}
+      <div className="space-y-1.5" ref={dropdownRef}>
+        <Label>주소 *</Label>
+        <div className="relative">
+          <Search className="text-text-secondary pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Input
+            type="text"
+            value={addressQuery}
+            onChange={(e) => handleAddressInput(e.target.value)}
+            onFocus={() => results.length > 0 && setShowResults(true)}
+            required
+            placeholder="주소를 입력하면 자동 검색됩니다"
+            className="pl-9"
+          />
+          {geocodeLoading && (
+            <Loader2 className="text-text-secondary absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin" />
+          )}
+        </div>
+
+        {/* 검색 결과 드롭다운 */}
+        {showResults && results.length > 0 && (
+          <div className="border-border bg-surface absolute z-50 mt-1 max-h-60 w-[calc(100%-2rem)] overflow-y-auto rounded-lg border shadow-lg">
+            {results.map((result, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => handleSelectAddress(result)}
+                className="hover:bg-surface-dim flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm transition-colors"
+              >
+                <MapPin className={`mt-0.5 h-4 w-4 flex-shrink-0 ${result.source === 'place' ? 'text-highlight-dark' : 'text-primary'}`} />
+                <div className="min-w-0 flex-1">
+                  {result.placeName ? (
+                    <>
+                      <p className="text-text truncate font-medium">{result.placeName}</p>
+                      <p className="text-text-secondary truncate text-xs">{result.roadAddress}</p>
+                      {result.category && (
+                        <p className="text-text-secondary truncate text-xs">{result.category}</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-text truncate font-medium">{result.roadAddress}</p>
+                      {result.jibunAddress && result.jibunAddress !== result.roadAddress && (
+                        <p className="text-text-secondary truncate text-xs">{result.jibunAddress}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showResults && !geocodeLoading && addressQuery.length >= 2 && results.length === 0 && (
+          <p className="text-text-secondary px-1 text-xs">검색 결과가 없습니다.</p>
+        )}
       </div>
 
       {/* 좌표 */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-text mb-1 block text-sm font-medium">
-            위도 *
-          </label>
-          <input
-            type="number"
-            step="any"
-            value={form.latitude}
-            onChange={(e) => updateField("latitude", Number(e.target.value))}
-            required
-            className="border-border bg-surface h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-primary"
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="manual-coords"
+            checked={manualCoords}
+            onCheckedChange={(checked) => setManualCoords(!!checked)}
           />
+          <Label htmlFor="manual-coords" className="cursor-pointer text-xs font-normal">
+            좌표 직접 입력
+          </Label>
         </div>
-        <div>
-          <label className="text-text mb-1 block text-sm font-medium">
-            경도 *
-          </label>
-          <input
-            type="number"
-            step="any"
-            value={form.longitude}
-            onChange={(e) => updateField("longitude", Number(e.target.value))}
-            required
-            className="border-border bg-surface h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-primary"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">위도 *</Label>
+            <Input
+              type="number"
+              step="any"
+              value={form.latitude}
+              onChange={(e) => updateField('latitude', Number(e.target.value))}
+              required
+              readOnly={!manualCoords}
+              className={!manualCoords ? 'bg-surface-dim' : ''}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">경도 *</Label>
+            <Input
+              type="number"
+              step="any"
+              value={form.longitude}
+              onChange={(e) => updateField('longitude', Number(e.target.value))}
+              required
+              readOnly={!manualCoords}
+              className={!manualCoords ? 'bg-surface-dim' : ''}
+            />
+          </div>
         </div>
       </div>
 
       {/* 카테고리 */}
-      <div>
-        <label className="text-text mb-1 block text-sm font-medium">
-          카테고리 *
-        </label>
+      <div className="space-y-1.5">
+        <Label>카테고리 *</Label>
         <div className="flex flex-wrap gap-2">
           {CATEGORIES.map((cat) => {
             const isActive = form.categories.includes(cat);
             return (
-              <button
+              <Badge
                 key={cat}
-                type="button"
-                onClick={() => toggleCategory(cat)}
-                className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-primary text-white"
-                    : "bg-surface-dim text-text-secondary border-border border"
+                variant={isActive ? 'default' : 'outline'}
+                className={`cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  isActive ? 'bg-primary text-white hover:bg-primary-dark' : ''
                 }`}
+                onClick={() => toggleCategory(cat)}
               >
                 {cat}
-              </button>
+              </Badge>
             );
           })}
         </div>
       </div>
 
       {/* 설명 */}
-      <div>
-        <label className="text-text mb-1 block text-sm font-medium">
-          설명
-        </label>
-        <textarea
-          value={form.description ?? ""}
-          onChange={(e) =>
-            updateField("description", e.target.value || null)
-          }
+      <div className="space-y-1.5">
+        <Label>설명</Label>
+        <Textarea
+          value={form.description ?? ''}
+          onChange={(e) => updateField('description', e.target.value || null)}
           rows={3}
-          className="border-border bg-surface w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-primary"
           placeholder="장소에 대한 간단한 설명"
         />
       </div>
 
       {/* 전화번호 */}
-      <div>
-        <label className="text-text mb-1 block text-sm font-medium">
-          전화번호
-        </label>
-        <input
+      <div className="space-y-1.5">
+        <Label>전화번호</Label>
+        <Input
           type="tel"
-          value={form.phone ?? ""}
-          onChange={(e) => updateField("phone", e.target.value || null)}
-          className="border-border bg-surface h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-primary"
+          value={form.phone ?? ''}
+          onChange={(e) => updateField('phone', e.target.value || null)}
           placeholder="02-1234-5678"
         />
       </div>
 
       {/* 하이라이트 */}
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="highlight"
           checked={form.is_highlighted}
-          onChange={(e) => updateField("is_highlighted", e.target.checked)}
-          className="h-4 w-4 rounded accent-primary"
+          onCheckedChange={(checked) => updateField('is_highlighted', !!checked)}
         />
-        <span className="text-sm">추천 장소로 하이라이트</span>
-      </label>
-
-      {error && <p className="text-sm text-red-500">{error}</p>}
+        <Label htmlFor="highlight" className="cursor-pointer font-normal">
+          추천 장소로 하이라이트
+        </Label>
+      </div>
 
       {/* 제출 */}
       <div className="flex gap-2 pt-2">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="border-border text-text-secondary h-10 flex-1 rounded-lg border text-sm font-medium"
-        >
+        <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>
           취소
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="h-10 flex-1 rounded-lg bg-primary text-sm font-medium text-white disabled:opacity-50"
-        >
-          {saving ? "저장 중..." : isEdit ? "수정" : "추가"}
-        </button>
+        </Button>
+        <Button type="submit" disabled={saving} className="flex-1">
+          {saving ? '저장 중...' : isEdit ? '수정' : '추가'}
+        </Button>
       </div>
     </form>
   );
