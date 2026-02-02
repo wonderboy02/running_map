@@ -1,3 +1,5 @@
+BEGIN;
+
 -- spots 테이블 생성
 CREATE TABLE spots (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -57,3 +59,5 @@ CREATE TRIGGER spots_updated_at
   BEFORE UPDATE ON spots
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at();
+
+COMMIT;
