@@ -72,10 +72,10 @@ export default function SpotDetailPage() {
           variant="ghost"
           size="sm"
           onClick={() => router.back()}
-          className="text-text-secondary -ml-1 gap-1"
+          className="text-text-secondary -ml-1 gap-1 min-h-[40px]"
         >
           <ChevronLeft className="h-5 w-5" />
-          뒤로
+          <span className="text-[clamp(13px,3.5vw,15px)]">뒤로</span>
         </Button>
       </header>
 
@@ -105,26 +105,26 @@ export default function SpotDetailPage() {
           <div className="h-1 bg-gray-200" />
         )}
 
-        <div className="p-4">
-          <div className="mb-1 flex items-start justify-between">
-            <h1 className="text-xl font-bold">{spot.name}</h1>
+        <div className="px-4 py-4">
+          <div className="mb-2 flex items-start justify-between">
+            <h1 className="text-[clamp(18px,5vw,22px)] font-bold tracking-tight leading-tight">{spot.name}</h1>
             {spot.is_highlighted && (
               <Badge
                 variant="secondary"
-                className="bg-highlight/10 text-highlight-dark ml-2 flex-shrink-0"
+                className="bg-highlight/10 text-highlight-dark ml-2 flex-shrink-0 text-[clamp(12px,3vw,13px)] px-2 py-0.5"
               >
                 추천
               </Badge>
             )}
           </div>
 
-          <p className="text-text-secondary mb-3 text-sm">{spot.address}</p>
+          <p className="text-text-secondary mb-4 text-[clamp(13px,3.5vw,15px)] leading-relaxed">{spot.address}</p>
 
           <div className="mb-4 flex flex-wrap gap-1.5">
             {spot.categories.map((cat) => {
               const colorClass = CATEGORY_BADGE_COLORS[cat] || 'bg-gray-100 text-gray-700 border-gray-200';
               return (
-                <Badge key={cat} variant="outline" className={colorClass}>
+                <Badge key={cat} variant="outline" className={`${colorClass} text-[clamp(12px,3vw,14px)] px-2.5 py-1`}>
                   {cat}
                 </Badge>
               );
@@ -133,15 +133,15 @@ export default function SpotDetailPage() {
 
           {spot.description && (
             <div className="mb-4">
-              <h2 className="mb-1 text-sm font-semibold">소개</h2>
-              <p className="text-text-secondary text-sm leading-relaxed">{spot.description}</p>
+              <h2 className="mb-1.5 text-[clamp(13px,3.5vw,15px)] font-semibold">소개</h2>
+              <p className="text-text-secondary text-[clamp(13px,3.5vw,15px)] leading-relaxed">{spot.description}</p>
             </div>
           )}
 
           {spot.phone && (
             <div className="mb-4">
-              <h2 className="mb-1 text-sm font-semibold">연락처</h2>
-              <a href={`tel:${spot.phone}`} className="text-primary text-sm underline">
+              <h2 className="mb-1.5 text-[clamp(13px,3.5vw,15px)] font-semibold">연락처</h2>
+              <a href={`tel:${spot.phone}`} className="text-primary text-[clamp(13px,3.5vw,15px)] underline min-h-[40px] inline-flex items-center">
                 {spot.phone}
               </a>
             </div>
@@ -149,13 +149,13 @@ export default function SpotDetailPage() {
 
           {spot.operating_hours && (
             <div className="mb-4">
-              <h2 className="mb-1 text-sm font-semibold">운영시간</h2>
-              <div className="space-y-0.5">
+              <h2 className="mb-1.5 text-[clamp(13px,3.5vw,15px)] font-semibold">운영시간</h2>
+              <div className="space-y-1">
                 {weekdays.map((day) => {
                   const hours = spot.operating_hours?.[day];
                   if (!hours) return null;
                   return (
-                    <div key={day} className="flex text-sm">
+                    <div key={day} className="flex text-[clamp(13px,3.5vw,15px)]">
                       <span className="text-text-secondary w-6">{weekdayLabels[day]}</span>
                       <span className="text-text">{hours}</span>
                     </div>
@@ -165,14 +165,16 @@ export default function SpotDetailPage() {
             </div>
           )}
 
-          {/* Naver Map Button */}
-          <div className="mt-6">
+          {/* Naver Map Button - 네이버 그린 */}
+          <div className="mt-5">
             <Button
               onClick={() => openNaverMap(spot)}
-              className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+              className="w-full h-11 bg-[#03C75A] hover:bg-[#02b350] text-white font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm text-[clamp(13px,3.5vw,15px)]"
             >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
               네이버 지도에서 보기
-              <ExternalLink className="w-4 h-4 ml-1.5" />
             </Button>
           </div>
         </div>

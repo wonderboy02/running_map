@@ -5,6 +5,7 @@ import NaverMap from '@/components/Map/NaverMap';
 import Header from '@/components/Header';
 import FilterChips from '@/components/FilterChips';
 import BottomSheet from '@/components/BottomSheet';
+import DefaultDrawer from '@/components/DefaultDrawer';
 import FABMenu from '@/components/FABMenu';
 import { useSpots } from '@/hooks/useSpots';
 import type { Spot } from '@/types';
@@ -68,10 +69,19 @@ export default function HomePage() {
         />
         <FABMenu />
       </div>
-      <BottomSheet
-        spot={selectedSpot}
-        onClose={() => setSelectedSpot(null)}
-      />
+
+      {/* 장소 선택 시: BottomSheet, 기본 상태: DefaultDrawer */}
+      {selectedSpot ? (
+        <BottomSheet
+          spot={selectedSpot}
+          onClose={() => setSelectedSpot(null)}
+        />
+      ) : (
+        <DefaultDrawer
+          spots={filteredSpots}
+          onSpotClick={setSelectedSpot}
+        />
+      )}
     </div>
   );
 }
