@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { CATEGORIES } from '@/types';
 
@@ -59,12 +60,12 @@ export function BulkEditDialog({
 
   const handleSubmit = async () => {
     if (!updateHighlight && !updateCategories && !updateDescription && !updatePhone) {
-      alert('수정할 항목을 선택해주세요.');
+      toast.error('수정할 항목을 선택해주세요.');
       return;
     }
 
     if (updateCategories && selectedCategories.length === 0) {
-      alert('카테고리를 선택해주세요.');
+      toast.error('카테고리를 선택해주세요.');
       return;
     }
 
@@ -104,16 +105,16 @@ export function BulkEditDialog({
       const data = await response.json();
 
       if (data.success) {
-        alert(data.message);
+        toast.success(data.message);
         onOpenChange(false);
         onSuccess(); // 테이블 새로고침
         resetForm();
       } else {
-        alert(`오류: ${data.error}`);
+        toast.error(data.error || '일괄 수정에 실패했습니다.');
       }
     } catch (error) {
       console.error('[BulkEdit] Error:', error);
-      alert('일괄 수정 중 오류가 발생했습니다.');
+      toast.error('일괄 수정 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }

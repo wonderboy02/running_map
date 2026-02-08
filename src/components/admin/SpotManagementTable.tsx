@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import type { Spot } from '@/types';
@@ -153,16 +154,16 @@ export function SpotManagementTable() {
       const data = await response.json();
 
       if (data.success) {
-        alert(data.message);
+        toast.success(data.message);
         setSelected(new Set());
         setDeleteDialogOpen(false);
         fetchSpots(); // 새로고침
       } else {
-        alert(`오류: ${data.error}`);
+        toast.error(data.error || '삭제에 실패했습니다.');
       }
     } catch (error) {
       console.error('[Delete] Error:', error);
-      alert('삭제 중 오류가 발생했습니다.');
+      toast.error('삭제 중 오류가 발생했습니다.');
     } finally {
       setDeleting(false);
     }
