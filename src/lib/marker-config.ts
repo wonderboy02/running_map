@@ -1,17 +1,13 @@
 const CATEGORY_COLORS: Record<string, string> = {
-  짐보관: '#3b82f6', // blue
-  샤워실: '#06b6d4', // cyan
-  탈의실: '#8b5cf6', // violet
-  락커: '#10b981', // emerald
-  카페: '#f59e0b', // amber
+  러너스팟: '#2563eb', // Blue (primary)
+  샤워: '#64748b', // Slate
+  짐보관: '#6b7280', // Gray
 };
 
 const CATEGORY_CSS_CLASSES: Record<string, string> = {
+  러너스팟: 'marker-category-runner',
+  샤워: 'marker-category-shower',
   짐보관: 'marker-category-locker',
-  샤워실: 'marker-category-shower',
-  탈의실: 'marker-category-changing',
-  락커: 'marker-category-storage',
-  카페: 'marker-category-cafe',
 };
 
 const DEFAULT_COLOR = '#2563eb'; // primary blue

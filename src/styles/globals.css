@@ -114,24 +114,16 @@ body {
 }
 
 /* 카테고리별 마커 색상 */
-.marker-category-locker {
-  background-color: #3b82f6;
+.marker-category-runner {
+  background-color: #2563eb;
 }
 
 .marker-category-shower {
-  background-color: #06b6d4;
+  background-color: #64748b;
 }
 
-.marker-category-changing {
-  background-color: #8b5cf6;
-}
-
-.marker-category-storage {
-  background-color: #10b981;
-}
-
-.marker-category-cafe {
-  background-color: #f59e0b;
+.marker-category-locker {
+  background-color: #6b7280;
 }
 
 @keyframes marker-pulse {

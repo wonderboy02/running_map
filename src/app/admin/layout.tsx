@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminLayout({
   children,
@@ -59,6 +60,12 @@ export default function AdminLayout({
 
   if (!user) return null;
 
+  const currentTab = pathname.startsWith('/admin/bulk')
+    ? '/admin/bulk'
+    : pathname.startsWith('/admin/check')
+    ? '/admin/check'
+    : '/admin';
+
   return (
     <div className="bg-surface-dim flex h-dvh flex-col">
       {/* Admin 헤더 */}
@@ -79,6 +86,22 @@ export default function AdminLayout({
           로그아웃
         </button>
       </header>
+
+      {/* 탭 네비게이션 */}
+      <Tabs value={currentTab} onValueChange={(value) => router.push(value)} className="w-full">
+        <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4 h-12">
+          <TabsTrigger value="/admin" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+            장소 목록
+          </TabsTrigger>
+          <TabsTrigger value="/admin/bulk" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+            검색 & 일괄 관리
+          </TabsTrigger>
+          <TabsTrigger value="/admin/check" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+            장소 점검
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="flex-1 overflow-y-auto">{children}</div>
     </div>
   );

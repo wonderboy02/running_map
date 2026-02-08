@@ -19,11 +19,9 @@ export type SpotInsert = Omit<Spot, "id" | "created_at" | "updated_at">;
 export type SpotUpdate = Partial<SpotInsert>;
 
 export const CATEGORIES = [
+  "러너스팟",
+  "샤워",
   "짐보관",
-  "샤워실",
-  "탈의실",
-  "락커",
-  "카페",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];

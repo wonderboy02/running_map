@@ -133,6 +133,11 @@ NAVER_MAP_CLIENT_SECRET=your_client_secret_here
 - **JavaScript API v3 가이드**: [https://navermaps.github.io/maps.js.ncp/docs/](https://navermaps.github.io/maps.js.ncp/docs/)
 - **Client ID 발급**: [https://navermaps.github.io/maps.js.ncp/docs/tutorial-1-Getting-Client-ID.html](https://navermaps.github.io/maps.js.ncp/docs/tutorial-1-Getting-Client-ID.html)
 
+### 프로젝트 문서
+
+- **Naver Maps API 레퍼런스**: `docs/naver-maps-reference.md` (Map, Marker, Event, GroundOverlay 등 주요 API 정리)
+  - **GroundOverlay**: 지도 위에 투명도가 있는 이미지를 오버레이하는 방법 (러닝 코스 하이라이트, 구역 표시 등에 활용)
+
 ### 트러블슈팅
 
 **지도 "Authentication Failed" 에러 발생 시:**
@@ -153,6 +158,194 @@ NAVER_MAP_CLIENT_SECRET=your_client_secret_here
 4. 브라우저에서 `/api/geocode?query=강남` 직접 호출하여 `detail` 필드의 에러 메시지 확인
 5. 설정 변경 후 5-10분 대기 (NCP 콘솔 설정 반영 시간)
 6. Client Secret이 재발급되었거나 비활성화되지 않았는지 확인
+
+## Supabase 클라이언트 패턴
+
+### ⚠️ 중요: 싱글턴 패턴 사용
+
+**Supabase 클라이언트는 반드시 싱글턴 패턴으로 생성하고 재사용해야 합니다.**
+
+#### 클라이언트 사이드 (`client.ts`)
+
+```typescript
+// ✅ 올바른 방법 - 싱글턴
+import { createClient } from "@supabase/supabase-js";
+
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// 사용
+import { supabase } from '@/lib/supabase/client';
+await supabase.from('spots').select('*');
+```
+
+#### 서버 사이드 (`server.ts`)
+
+```typescript
+// ✅ 올바른 방법 - 싱글턴 (Service Role Key 사용)
+import { createClient } from "@supabase/supabase-js";
+
+export const supabaseServer = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// 사용 (API Route에서)
+import { supabaseServer } from '@/lib/supabase/server';
+await supabaseServer.from('spots').insert(...);
+```
+
+#### ❌ 잘못된 방법
+
+```typescript
+// ❌ 함수로 매번 생성하면 비효율적
+export function createServerClient() {
+  return createClient(...);
+}
+
+// ❌ 사용할 때마다 새 인스턴스 생성
+const supabase = await createClient();
+```
+
+#### 사용 구분
+
+| 위치 | 사용할 클라이언트 | 키 종류 | 용도 |
+|------|-------------------|---------|------|
+| **프론트엔드** (컴포넌트, 훅) | `supabase` (client.ts) | Anon Key | 일반 CRUD, RLS 적용 |
+| **서버 사이드** (API Route) | `supabaseServer` (server.ts) | Service Role Key | Admin 작업, RLS 우회 |
+
+### ⚠️ 중요: Service Role Key 클라이언트로 auth.getUser() 금지
+
+**Service Role Key 클라이언트(`supabaseServer`)로는 절대 `auth.getUser()`를 호출하면 안 됩니다.**
+
+- Service Role Key는 **RLS 우회용**이지 사용자 인증 확인용이 아님
+- 인증 확인에는 **쿠키 기반 클라이언트**(`server-auth.ts`) 사용 필요
+
+## Admin API 인증 패턴
+
+### ⚠️ 필수: withAuth HOF 패턴 사용
+
+**모든 Admin API Route는 반드시 `withAuth` HOF(Higher-Order Function)로 래핑해야 합니다.**
+
+#### 인증 확인용 클라이언트 (`server-auth.ts`)
+
+```typescript
+// src/lib/supabase/server-auth.ts
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+/**
+ * 쿠키 기반 Supabase 클라이언트 생성 (인증 확인용)
+ * - 각 요청마다 새로 생성 (싱글턴 아님)
+ * - Anon Key 사용하여 JWT 토큰 확인
+ */
+export async function createAuthClient() {
+  const cookieStore = await cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+}
+```
+
+#### withAuth HOF (`withAuth.ts`)
+
+```typescript
+// src/lib/auth/withAuth.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { User } from '@supabase/supabase-js';
+import { createAuthClient } from '@/lib/supabase/server-auth';
+
+export function withAuth(
+  handler: (request: NextRequest, user: User) => Promise<NextResponse>
+) {
+  return async (request: NextRequest): Promise<NextResponse> => {
+    try {
+      const supabaseAuth = await createAuthClient();
+      const { data: { user }, error } = await supabaseAuth.auth.getUser();
+
+      if (error || !user) {
+        return NextResponse.json(
+          { success: false, error: '인증이 필요합니다.' },
+          { status: 401 }
+        );
+      }
+
+      return await handler(request, user);
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: '서버 오류가 발생했습니다.' },
+        { status: 500 }
+      );
+    }
+  };
+}
+```
+
+#### 사용 예시
+
+```typescript
+// src/app/api/admin/*/route.ts
+import { withAuth } from '@/lib/auth/withAuth';
+import { supabaseServer } from '@/lib/supabase/server';
+
+// ✅ 올바른 방법
+export const POST = withAuth(async (request, user) => {
+  // user는 이미 인증된 상태
+  // DB 작업은 supabaseServer (Service Role Key) 사용
+  const { data } = await supabaseServer.from('spots').insert(...);
+  return NextResponse.json({ success: true, data });
+});
+
+export const GET = withAuth(async (request, user) => {
+  // 로직...
+});
+
+export const PATCH = withAuth(async (request, user) => {
+  // 로직...
+});
+
+export const DELETE = withAuth(async (request, user) => {
+  // 로직...
+});
+```
+
+#### ❌ 잘못된 방법
+
+```typescript
+// ❌ withAuth 없이 직접 인증 체크 (코드 중복)
+export async function POST(request: NextRequest) {
+  const supabaseAuth = await createAuthClient();
+  const { data: { user } } = await supabaseAuth.auth.getUser();
+  if (!user) return NextResponse.json({ error: '인증 실패' }, { status: 401 });
+  // 로직...
+}
+
+// ❌ Service Role Key로 인증 체크 (작동 안 함)
+export async function POST(request: NextRequest) {
+  const { data: { user } } = await supabaseServer.auth.getUser(); // 실패!
+  // 로직...
+}
+```
+
+#### 적용 규칙
+
+1. **모든 Admin API Route**는 `withAuth`로 래핑 필수
+2. **인증 확인**: `withAuth` → `createAuthClient()` → Anon Key + 쿠키
+3. **DB 작업**: `supabaseServer` → Service Role Key (RLS 우회)
+4. **HOF 패턴**으로 인증 로직 중복 제거 및 일관성 유지
 
 ## Supabase 타입 생성
 

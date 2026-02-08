@@ -249,6 +249,145 @@ const circle = new naver.maps.Circle({
 });
 ```
 
+### GroundOverlay (이미지 오버레이)
+
+**개요**: 지도의 특정 좌표 범위에 이미지를 배치하는 오버레이. 지도 확대/축소 시 이미지도 함께 크기가 조정됩니다.
+
+**용도**: 러닝 코스 하이라이트, 구역 표시, 히트맵, 반투명 이미지 레이어 등
+
+#### 기본 사용법
+
+```typescript
+// 1. 이미지를 표시할 좌표 범위 설정
+const bounds = new naver.maps.LatLngBounds(
+  new naver.maps.LatLng(37.5, 127.0),   // 남서쪽 모서리 (SW)
+  new naver.maps.LatLng(37.6, 127.1)    // 북동쪽 모서리 (NE)
+);
+
+// 2. GroundOverlay 생성
+const groundOverlay = new naver.maps.GroundOverlay(
+  '/images/course-overlay.png',  // 이미지 URL (PNG 투명도 지원)
+  bounds,                         // 좌표 범위
+  {
+    opacity: 0.8,                 // 투명도 (0~1, 1이 불투명)
+    clickable: true,              // 클릭 이벤트 허용
+    map: map                      // 지도 객체 (옵션)
+  }
+);
+
+// 3. 지도에 추가 (옵션에서 map을 설정하지 않은 경우)
+groundOverlay.setMap(map);
+```
+
+#### 주요 메서드
+
+| 메서드 | 설명 |
+|--------|------|
+| `setMap(map \| null)` | 지도에 표시/제거 |
+| `getMap()` | 현재 지도 반환 |
+| `setOpacity(opacity)` | 투명도 설정 (0~1) |
+| `getOpacity()` | 현재 투명도 반환 |
+| `setUrl(url)` | 이미지 URL 변경 |
+| `setBounds(bounds)` | 좌표 범위 변경 |
+| `getBounds()` | 현재 좌표 범위 반환 |
+| `setClickable(clickable)` | 클릭 가능 여부 설정 |
+| `getClickable()` | 클릭 가능 여부 반환 |
+
+#### 이벤트
+
+```typescript
+// 클릭 이벤트 (clickable: true인 경우)
+naver.maps.Event.addListener(groundOverlay, 'click', (e) => {
+  console.log('이미지 오버레이 클릭!', e.coord);
+});
+```
+
+#### TypeScript 타입 정의
+
+`src/types/naver-maps.d.ts`에 추가:
+
+```typescript
+declare namespace naver.maps {
+  class GroundOverlay {
+    constructor(
+      url: string,
+      bounds: LatLngBounds,
+      options?: GroundOverlayOptions
+    );
+
+    setMap(map: Map | null): void;
+    getMap(): Map | null;
+    setOpacity(opacity: number): void;
+    getOpacity(): number;
+    setUrl(url: string): void;
+    setBounds(bounds: LatLngBounds): void;
+    getBounds(): LatLngBounds;
+    setClickable(clickable: boolean): void;
+    getClickable(): boolean;
+  }
+
+  interface GroundOverlayOptions {
+    opacity?: number;       // 0~1 (기본값: 1)
+    clickable?: boolean;    // 기본값: true
+    map?: Map;
+    crossOrigin?: string;   // CORS 설정 (필요 시)
+  }
+}
+```
+
+#### 실제 사용 예시
+
+```typescript
+// 예제 1: 러닝 코스 하이라이트 (반투명 PNG)
+const courseBounds = new naver.maps.LatLngBounds(
+  new naver.maps.LatLng(37.5665, 126.978),
+  new naver.maps.LatLng(37.5765, 126.988)
+);
+
+const courseOverlay = new naver.maps.GroundOverlay(
+  '/images/course-highlight.png',
+  courseBounds,
+  {
+    opacity: 0.6,
+    clickable: true
+  }
+);
+courseOverlay.setMap(map);
+
+// 예제 2: 동적 투명도 조절
+let currentOpacity = 0.8;
+document.getElementById('opacitySlider')?.addEventListener('input', (e) => {
+  currentOpacity = parseFloat((e.target as HTMLInputElement).value);
+  courseOverlay.setOpacity(currentOpacity);
+});
+
+// 예제 3: 이미지 전환
+const toggleImage = () => {
+  const currentUrl = courseOverlay.getUrl();
+  const newUrl = currentUrl.includes('day')
+    ? '/images/night-overlay.png'
+    : '/images/day-overlay.png';
+  courseOverlay.setUrl(newUrl);
+};
+
+// 예제 4: 오버레이 제거
+const removeOverlay = () => {
+  courseOverlay.setMap(null);
+};
+```
+
+#### 주의사항
+
+- **이미지 포맷**: PNG (투명도 지원), JPG, GIF 모두 사용 가능
+- **CORS**: 외부 도메인 이미지 사용 시 `crossOrigin` 옵션 필요
+- **성능**: 대용량 이미지는 로딩 시간이 길 수 있으므로 적절한 크기로 최적화 권장
+- **좌표 범위**: `LatLngBounds`의 남서쪽(SW), 북동쪽(NE) 순서 주의
+
+#### 공식 문서
+
+- [GroundOverlay API Reference](https://navermaps.github.io/maps.js.ncp/docs/naver.maps.GroundOverlay.html)
+- [GroundOverlay Tutorial](https://navermaps.github.io/maps.js.en/docs/tutorial-5-GroundOverlay.html)
+
 ---
 
 ## Position 상수

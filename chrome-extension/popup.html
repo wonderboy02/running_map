@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>네이버 지도 장소 추출기</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🗺️ 장소 추출기</h1>
+
+    <div class="button-group">
+      <button id="extractBtn" class="btn btn-primary">
+        📍 현재 페이지 추출
+      </button>
+    </div>
+
+    <div class="info">
+      <p>저장된 장소: <strong id="count">0</strong>개</p>
+    </div>
+
+    <div class="places-container">
+      <div class="places-header">
+        <h3>추출된 장소 목록</h3>
+        <button id="clearBtn" class="btn btn-small">모두 삭제</button>
+      </div>
+      <div id="placesList" class="places-list">
+        <p class="empty-message">아직 추출된 장소가 없습니다.</p>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button id="downloadTxtBtn" class="btn btn-secondary">
+        📄 TXT 다운로드
+      </button>
+    </div>
+
+    <div class="usage-guide">
+      <h4>📖 사용 방법</h4>
+      <ol>
+        <li>네이버 지도에서 장소 검색</li>
+        <li>"현재 페이지 추출" 버튼 클릭</li>
+        <li>"TXT 다운로드" 버튼 클릭</li>
+        <li>Admin 페이지 → 일괄 검색에 붙여넣기</li>
+        <li>카테고리 선택 후 DB에 추가</li>
+      </ol>
+    </div>
+
+    <div id="status" class="status"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
