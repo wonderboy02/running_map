@@ -35,7 +35,7 @@ export default function FABMenu() {
   }, [isOpen]);
 
   return (
-    <div ref={menuRef} className="absolute bottom-6 right-4 z-30">
+    <div ref={menuRef} className="absolute bottom-5 right-4 z-30">
       {isOpen && (
         <div className="mb-3 flex flex-col gap-2">
           {MENU_ITEMS.map((item) => (
@@ -44,7 +44,7 @@ export default function FABMenu() {
               href={item.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-surface flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium shadow-lg transition-transform hover:scale-105"
+              className="bg-surface flex items-center gap-2 rounded-full px-4 py-2.5 text-[clamp(13px,3.5vw,15px)] font-medium shadow-lg transition-transform hover:scale-105 min-h-[44px]"
               onClick={() => setIsOpen(false)}
             >
               <item.icon className="h-4 w-4" />
@@ -62,7 +62,7 @@ export default function FABMenu() {
         }`}
         aria-label="메뉴"
       >
-        <Plus className="h-6 w-6" />
+        <Plus className="h-5 w-5" />
       </Button>
     </div>
   );

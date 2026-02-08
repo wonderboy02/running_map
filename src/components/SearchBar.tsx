@@ -49,9 +49,9 @@ export default function SearchBar({ onLocationSelect, onClose }: SearchBarProps)
   }
 
   return (
-    <div className="relative flex flex-1 items-center gap-2" ref={dropdownRef}>
+    <div className="relative flex flex-1 items-center gap-2.5" ref={dropdownRef}>
       <div className="relative flex-1">
-        <Search className="text-text-secondary pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+        <Search className="text-text-secondary pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2" />
         <input
           ref={inputRef}
           type="text"
@@ -59,7 +59,7 @@ export default function SearchBar({ onLocationSelect, onClose }: SearchBarProps)
           onChange={(e) => handleInput(e.target.value)}
           onFocus={() => results.length > 0 && setShowResults(true)}
           placeholder="장소명, 주소 검색"
-          className="border-border bg-surface-dim h-9 w-full rounded-full border py-1.5 pl-9 pr-9 text-sm outline-none focus:border-primary"
+          className="border-border bg-surface-dim h-9 w-full rounded-full border py-1.5 pl-10 pr-9 text-[clamp(13px,3.5vw,15px)] outline-none focus:border-primary"
         />
         {loading && (
           <Loader2 className="text-text-secondary absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin" />
@@ -68,7 +68,7 @@ export default function SearchBar({ onLocationSelect, onClose }: SearchBarProps)
           <button
             type="button"
             onClick={() => { setQuery(''); clear(); setShowResults(false); }}
-            className="absolute right-3 top-1/2 -translate-y-1/2"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5"
           >
             <X className="text-text-secondary h-4 w-4" />
           </button>
@@ -76,36 +76,36 @@ export default function SearchBar({ onLocationSelect, onClose }: SearchBarProps)
       </div>
       <button
         onClick={handleClose}
-        className="text-text-secondary flex-shrink-0 text-sm"
+        className="text-text-secondary flex-shrink-0 text-[clamp(13px,3.5vw,15px)] min-w-[40px] min-h-[40px] flex items-center justify-center -mr-1.5"
       >
         취소
       </button>
 
       {/* 검색 결과 드롭다운 */}
       {showResults && results.length > 0 && (
-        <div className="border-border bg-surface absolute left-0 top-full z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border shadow-lg">
+        <div className="border-border bg-surface absolute left-0 top-full z-50 mt-1.5 max-h-72 w-full overflow-y-auto rounded-xl border shadow-lg">
           {results.map((result, i) => (
             <button
               key={i}
               type="button"
               onClick={() => handleSelect(result)}
-              className="hover:bg-surface-dim flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm transition-colors"
+              className="hover:bg-surface-dim flex w-full items-start gap-2.5 px-3.5 py-3 text-left text-sm transition-colors first:rounded-t-xl last:rounded-b-xl"
             >
               <MapPin className={`mt-0.5 h-4 w-4 flex-shrink-0 ${result.source === 'place' ? 'text-highlight-dark' : 'text-primary'}`} />
               <div className="min-w-0 flex-1">
                 {result.placeName ? (
                   <>
-                    <p className="text-text truncate font-medium">{result.placeName}</p>
-                    <p className="text-text-secondary truncate text-xs">{result.roadAddress}</p>
+                    <p className="text-text truncate font-medium text-[clamp(13px,3.5vw,15px)] mb-0.5">{result.placeName}</p>
+                    <p className="text-text-secondary truncate text-[clamp(12px,3vw,13px)]">{result.roadAddress}</p>
                     {result.category && (
-                      <p className="text-text-secondary truncate text-xs">{result.category}</p>
+                      <p className="text-text-secondary truncate text-[clamp(12px,3vw,13px)] mt-0.5">{result.category}</p>
                     )}
                   </>
                 ) : (
                   <>
-                    <p className="text-text truncate font-medium">{result.roadAddress}</p>
+                    <p className="text-text truncate font-medium text-[clamp(13px,3.5vw,15px)] mb-0.5">{result.roadAddress}</p>
                     {result.jibunAddress && result.jibunAddress !== result.roadAddress && (
-                      <p className="text-text-secondary truncate text-xs">{result.jibunAddress}</p>
+                      <p className="text-text-secondary truncate text-[clamp(12px,3vw,13px)]">{result.jibunAddress}</p>
                     )}
                   </>
                 )}
@@ -116,8 +116,8 @@ export default function SearchBar({ onLocationSelect, onClose }: SearchBarProps)
       )}
 
       {showResults && !loading && query.length >= 2 && results.length === 0 && (
-        <div className="border-border bg-surface absolute left-0 top-full z-50 mt-1 w-full rounded-lg border px-3 py-3 shadow-lg">
-          <p className="text-text-secondary text-center text-xs">검색 결과가 없습니다.</p>
+        <div className="border-border bg-surface absolute left-0 top-full z-50 mt-1.5 w-full rounded-xl border px-3.5 py-3.5 shadow-lg">
+          <p className="text-text-secondary text-center text-[clamp(12px,3vw,13px)]">검색 결과가 없습니다.</p>
         </div>
       )}
     </div>
