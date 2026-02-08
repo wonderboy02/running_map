@@ -10,7 +10,7 @@ import { useSpots } from '@/hooks/useSpots';
 import type { Spot } from '@/types';
 
 export default function HomePage() {
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']); // 기본 선택
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [initialCenter, setInitialCenter] = useState<{ lat: number; lng: number } | null>(null);
@@ -35,7 +35,6 @@ export default function HomePage() {
   }, []);
 
   const filteredSpots = spots.filter((spot) => {
-    if (spot.is_highlighted) return true;
     if (activeFilters.length === 0) return true;
     return spot.categories.some((cat) => activeFilters.includes(cat));
   });

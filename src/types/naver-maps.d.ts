@@ -140,6 +140,30 @@ declare namespace naver.maps {
     static trigger(target: unknown, type: string, ...args: unknown[]): void;
   }
 
+  interface GroundOverlayOptions {
+    opacity?: number;
+    clickable?: boolean;
+    map?: Map;
+    crossOrigin?: string;
+  }
+
+  class GroundOverlay {
+    constructor(
+      url: string,
+      bounds: LatLngBounds,
+      options?: GroundOverlayOptions
+    );
+    setMap(map: Map | null): void;
+    getMap(): Map | null;
+    setOpacity(opacity: number): void;
+    getOpacity(): number;
+    setUrl(url: string): void;
+    setBounds(bounds: LatLngBounds): void;
+    getBounds(): LatLngBounds;
+    setClickable(clickable: boolean): void;
+    getClickable(): boolean;
+  }
+
   // Position constants
   const Position: {
     TOP_LEFT: number;

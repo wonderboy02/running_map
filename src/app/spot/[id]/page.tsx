@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ExternalLink, MapPin } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { openNaverMap } from '@/lib/naver-map-utils';
 import type { Spot } from '@/types';
 
 export default function SpotDetailPage() {
@@ -44,6 +45,9 @@ export default function SpotDetailPage() {
 
   if (!spot) return null;
 
+  const isRunnerSpot = spot.categories.includes('러너스팟');
+  const hasPhotos = spot.photos && spot.photos.length > 0;
+
   const weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   const weekdayLabels: Record<string, string> = {
     mon: '월',
@@ -53,6 +57,12 @@ export default function SpotDetailPage() {
     fri: '금',
     sat: '토',
     sun: '일',
+  };
+
+  const CATEGORY_BADGE_COLORS: Record<string, string> = {
+    러너스팟: 'bg-blue-50 text-blue-700 border-blue-200',
+    샤워: 'bg-slate-50 text-slate-700 border-slate-200',
+    짐보관: 'bg-gray-50 text-gray-700 border-gray-200',
   };
 
   return (
@@ -70,7 +80,9 @@ export default function SpotDetailPage() {
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        {spot.photos.length > 0 && (
+        {/* Header: 3가지 케이스 */}
+        {isRunnerSpot && hasPhotos ? (
+          // Case A: 러너스팟 + 사진 있음
           <div className="scrollbar-none flex gap-1 overflow-x-auto">
             {spot.photos.map((photo, i) => (
               <img
@@ -81,6 +93,16 @@ export default function SpotDetailPage() {
               />
             ))}
           </div>
+        ) : isRunnerSpot ? (
+          // Case B: 러너스팟 + 사진 없음 (Placeholder)
+          <div className="relative h-32 bg-gray-100 flex items-center justify-center">
+            <div className="text-center text-gray-500">
+              <p className="text-sm font-medium">사진 없음</p>
+            </div>
+          </div>
+        ) : (
+          // Case C: 샤워/짐보관 (미니멀 라인)
+          <div className="h-1 bg-gray-200" />
         )}
 
         <div className="p-4">
@@ -99,11 +121,14 @@ export default function SpotDetailPage() {
           <p className="text-text-secondary mb-3 text-sm">{spot.address}</p>
 
           <div className="mb-4 flex flex-wrap gap-1.5">
-            {spot.categories.map((cat) => (
-              <Badge key={cat} className="bg-primary/10 text-primary">
-                {cat}
-              </Badge>
-            ))}
+            {spot.categories.map((cat) => {
+              const colorClass = CATEGORY_BADGE_COLORS[cat] || 'bg-gray-100 text-gray-700 border-gray-200';
+              return (
+                <Badge key={cat} variant="outline" className={colorClass}>
+                  {cat}
+                </Badge>
+              );
+            })}
           </div>
 
           {spot.description && (
@@ -139,6 +164,17 @@ export default function SpotDetailPage() {
               </div>
             </div>
           )}
+
+          {/* Naver Map Button */}
+          <div className="mt-6">
+            <Button
+              onClick={() => openNaverMap(spot)}
+              className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+            >
+              네이버 지도에서 보기
+              <ExternalLink className="w-4 h-4 ml-1.5" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
