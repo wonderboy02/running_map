@@ -27,7 +27,7 @@ export default function BottomSheet({ spot, onClose }: BottomSheetProps) {
 
   return (
     <Sheet isOpen={!!spot} onClose={onClose}>
-      <Sheet.Container>
+      <Sheet.Container style={{ maxHeight: '75vh' }}>
         <Sheet.Header />
 
         <Sheet.Content>
