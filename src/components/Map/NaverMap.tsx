@@ -136,8 +136,14 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, selected
       const ne = new naver.maps.LatLng(overlay.nw_lat, overlay.se_lng);
       const bounds = new naver.maps.LatLngBounds(sw, ne);
 
+      // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
+      const imageUrl = overlay.image_url.replace(
+        /https:\/\/[^/]+\/storage\/v1\/object\/public/,
+        '/storage',
+      );
+
       const groundOverlay = new naver.maps.GroundOverlay(
-        overlay.image_url,
+        imageUrl,
         bounds,
         { opacity: overlay.opacity, clickable: false },
       );

@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/storage/:path*",
+        destination:
+          "https://btxtexwnlirtabwzfckz.supabase.co/storage/v1/object/public/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

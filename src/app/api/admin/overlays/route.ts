@@ -34,6 +34,7 @@ async function convertAndUpload(imageFile: File): Promise<string> {
     .from('overlays')
     .upload(fileName, webpBuffer, {
       contentType: 'image/webp',
+      cacheControl: '31536000',
       upsert: false,
     });
 

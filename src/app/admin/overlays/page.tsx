@@ -1,7 +1,19 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MapPin, Search, Loader2, Plus, Pencil, Trash2, Image as ImageIcon } from 'lucide-react';
+import {
+  MapPin,
+  Search,
+  Loader2,
+  Plus,
+  Pencil,
+  Trash2,
+  Image as ImageIcon,
+  Upload,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,6 +59,422 @@ const EMPTY_FORM: OverlayForm = {
   is_active: true,
   image: null,
 };
+
+// --- Bulk Upload ---
+
+interface BulkItem {
+  file: File;
+  name: string;
+  nwPlace: string;
+  sePlace: string;
+  nwLat: number;
+  nwLng: number;
+  seLat: number;
+  seLng: number;
+  nwResultName: string;
+  seResultName: string;
+  nwWarning: boolean;
+  seWarning: boolean;
+  status: 'geocoding' | 'ready' | 'error';
+  error?: string;
+}
+
+function removeSpaces(s: string) {
+  return s.replace(/\s/g, '');
+}
+
+function parseOverlayFilename(filename: string): {
+  name: string;
+  nwPlace: string;
+  sePlace: string;
+} | null {
+  const nameWithoutExt = filename.replace(/\.[^.]+$/, '');
+  const parts = nameWithoutExt.split('_');
+  if (parts.length < 3) return null;
+  // 마지막 두 파트가 SE, NW 장소, 나머지는 이름
+  const sePlace = parts[parts.length - 1];
+  const nwPlace = parts[parts.length - 2];
+  const name = parts.slice(0, -2).join('_');
+  return { name, nwPlace, sePlace };
+}
+
+async function geocodePlace(
+  query: string,
+): Promise<{ lat: number; lng: number; placeName: string } | null> {
+  try {
+    const res = await fetch(
+      `/api/geocode?query=${encodeURIComponent(query.trim())}`,
+    );
+    const data = await res.json();
+    if (data.addresses && data.addresses.length > 0) {
+      const first = data.addresses[0];
+      return {
+        lat: first.latitude,
+        lng: first.longitude,
+        placeName: first.placeName || first.roadAddress || '',
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function BulkUploadDialog({
+  open,
+  onOpenChange,
+  onUploaded,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUploaded: () => void;
+}) {
+  const [items, setItems] = useState<BulkItem[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function reset() {
+    setItems([]);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newItems: BulkItem[] = [];
+
+    for (const file of Array.from(files)) {
+      const parsed = parseOverlayFilename(file.name);
+      if (!parsed) {
+        newItems.push({
+          file,
+          name: file.name,
+          nwPlace: '',
+          sePlace: '',
+          nwLat: 0,
+          nwLng: 0,
+          seLat: 0,
+          seLng: 0,
+          nwResultName: '',
+          seResultName: '',
+          nwWarning: false,
+          seWarning: false,
+          status: 'error',
+          error: '파일명 형식 오류 ({이름}_{NW장소}_{SE장소}.확장자)',
+        });
+        continue;
+      }
+
+      newItems.push({
+        file,
+        name: parsed.name,
+        nwPlace: parsed.nwPlace,
+        sePlace: parsed.sePlace,
+        nwLat: 0,
+        nwLng: 0,
+        seLat: 0,
+        seLng: 0,
+        nwResultName: '',
+        seResultName: '',
+        nwWarning: false,
+        seWarning: false,
+        status: 'geocoding',
+      });
+    }
+
+    setItems(newItems);
+
+    // Geocode 비동기 처리
+    const updated = [...newItems];
+    for (let i = 0; i < updated.length; i++) {
+      const item = updated[i];
+      if (item.status === 'error') continue;
+
+      const [nwResult, seResult] = await Promise.all([
+        geocodePlace(item.nwPlace),
+        geocodePlace(item.sePlace),
+      ]);
+
+      if (!nwResult || !seResult) {
+        updated[i] = {
+          ...item,
+          status: 'error',
+          error: !nwResult && !seResult
+            ? 'NW/SE 장소 모두 검색 실패'
+            : !nwResult
+              ? 'NW 장소 검색 실패'
+              : 'SE 장소 검색 실패',
+          nwLat: nwResult?.lat ?? 0,
+          nwLng: nwResult?.lng ?? 0,
+          seLat: seResult?.lat ?? 0,
+          seLng: seResult?.lng ?? 0,
+          nwResultName: nwResult?.placeName ?? '',
+          seResultName: seResult?.placeName ?? '',
+          nwWarning: false,
+          seWarning: false,
+        };
+      } else {
+        const nwWarning =
+          removeSpaces(nwResult.placeName) !== removeSpaces(item.nwPlace);
+        const seWarning =
+          removeSpaces(seResult.placeName) !== removeSpaces(item.sePlace);
+
+        updated[i] = {
+          ...item,
+          nwLat: nwResult.lat,
+          nwLng: nwResult.lng,
+          seLat: seResult.lat,
+          seLng: seResult.lng,
+          nwResultName: nwResult.placeName,
+          seResultName: seResult.placeName,
+          nwWarning,
+          seWarning,
+          status: 'ready',
+        };
+      }
+
+      setItems([...updated]);
+    }
+  }
+
+  async function handleBulkUpload() {
+    const readyItems = items.filter((item) => item.status === 'ready');
+    if (readyItems.length === 0) {
+      toast.error('업로드 가능한 항목이 없습니다.');
+      return;
+    }
+
+    setUploading(true);
+
+    const formData = new FormData();
+    const metadata = readyItems.map((item, i) => {
+      formData.append(`image_${i}`, item.file);
+      return {
+        name: item.name,
+        nw_lat: item.nwLat,
+        nw_lng: item.nwLng,
+        se_lat: item.seLat,
+        se_lng: item.seLng,
+        opacity: 1.0,
+      };
+    });
+    formData.append('metadata', JSON.stringify(metadata));
+
+    try {
+      const res = await fetch('/api/admin/overlays/bulk', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const msg =
+          data.errorCount > 0
+            ? `${data.successCount}개 성공, ${data.errorCount}개 실패`
+            : `${data.successCount}개 업로드 완료`;
+        toast.success(msg);
+
+        if (data.errors?.length > 0) {
+          data.errors.forEach(
+            (err: { name: string; error: string }) =>
+              toast.error(`${err.name}: ${err.error}`),
+          );
+        }
+
+        onOpenChange(false);
+        reset();
+        onUploaded();
+      } else {
+        toast.error(data.error || '일괄 업로드에 실패했습니다.');
+      }
+    } catch {
+      toast.error('서버 오류가 발생했습니다.');
+    }
+    setUploading(false);
+  }
+
+  const readyCount = items.filter((i) => i.status === 'ready').length;
+  const geocodingCount = items.filter((i) => i.status === 'geocoding').length;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>오버레이 일괄 추가</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* 안내 */}
+          <div className="bg-surface-dim rounded-md p-3 text-sm">
+            <p className="font-medium">파일명 형식</p>
+            <p className="text-text-secondary mt-1">
+              <code className="bg-background rounded px-1 py-0.5 text-xs">
+                {'{이름}_{왼쪽위 장소}_{오른쪽아래 장소}.확장자'}
+              </code>
+            </p>
+            <p className="text-text-secondary mt-1 text-xs">
+              예: 여의도코스_여의도공원_63빌딩.png
+            </p>
+          </div>
+
+          {/* 파일 선택 */}
+          <div className="space-y-1.5">
+            <Label>이미지 파일 선택</Label>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFilesSelected}
+            />
+          </div>
+
+          {/* 프리뷰 테이블 */}
+          {items.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">
+                프리뷰 ({readyCount}개 준비
+                {geocodingCount > 0 && `, ${geocodingCount}개 검색 중`})
+              </p>
+              <div className="max-h-64 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-border border-b text-left">
+                      <th className="pb-1.5 pr-2">이름</th>
+                      <th className="pb-1.5 pr-2">NW 장소</th>
+                      <th className="pb-1.5 pr-2">SE 장소</th>
+                      <th className="pb-1.5">상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, i) => (
+                      <tr key={i} className="border-border border-b">
+                        <td className="py-1.5 pr-2 font-medium">
+                          {item.name}
+                        </td>
+                        <td className="py-1.5 pr-2">
+                          {item.status === 'geocoding' ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : item.nwResultName ? (
+                            <span className="flex items-center gap-1">
+                              {item.nwResultName}
+                              {item.nwWarning && (
+                                <span
+                                  className="inline-flex items-center rounded bg-yellow-100 px-1 py-0.5 text-yellow-700"
+                                  title={`입력: ${item.nwPlace}`}
+                                >
+                                  <AlertTriangle className="h-3 w-3" />
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-text-secondary">
+                              {item.nwPlace}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1.5 pr-2">
+                          {item.status === 'geocoding' ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : item.seResultName ? (
+                            <span className="flex items-center gap-1">
+                              {item.seResultName}
+                              {item.seWarning && (
+                                <span
+                                  className="inline-flex items-center rounded bg-yellow-100 px-1 py-0.5 text-yellow-700"
+                                  title={`입력: ${item.sePlace}`}
+                                >
+                                  <AlertTriangle className="h-3 w-3" />
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-text-secondary">
+                              {item.sePlace}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1.5">
+                          {item.status === 'geocoding' && (
+                            <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                          )}
+                          {item.status === 'ready' && (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          )}
+                          {item.status === 'error' && (
+                            <span
+                              className="flex items-center gap-1 text-red-500"
+                              title={item.error}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 에러 상세 */}
+              {items.some((i) => i.status === 'error') && (
+                <div className="space-y-1">
+                  {items
+                    .filter((i) => i.status === 'error')
+                    .map((item, i) => (
+                      <p key={i} className="text-xs text-red-500">
+                        {item.name}: {item.error}
+                      </p>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 버튼 */}
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                onOpenChange(false);
+                reset();
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={handleBulkUpload}
+              disabled={uploading || readyCount === 0 || geocodingCount > 0}
+              className="flex-1"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  업로드 중...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-1 h-4 w-4" />
+                  일괄 업로드 ({readyCount}개)
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function CoordSearchInput({
   label,
@@ -187,6 +615,7 @@ export default function AdminOverlaysPage() {
   const [form, setForm] = useState<OverlayForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
   async function fetchOverlays() {
     setLoading(true);
@@ -360,10 +789,16 @@ export default function AdminOverlaysPage() {
     <div className="p-4">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-bold">오버레이 관리</h1>
-        <Button size="sm" onClick={openCreateDialog}>
-          <Plus className="mr-1 h-4 w-4" />
-          추가
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setBulkDialogOpen(true)}>
+            <Upload className="mr-1 h-4 w-4" />
+            일괄 추가
+          </Button>
+          <Button size="sm" onClick={openCreateDialog}>
+            <Plus className="mr-1 h-4 w-4" />
+            추가
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -577,6 +1012,13 @@ export default function AdminOverlaysPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 일괄 추가 Dialog */}
+      <BulkUploadDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        onUploaded={fetchOverlays}
+      />
 
       {/* Supabase Storage 안내 */}
       {overlays.length === 0 && !loading && (
