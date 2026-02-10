@@ -450,3 +450,14 @@ npm run gen:types
 - 모호하거나 이상한 부분이 있으면 user 에게 반드시 물어보고 확실하게 처리
 - **깔끔하고 권장된 구조**로 코딩할 것, 계획이 그렇지 않다면 계획에 대해 좀 더 명확히 논의
 - 이 컴퓨터는 window 기반 powershell 을 사용하니까 명령어를 그에 맞춰 사용
+
+## 이미지 최적화 가이드
+
+- **유저 대면 이미지는 반드시 `next/image` (`<Image>`) 사용** — `<img>` 태그 금지
+  - Vercel이 자동으로 WebP/AVIF 변환 + 리사이즈 + Edge 캐싱 + lazy loading 처리
+  - `next.config.ts`에 Supabase Storage `remotePatterns` 설정 완료
+- **Admin 전용 이미지** (미리보기, 폼 내부)는 `<img>` 허용 (DataURL 프리뷰 등)
+- **서버 사이드 업로드 시 `sharp`로 WebP 변환** — 원본 포맷(png, jpg 등) 그대로 저장하지 않음
+  - Naver Maps SDK `GroundOverlay` 등 SDK가 직접 fetch하는 이미지는 `next/image` 경유 불가 → 업로드 시점에 최적화 필수
+- **`fill` + `sizes` 패턴 사용** — 반응형 레이아웃에서 이미지 크기를 효율적으로 지정
+  - 전체 폭: `sizes="100vw"`, 고정 폭: `sizes="288px"` 등

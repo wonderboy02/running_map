@@ -3,20 +3,22 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
 import { getMarkerIcon } from '@/lib/marker-config';
-import type { Spot } from '@/types';
+import type { Spot, Overlay } from '@/types';
 
 interface NaverMapProps {
   spots: Spot[];
+  overlays?: Overlay[];
   onMarkerClick: (spot: Spot) => void;
   selectedSpot: Spot | null;
   targetLocation: { lat: number; lng: number } | null;
   initialCenter: { lat: number; lng: number } | null;
 }
 
-export default function NaverMap({ spots, onMarkerClick, selectedSpot, targetLocation, initialCenter }: NaverMapProps) {
+export default function NaverMap({ spots, overlays = [], onMarkerClick, selectedSpot, targetLocation, initialCenter }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
+  const overlaysRef = useRef<Map<string, naver.maps.GroundOverlay>>(new Map());
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
   const hasMovedToInitialCenter = useRef(false);
 
@@ -109,6 +111,41 @@ export default function NaverMap({ spots, onMarkerClick, selectedSpot, targetLoc
     map.setZoom(15);
     map.panTo(position);
   }, [map, targetLocation]);
+
+  // GroundOverlay 렌더링
+  useEffect(() => {
+    if (!isReady || !map) return;
+
+    const currentIds = new Set(overlays.map((o) => o.id));
+    const existingOverlays = overlaysRef.current;
+
+    // 더 이상 없는 오버레이 제거
+    existingOverlays.forEach((groundOverlay, id) => {
+      if (!currentIds.has(id)) {
+        groundOverlay.setMap(null);
+        existingOverlays.delete(id);
+      }
+    });
+
+    // 새로운 오버레이 추가
+    overlays.forEach((overlay) => {
+      if (existingOverlays.has(overlay.id)) return;
+
+      // NW/SE → SW/NE 변환 (LatLngBounds 용)
+      const sw = new naver.maps.LatLng(overlay.se_lat, overlay.nw_lng);
+      const ne = new naver.maps.LatLng(overlay.nw_lat, overlay.se_lng);
+      const bounds = new naver.maps.LatLngBounds(sw, ne);
+
+      const groundOverlay = new naver.maps.GroundOverlay(
+        overlay.image_url,
+        bounds,
+        { opacity: overlay.opacity, clickable: false },
+      );
+
+      groundOverlay.setMap(map);
+      existingOverlays.set(overlay.id, groundOverlay);
+    });
+  }, [isReady, map, overlays]);
 
   return (
     <div ref={containerRef} className="relative h-full w-full">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { openNaverMap } from '@/lib/naver-map-utils';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Spot } from '@/types';
 
 interface BottomSheetProps {
@@ -46,12 +47,15 @@ export default function BottomSheet({ spot, onClose }: BottomSheetProps) {
             <div className="relative h-48 overflow-hidden -mx-4 -mt-4">
               <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none">
                 {spot.photos.map((photo, i) => (
-                  <img
-                    key={i}
-                    src={photo}
-                    alt={`${spot.name} ${i + 1}`}
-                    className="w-full h-48 object-cover flex-shrink-0 snap-center"
-                  />
+                  <div key={i} className="relative w-full h-48 flex-shrink-0 snap-center">
+                    <Image
+                      src={photo}
+                      alt={`${spot.name} ${i + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="100vw"
+                    />
+                  </div>
                 ))}
               </div>
               {spot.photos.length > 1 && (

@@ -18,6 +18,20 @@ export interface Spot {
 export type SpotInsert = Omit<Spot, "id" | "created_at" | "updated_at">;
 export type SpotUpdate = Partial<SpotInsert>;
 
+export interface Overlay {
+  id: string;
+  name: string;
+  image_url: string;
+  nw_lat: number;
+  nw_lng: number;
+  se_lat: number;
+  se_lng: number;
+  opacity: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export const CATEGORIES = [
   "러너스팟",
   "샤워",
