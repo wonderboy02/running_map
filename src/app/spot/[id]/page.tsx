@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { openNaverMap } from '@/lib/naver-map-utils';
+import Image from 'next/image';
 import type { Spot } from '@/types';
 
 export default function SpotDetailPage() {
@@ -85,12 +86,15 @@ export default function SpotDetailPage() {
           // Case A: 러너스팟 + 사진 있음
           <div className="scrollbar-none flex gap-1 overflow-x-auto">
             {spot.photos.map((photo, i) => (
-              <img
-                key={i}
-                src={photo}
-                alt={`${spot.name} 사진 ${i + 1}`}
-                className="h-48 w-auto flex-shrink-0 object-cover"
-              />
+              <div key={i} className="relative h-48 w-72 flex-shrink-0">
+                <Image
+                  src={photo}
+                  alt={`${spot.name} 사진 ${i + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="288px"
+                />
+              </div>
             ))}
           </div>
         ) : isRunnerSpot ? (

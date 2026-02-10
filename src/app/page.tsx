@@ -8,6 +8,7 @@ import BottomSheet from '@/components/BottomSheet';
 import DefaultDrawer from '@/components/DefaultDrawer';
 import FABMenu from '@/components/FABMenu';
 import { useSpots } from '@/hooks/useSpots';
+import { useOverlays } from '@/hooks/useOverlays';
 import type { Spot } from '@/types';
 
 export default function HomePage() {
@@ -17,6 +18,7 @@ export default function HomePage() {
   const [initialCenter, setInitialCenter] = useState<{ lat: number; lng: number } | null>(null);
 
   const { spots } = useSpots();
+  const { overlays } = useOverlays();
 
   // 초기 진입 시 현재 위치로 이동 (핀 없이)
   useEffect(() => {
@@ -62,6 +64,7 @@ export default function HomePage() {
       <div className="relative flex-1">
         <NaverMap
           spots={filteredSpots}
+          overlays={overlays}
           onMarkerClick={setSelectedSpot}
           selectedSpot={selectedSpot}
           targetLocation={targetLocation}

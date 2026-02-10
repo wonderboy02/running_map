@@ -64,6 +64,8 @@ export default function AdminLayout({
     ? '/admin/bulk'
     : pathname.startsWith('/admin/check')
     ? '/admin/check'
+    : pathname.startsWith('/admin/overlays')
+    ? '/admin/overlays'
     : '/admin';
 
   return (
@@ -98,6 +100,9 @@ export default function AdminLayout({
           </TabsTrigger>
           <TabsTrigger value="/admin/check" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
             장소 점검
+          </TabsTrigger>
+          <TabsTrigger value="/admin/overlays" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+            오버레이
           </TabsTrigger>
         </TabsList>
       </Tabs>
