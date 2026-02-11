@@ -122,9 +122,20 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
       zIndex: 200,
     });
 
-    map.setZoom(15);
-    map.panTo(position);
-  }, [map, targetLocation]);
+    // 코스 선택: bounds에 맞춰 자동 줌
+    if (selection?.type === 'course') {
+      const course = selection.data;
+      const bounds = new naver.maps.LatLngBounds(
+        new naver.maps.LatLng(course.se_lat, course.nw_lng),
+        new naver.maps.LatLng(course.nw_lat, course.se_lng),
+      );
+      map.fitBounds(bounds, { padding: 60 });
+    } else {
+      // 스팟/주소: 현재 줌 유지, 너무 멀면 최소 14
+      if (map.getZoom() < 14) map.setZoom(14);
+      map.panTo(position);
+    }
+  }, [map, targetLocation]); // selection은 targetLocation과 동시에 갱신됨
 
   // GroundOverlay 렌더링
   useEffect(() => {
