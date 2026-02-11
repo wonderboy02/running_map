@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { Search, MapPin, Loader2, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useGeocode, type GeocodeResult } from '@/hooks/useGeocode';
 
 interface SearchBarProps {
@@ -52,14 +53,14 @@ export default function SearchBar({ onLocationSelect, onClose }: SearchBarProps)
     <div className="relative flex flex-1 items-center gap-2.5" ref={dropdownRef}>
       <div className="relative flex-1">
         <Search className="text-text-secondary pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2" />
-        <input
+        <Input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => handleInput(e.target.value)}
           onFocus={() => results.length > 0 && setShowResults(true)}
           placeholder="장소명, 주소 검색"
-          className="border-border bg-surface-dim h-9 w-full rounded-full border py-1.5 pl-10 pr-9 text-[clamp(13px,3.5vw,15px)] outline-none focus:border-primary"
+          className="bg-surface-dim h-9 rounded-full py-1.5 pl-10 pr-9 text-[clamp(13px,3.5vw,15px)]"
         />
         {loading && (
           <Loader2 className="text-text-secondary absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin" />

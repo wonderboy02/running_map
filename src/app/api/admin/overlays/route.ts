@@ -1,51 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import sharp from 'sharp';
 import { withAuth } from '@/lib/auth/withAuth';
 import { supabaseServer } from '@/lib/supabase/server';
+import { validateImageFile, convertAndUpload, removeFromStorage } from '@/lib/image-upload';
 
-const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-function validateImageFile(file: File): string | null {
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-    return `허용되지 않는 파일 형식입니다. (${ALLOWED_MIME_TYPES.join(', ')})`;
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    return `파일 크기가 10MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(1)}MB)`;
-  }
-  return null;
-}
-
-/** 이미지를 WebP로 변환 후 Storage에 업로드하고 Public URL 반환 */
-async function convertAndUpload(imageFile: File): Promise<string> {
-  const arrayBuffer = await imageFile.arrayBuffer();
-  let webpBuffer: Buffer;
-  try {
-    webpBuffer = await sharp(Buffer.from(arrayBuffer))
-      .webp({ quality: 85 })
-      .toBuffer();
-  } catch {
-    throw new Error('이미지 변환에 실패했습니다. 유효한 이미지 파일인지 확인해주세요.');
-  }
-
-  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
-
-  const { error } = await supabaseServer.storage
-    .from('overlays')
-    .upload(fileName, webpBuffer, {
-      contentType: 'image/webp',
-      cacheControl: '31536000',
-      upsert: false,
-    });
-
-  if (error) throw error;
-
-  const { data: urlData } = supabaseServer.storage
-    .from('overlays')
-    .getPublicUrl(fileName);
-
-  return urlData.publicUrl;
-}
+const OVERLAY_UPLOAD = { bucket: 'overlays' } as const;
 
 // GET: 전체 오버레이 목록
 export const GET = withAuth(async () => {
@@ -85,6 +43,11 @@ export const POST = withAuth(async (request: NextRequest) => {
     const opacity = parseFloat(formData.get('opacity') as string) || 1.0;
     const is_active = formData.get('is_active') === 'true';
     const imageFile = formData.get('image') as File | null;
+    const description = formData.get('description') as string | null;
+    const difficulty_str = formData.get('difficulty') as string | null;
+    const distance_km_str = formData.get('distance_km') as string | null;
+    const pin_lat_str = formData.get('pin_lat') as string | null;
+    const pin_lng_str = formData.get('pin_lng') as string | null;
 
     if (!name || !imageFile) {
       return NextResponse.json(
@@ -108,7 +71,7 @@ export const POST = withAuth(async (request: NextRequest) => {
       );
     }
 
-    const image_url = await convertAndUpload(imageFile).catch((err) => {
+    const image_url = await convertAndUpload(imageFile, OVERLAY_UPLOAD).catch((err) => {
       console.error('[Overlays POST] Upload error:', err);
       return null;
     });
@@ -120,18 +83,25 @@ export const POST = withAuth(async (request: NextRequest) => {
       );
     }
 
+    const insertData: Record<string, unknown> = {
+      name,
+      image_url,
+      nw_lat,
+      nw_lng,
+      se_lat,
+      se_lng,
+      opacity: Math.min(1, Math.max(0, opacity)),
+      is_active,
+    };
+    if (description) insertData.description = description;
+    if (difficulty_str) insertData.difficulty = parseInt(difficulty_str, 10);
+    if (distance_km_str) insertData.distance_km = parseFloat(distance_km_str);
+    if (pin_lat_str) insertData.pin_lat = parseFloat(pin_lat_str);
+    if (pin_lng_str) insertData.pin_lng = parseFloat(pin_lng_str);
+
     const { data, error } = await supabaseServer
       .from('overlays')
-      .insert({
-        name,
-        image_url,
-        nw_lat,
-        nw_lng,
-        se_lat,
-        se_lng,
-        opacity: Math.min(1, Math.max(0, opacity)),
-        is_active,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -212,6 +182,21 @@ export const PATCH = withAuth(async (request: NextRequest) => {
     const is_active_str = formData.get('is_active') as string | null;
     if (is_active_str !== null) updates.is_active = is_active_str === 'true';
 
+    const description = formData.get('description') as string | null;
+    if (description !== null) updates.description = description || null;
+
+    const difficulty_str = formData.get('difficulty') as string | null;
+    if (difficulty_str !== null) updates.difficulty = difficulty_str ? parseInt(difficulty_str, 10) : null;
+
+    const distance_km_str = formData.get('distance_km') as string | null;
+    if (distance_km_str !== null) updates.distance_km = distance_km_str ? parseFloat(distance_km_str) : null;
+
+    const pin_lat_str = formData.get('pin_lat') as string | null;
+    if (pin_lat_str !== null) updates.pin_lat = pin_lat_str ? parseFloat(pin_lat_str) : null;
+
+    const pin_lng_str = formData.get('pin_lng') as string | null;
+    if (pin_lng_str !== null) updates.pin_lng = pin_lng_str ? parseFloat(pin_lng_str) : null;
+
     // 새 이미지가 있으면 WebP 변환 후 교체
     const imageFile = formData.get('image') as File | null;
     if (imageFile && imageFile.size > 0) {
@@ -230,13 +215,10 @@ export const PATCH = withAuth(async (request: NextRequest) => {
         .single();
 
       if (existing?.image_url) {
-        const oldFileName = existing.image_url.split('/').pop();
-        if (oldFileName) {
-          await supabaseServer.storage.from('overlays').remove([oldFileName]);
-        }
+        await removeFromStorage('overlays', [existing.image_url]);
       }
 
-      const image_url = await convertAndUpload(imageFile).catch((err) => {
+      const image_url = await convertAndUpload(imageFile, OVERLAY_UPLOAD).catch((err) => {
         console.error('[Overlays PATCH] Upload error:', err);
         return null;
       });
@@ -296,10 +278,7 @@ export const DELETE = withAuth(async (request: NextRequest) => {
 
     // Storage에서 이미지 삭제
     if (existing?.image_url) {
-      const fileName = existing.image_url.split('/').pop();
-      if (fileName) {
-        await supabaseServer.storage.from('overlays').remove([fileName]);
-      }
+      await removeFromStorage('overlays', [existing.image_url]);
     }
 
     // DB에서 삭제

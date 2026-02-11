@@ -18,8 +18,8 @@ export function useNaverMap(
   const [isReady, setIsReady] = useState(false);
 
   const {
-    center = { lat: 37.5665, lng: 126.978 },
-    zoom = 16,
+    center = { lat: 37.5247, lng: 126.9244 },
+    zoom = 13,
     tileTransition = true,
     scaleControl = false,
   } = options;

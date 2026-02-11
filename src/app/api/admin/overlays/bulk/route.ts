@@ -1,57 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import sharp from 'sharp';
 import { withAuth } from '@/lib/auth/withAuth';
 import { supabaseServer } from '@/lib/supabase/server';
+import { validateImageFile, convertAndUpload } from '@/lib/image-upload';
 
-const ALLOWED_MIME_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'image/gif',
-];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-function validateImageFile(file: File): string | null {
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-    return `허용되지 않는 파일 형식입니다. (${ALLOWED_MIME_TYPES.join(', ')})`;
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    return `파일 크기가 10MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(1)}MB)`;
-  }
-  return null;
-}
-
-async function convertAndUpload(imageFile: File): Promise<string> {
-  const arrayBuffer = await imageFile.arrayBuffer();
-  let webpBuffer: Buffer;
-  try {
-    webpBuffer = await sharp(Buffer.from(arrayBuffer))
-      .webp({ quality: 85 })
-      .toBuffer();
-  } catch {
-    throw new Error(
-      '이미지 변환에 실패했습니다. 유효한 이미지 파일인지 확인해주세요.',
-    );
-  }
-
-  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
-
-  const { error } = await supabaseServer.storage
-    .from('overlays')
-    .upload(fileName, webpBuffer, {
-      contentType: 'image/webp',
-      cacheControl: '31536000',
-      upsert: false,
-    });
-
-  if (error) throw error;
-
-  const { data: urlData } = supabaseServer.storage
-    .from('overlays')
-    .getPublicUrl(fileName);
-
-  return urlData.publicUrl;
-}
+const OVERLAY_UPLOAD = { bucket: 'overlays' } as const;
 
 interface BulkOverlayMeta {
   name: string;
@@ -128,7 +80,7 @@ export const POST = withAuth(async (request: NextRequest) => {
       }
 
       try {
-        const image_url = await convertAndUpload(imageFile);
+        const image_url = await convertAndUpload(imageFile, OVERLAY_UPLOAD);
 
         const { data, error } = await supabaseServer
           .from('overlays')

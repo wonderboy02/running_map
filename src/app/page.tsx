@@ -1,24 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import NaverMap from '@/components/Map/NaverMap';
 import Header from '@/components/Header';
 import FilterChips from '@/components/FilterChips';
-import BottomSheet from '@/components/BottomSheet';
-import DefaultDrawer from '@/components/DefaultDrawer';
-import FABMenu from '@/components/FABMenu';
+import BottomDrawer from '@/components/BottomDrawer';
+import FloatingControls from '@/components/FloatingControls';
 import { useSpots } from '@/hooks/useSpots';
 import { useOverlays } from '@/hooks/useOverlays';
-import type { Spot } from '@/types';
+import type { Spot, Overlay, DrawerSelection } from '@/types';
 
 export default function HomePage() {
   const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']); // 기본 선택
-  const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
+  const [selection, setSelection] = useState<DrawerSelection | null>(null);
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [initialCenter, setInitialCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [naverMap, setNaverMap] = useState<naver.maps.Map | null>(null);
+  const [showOverlays, setShowOverlays] = useState(true);
 
   const { spots } = useSpots();
   const { overlays } = useOverlays();
+
+  const handleMapReady = useCallback((map: naver.maps.Map) => {
+    setNaverMap(map);
+  }, []);
 
   // 초기 진입 시 현재 위치로 이동 (핀 없이)
   useEffect(() => {
@@ -50,9 +55,21 @@ export default function HomePage() {
     );
   };
 
-  function handleLocationSelect(lat: number, lng: number) {
+  const handleLocationSelect = useCallback((lat: number, lng: number) => {
     setTargetLocation({ lat, lng });
-  }
+  }, []);
+
+  const handleMarkerClick = useCallback((spot: Spot) => {
+    setSelection({ type: 'spot', data: spot });
+  }, []);
+
+  const handleOverlayPinClick = useCallback((overlay: Overlay) => {
+    setSelection({ type: 'overlay', data: overlay });
+  }, []);
+
+  const handleDeselect = useCallback(() => {
+    setSelection(null);
+  }, []);
 
   return (
     <div className="relative flex h-dvh flex-col">
@@ -64,27 +81,28 @@ export default function HomePage() {
       <div className="relative flex-1">
         <NaverMap
           spots={filteredSpots}
-          overlays={overlays}
-          onMarkerClick={setSelectedSpot}
-          selectedSpot={selectedSpot}
+          overlays={showOverlays ? overlays : []}
+          onMarkerClick={handleMarkerClick}
+          onOverlayPinClick={handleOverlayPinClick}
+          selection={selection}
           targetLocation={targetLocation}
           initialCenter={initialCenter}
+          onMapReady={handleMapReady}
         />
-        <FABMenu />
       </div>
 
-      {/* 장소 선택 시: BottomSheet, 기본 상태: DefaultDrawer */}
-      {selectedSpot ? (
-        <BottomSheet
-          spot={selectedSpot}
-          onClose={() => setSelectedSpot(null)}
-        />
-      ) : (
-        <DefaultDrawer
-          spots={filteredSpots}
-          onSpotClick={setSelectedSpot}
-        />
-      )}
+      <FloatingControls
+        map={naverMap}
+        showOverlays={showOverlays}
+        onToggleOverlays={setShowOverlays}
+      />
+
+      <BottomDrawer
+        spots={filteredSpots}
+        selection={selection}
+        onSpotClick={handleMarkerClick}
+        onDeselect={handleDeselect}
+      />
     </div>
   );
 }

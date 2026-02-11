@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -40,10 +41,15 @@ import type { Overlay } from '@/types';
 
 interface OverlayForm {
   name: string;
+  description: string;
+  difficulty: number | '';
+  distance_km: number | '';
   nw_lat: number;
   nw_lng: number;
   se_lat: number;
   se_lng: number;
+  pin_lat: number;
+  pin_lng: number;
   opacity: number;
   is_active: boolean;
   image: File | null;
@@ -51,10 +57,15 @@ interface OverlayForm {
 
 const EMPTY_FORM: OverlayForm = {
   name: '',
+  description: '',
+  difficulty: '',
+  distance_km: '',
   nw_lat: 0,
   nw_lng: 0,
   se_lat: 0,
   se_lng: 0,
+  pin_lat: 0,
+  pin_lng: 0,
   opacity: 1.0,
   is_active: true,
   image: null,
@@ -648,10 +659,15 @@ export default function AdminOverlaysPage() {
     setEditingOverlay(overlay);
     setForm({
       name: overlay.name,
+      description: overlay.description || '',
+      difficulty: overlay.difficulty ?? '',
+      distance_km: overlay.distance_km ?? '',
       nw_lat: overlay.nw_lat,
       nw_lng: overlay.nw_lng,
       se_lat: overlay.se_lat,
       se_lng: overlay.se_lng,
+      pin_lat: overlay.pin_lat || 0,
+      pin_lng: overlay.pin_lng || 0,
       opacity: overlay.opacity,
       is_active: overlay.is_active,
       image: null,
@@ -700,6 +716,11 @@ export default function AdminOverlaysPage() {
     formData.append('se_lng', String(form.se_lng));
     formData.append('opacity', String(form.opacity));
     formData.append('is_active', String(form.is_active));
+    if (form.description) formData.append('description', form.description);
+    if (form.difficulty !== '') formData.append('difficulty', String(form.difficulty));
+    if (form.distance_km !== '') formData.append('distance_km', String(form.distance_km));
+    if (form.pin_lat) formData.append('pin_lat', String(form.pin_lat));
+    if (form.pin_lng) formData.append('pin_lng', String(form.pin_lng));
     if (form.image) {
       formData.append('image', form.image);
     }
@@ -843,6 +864,13 @@ export default function AdminOverlaysPage() {
                     {overlay.is_active ? '활성' : '비활성'}
                   </span>
                 </div>
+                {(overlay.distance_km || overlay.difficulty) && (
+                  <p className="text-text-secondary mt-0.5 text-xs">
+                    {overlay.distance_km && `${overlay.distance_km}km`}
+                    {overlay.distance_km && overlay.difficulty && ' · '}
+                    {overlay.difficulty && `난이도 ${overlay.difficulty}/10`}
+                  </p>
+                )}
                 <p className="text-text-secondary mt-0.5 text-xs">
                   NW({overlay.nw_lat.toFixed(4)}, {overlay.nw_lng.toFixed(4)}) →
                   SE({overlay.se_lat.toFixed(4)}, {overlay.se_lng.toFixed(4)})
@@ -903,6 +931,63 @@ export default function AdminOverlaysPage() {
                 required
               />
             </div>
+
+            {/* 설명 */}
+            <div className="space-y-1.5">
+              <Label>설명</Label>
+              <Textarea
+                value={form.description}
+                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="예: 한강 반포대교~잠수교 왕복 코스"
+                rows={2}
+              />
+            </div>
+
+            {/* 거리 & 난이도 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>거리 (km)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={form.distance_km}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      distance_km: e.target.value ? parseFloat(e.target.value) : '',
+                    }))
+                  }
+                  placeholder="예: 5.2"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>난이도 (1~10)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={form.difficulty}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      difficulty: e.target.value ? parseInt(e.target.value, 10) : '',
+                    }))
+                  }
+                  placeholder="1~10"
+                />
+              </div>
+            </div>
+
+            {/* 코스 대표 핀 좌표 */}
+            <CoordSearchInput
+              label="코스 대표 핀 좌표"
+              lat={form.pin_lat}
+              lng={form.pin_lng}
+              onCoordsChange={(lat, lng) =>
+                setForm((prev) => ({ ...prev, pin_lat: lat, pin_lng: lng }))
+              }
+            />
 
             {/* 이미지 업로드 */}
             <div className="space-y-1.5">

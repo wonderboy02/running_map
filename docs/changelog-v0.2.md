@@ -1,5 +1,45 @@
 # Changelog v0.2 — shadcn/ui 통합 & 기능 추가
 
+## 변경 일자: 2026-02-11 (BottomDrawer 리팩토링)
+
+### BottomDrawer 통합 리팩토링
+
+기존 `BottomSheet`(스팟 선택 시)와 `DefaultDrawer`(기본 상태)를 하나의 `BottomDrawer` 컴포넌트로 통합.
+
+**문제점:**
+- 두 개의 Sheet 컴포넌트가 조건부 마운트/언마운트를 반복 → 부드럽지 않은 전환 UX
+- 바깥 클릭 시 Sheet가 완전히 닫히는 문제
+- Snap point 불일치 (BottomSheet: 없음, DefaultDrawer: [0, 0.12, 1])
+
+**해결:**
+- 하나의 Sheet 인스턴스에서 콘텐츠만 교체
+- DOM 측정 기반 4단계 snap point: peek(bar만) → title → content → full (내부 배열은 `[0, peekPx, titlePx, contentPx, maxHeight]`, index 0은 도달 불가)
+- `disableDismiss={true}`로 닫기 방지 (최소 title snap 유지)
+
+### 새 파일
+
+| 파일 | 설명 |
+|------|------|
+| `src/components/BottomDrawer/index.tsx` | 통합 Sheet + snap 관리 + 콘텐츠 스위칭 |
+| `src/components/BottomDrawer/useSnapPoints.ts` | DOM 측정 → snap point 계산 훅 |
+| `src/components/BottomDrawer/DrawerSpotDetail.tsx` | 스팟 상세 콘텐츠 (BottomSheet.tsx에서 추출) |
+| `src/components/BottomDrawer/DrawerSpotList.tsx` | 스팟 목록 콘텐츠 (DefaultDrawer.tsx에서 추출) |
+
+### 삭제된 파일
+
+| 파일 | 설명 |
+|------|------|
+| `src/components/BottomSheet.tsx` | → `DrawerSpotDetail.tsx`로 대체 |
+| `src/components/DefaultDrawer.tsx` | → `DrawerSpotList.tsx`로 대체 |
+
+### 수정된 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `src/app/page.tsx` | `BottomSheet`/`DefaultDrawer` 조건부 렌더링 → 단일 `BottomDrawer` 컴포넌트 |
+
+---
+
 ## 변경 일자: 2026-02-02
 
 ---
