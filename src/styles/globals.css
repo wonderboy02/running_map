@@ -182,31 +182,21 @@ body {
   display: none;
 }
 
-/* 검색 콘텐츠 패널 — 헤더 아래에서 drop-down */
+/* 검색 콘텐츠 패널 — 부드러운 fade */
 .search-panel-enter {
-  animation: search-panel-in 320ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
-  will-change: clip-path;
+  animation: search-panel-in 200ms ease-out forwards;
 }
 
 .search-panel-exit {
-  animation: search-panel-out 250ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
-  will-change: clip-path;
+  animation: search-panel-out 150ms ease-in forwards;
 }
 
 @keyframes search-panel-in {
-  from {
-    clip-path: inset(0 0 100% 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes search-panel-out {
-  from {
-    clip-path: inset(0 0 0 0);
-  }
-  to {
-    clip-path: inset(0 0 100% 0);
-  }
+  from { opacity: 1; }
+  to { opacity: 0; }
 }

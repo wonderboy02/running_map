@@ -21,6 +21,7 @@ export default function HomePage() {
 
   // 검색 상태
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [isSearchClosing, setIsSearchClosing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const { spots } = useSpots();
@@ -57,11 +58,17 @@ export default function HomePage() {
     );
   };
 
-  // 검색 dismiss 헬퍼
-  function dismissSearch() {
+  // 검색 닫기 (exit 애니메이션 트리거)
+  const requestCloseSearch = useCallback(() => {
+    setIsSearchClosing(true);
+  }, []);
+
+  // exit 애니메이션 완료 후 상태 초기화
+  const onSearchCloseComplete = useCallback(() => {
+    setIsSearchClosing(false);
     setIsSearchActive(false);
     setSearchQuery('');
-  }
+  }, []);
 
   function handleSearchCourseSelect(course: Course) {
     const lat = (course.nw_lat + course.se_lat) / 2;
@@ -96,6 +103,9 @@ export default function HomePage() {
       <Header
         isSearchActive={isSearchActive}
         onSearchActivate={() => setIsSearchActive(true)}
+        onSearchClose={requestCloseSearch}
+        query={searchQuery}
+        onQueryChange={setSearchQuery}
       />
       <FilterChips activeFilters={activeFilters} onToggle={handleFilterToggle} />
       <div className="relative flex-1">
@@ -124,12 +134,14 @@ export default function HomePage() {
         onDeselect={handleDeselect}
       />
 
-      {/* 풀스크린 검색 오버레이 */}
+      {/* 검색 콘텐츠 패널 (헤더 아래) */}
       <SearchOverlay
         isOpen={isSearchActive}
+        isClosing={isSearchClosing}
+        onCloseComplete={onSearchCloseComplete}
+        onRequestClose={requestCloseSearch}
         query={searchQuery}
         onQueryChange={setSearchQuery}
-        onClose={dismissSearch}
         spots={spots}
         courses={courses}
         onCourseSelect={handleSearchCourseSelect}

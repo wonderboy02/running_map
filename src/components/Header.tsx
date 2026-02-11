@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import { Search, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface HeaderProps {
   isSearchActive: boolean;
@@ -27,10 +27,9 @@ export default function Header({
     }
   }, [isSearchActive]);
 
-  const handleClear = useCallback(() => {
-    onQueryChange('');
-    inputRef.current?.focus();
-  }, [onQueryChange]);
+  const handleXClick = useCallback(() => {
+    onSearchClose();
+  }, [onSearchClose]);
 
   return (
     <header
@@ -52,7 +51,6 @@ export default function Header({
 
         {/* 검색바 — 동일한 input 엘리먼트가 비활성/활성 전환 */}
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
           <input
             ref={inputRef}
             type="text"
@@ -62,37 +60,21 @@ export default function Header({
               if (!isSearchActive) onSearchActivate();
             }}
             placeholder="장소, 코스 검색"
-            className={`w-full h-9 pl-10 rounded-full border text-[clamp(13px,3.5vw,15px)] outline-none transition-colors duration-200 ${
+            className={`w-full h-9 px-4 rounded-full border text-[clamp(13px,3.5vw,15px)] outline-none transition-colors duration-200 ${
               isSearchActive
                 ? 'pr-9 border-primary bg-surface-dim'
-                : 'pr-3.5 border-border bg-surface/95 backdrop-blur-sm'
+                : 'border-border bg-surface/95 backdrop-blur-sm'
             }`}
           />
-          {isSearchActive && query && (
+          {isSearchActive && (
             <button
               type="button"
-              onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5"
+              onClick={handleXClick}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-text-secondary hover:bg-black/5 active:bg-black/10"
             >
-              <X className="w-4 h-4 text-text-secondary" />
+              <X className="w-4 h-4" />
             </button>
           )}
-        </div>
-
-        {/* 취소 버튼: 검색 활성화 시 등장 */}
-        <div
-          className={`flex-shrink-0 transition-all duration-300 ease-out overflow-hidden ${
-            isSearchActive
-              ? 'max-w-[60px] opacity-100'
-              : 'max-w-0 opacity-0'
-          }`}
-        >
-          <button
-            onClick={onSearchClose}
-            className="text-text-secondary text-[clamp(13px,3.5vw,15px)] min-w-[40px] min-h-[40px] flex items-center justify-center whitespace-nowrap"
-          >
-            취소
-          </button>
         </div>
       </div>
     </header>
