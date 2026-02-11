@@ -41,7 +41,7 @@ export default function BottomDrawer({
     return () => cancelAnimationFrame(raf);
   }, [mounted, recalculate]);
 
-  // selectedSpot 변경 시: 콘텐츠 전환 → snap point 재계산 예약
+  // selection 변경 시: 콘텐츠 전환 → snap point 재계산 예약
   const pendingSnapRef = useRef<number | null>(null);
   const isFirstRender = useRef(true);
 

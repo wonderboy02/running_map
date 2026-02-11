@@ -181,3 +181,34 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* 검색 오버레이 애니메이션 */
+.search-overlay-enter {
+  animation: search-overlay-in 250ms ease-out forwards;
+}
+
+.search-overlay-exit {
+  animation: search-overlay-out 200ms ease-in forwards;
+}
+
+@keyframes search-overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes search-overlay-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}

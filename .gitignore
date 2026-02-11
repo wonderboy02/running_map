@@ -46,3 +46,6 @@ next-env.d.ts
 
 *temp.txt
 
+# 일회성 구현 명세서
+SEARCH_IMPLEMENTATION.md
+
