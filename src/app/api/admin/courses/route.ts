@@ -3,13 +3,13 @@ import { withAuth } from '@/lib/auth/withAuth';
 import { supabaseServer } from '@/lib/supabase/server';
 import { validateImageFile, convertAndUpload, removeFromStorage } from '@/lib/image-upload';
 
-const OVERLAY_UPLOAD = { bucket: 'overlays' } as const;
+const COURSE_UPLOAD = { bucket: 'courses' } as const;
 
-// GET: 전체 오버레이 목록
+// GET: 전체 코스 목록
 export const GET = withAuth(async () => {
   try {
     const { data, error } = await supabaseServer
-      .from('overlays')
+      .from('courses')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -22,7 +22,7 @@ export const GET = withAuth(async () => {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('[Overlays GET] Error:', error);
+    console.error('[Courses GET] Error:', error);
     return NextResponse.json(
       { success: false, error: '서버 오류가 발생했습니다.' },
       { status: 500 },
@@ -30,7 +30,7 @@ export const GET = withAuth(async () => {
   }
 });
 
-// POST: 새 오버레이 생성 (이미지 WebP 변환 후 업로드)
+// POST: 새 코스 생성 (이미지 WebP 변환 후 업로드)
 export const POST = withAuth(async (request: NextRequest) => {
   try {
     const formData = await request.formData();
@@ -71,8 +71,8 @@ export const POST = withAuth(async (request: NextRequest) => {
       );
     }
 
-    const image_url = await convertAndUpload(imageFile, OVERLAY_UPLOAD).catch((err) => {
-      console.error('[Overlays POST] Upload error:', err);
+    const image_url = await convertAndUpload(imageFile, COURSE_UPLOAD).catch((err) => {
+      console.error('[Courses POST] Upload error:', err);
       return null;
     });
 
@@ -100,13 +100,13 @@ export const POST = withAuth(async (request: NextRequest) => {
     if (pin_lng_str) insertData.pin_lng = parseFloat(pin_lng_str);
 
     const { data, error } = await supabaseServer
-      .from('overlays')
+      .from('courses')
       .insert(insertData)
       .select()
       .single();
 
     if (error) {
-      console.error('[Overlays POST] DB error:', error);
+      console.error('[Courses POST] DB error:', error);
       return NextResponse.json(
         { success: false, error: 'DB 저장에 실패했습니다.' },
         { status: 500 },
@@ -115,7 +115,7 @@ export const POST = withAuth(async (request: NextRequest) => {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('[Overlays POST] Error:', error);
+    console.error('[Courses POST] Error:', error);
     return NextResponse.json(
       { success: false, error: '서버 오류가 발생했습니다.' },
       { status: 500 },
@@ -123,7 +123,7 @@ export const POST = withAuth(async (request: NextRequest) => {
   }
 });
 
-// PATCH: 오버레이 수정 / is_active 토글
+// PATCH: 코스 수정 / is_active 토글
 export const PATCH = withAuth(async (request: NextRequest) => {
   try {
     const formData = await request.formData();
@@ -141,7 +141,7 @@ export const PATCH = withAuth(async (request: NextRequest) => {
     if (toggleOnly !== null) {
       const is_active = toggleOnly === 'true';
       const { data, error } = await supabaseServer
-        .from('overlays')
+        .from('courses')
         .update({ is_active })
         .eq('id', id)
         .select()
@@ -209,17 +209,17 @@ export const PATCH = withAuth(async (request: NextRequest) => {
       }
       // 기존 이미지 삭제
       const { data: existing } = await supabaseServer
-        .from('overlays')
+        .from('courses')
         .select('image_url')
         .eq('id', id)
         .single();
 
       if (existing?.image_url) {
-        await removeFromStorage('overlays', [existing.image_url]);
+        await removeFromStorage('courses', [existing.image_url]);
       }
 
-      const image_url = await convertAndUpload(imageFile, OVERLAY_UPLOAD).catch((err) => {
-        console.error('[Overlays PATCH] Upload error:', err);
+      const image_url = await convertAndUpload(imageFile, COURSE_UPLOAD).catch((err) => {
+        console.error('[Courses PATCH] Upload error:', err);
         return null;
       });
 
@@ -234,7 +234,7 @@ export const PATCH = withAuth(async (request: NextRequest) => {
     }
 
     const { data, error } = await supabaseServer
-      .from('overlays')
+      .from('courses')
       .update(updates)
       .eq('id', id)
       .select()
@@ -249,7 +249,7 @@ export const PATCH = withAuth(async (request: NextRequest) => {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('[Overlays PATCH] Error:', error);
+    console.error('[Courses PATCH] Error:', error);
     return NextResponse.json(
       { success: false, error: '서버 오류가 발생했습니다.' },
       { status: 500 },
@@ -257,7 +257,7 @@ export const PATCH = withAuth(async (request: NextRequest) => {
   }
 });
 
-// DELETE: 오버레이 삭제 + Storage 파일 삭제
+// DELETE: 코스 삭제 + Storage 파일 삭제
 export const DELETE = withAuth(async (request: NextRequest) => {
   try {
     const { id }: { id: string } = await request.json();
@@ -271,19 +271,19 @@ export const DELETE = withAuth(async (request: NextRequest) => {
 
     // 기존 이미지 URL 가져오기
     const { data: existing } = await supabaseServer
-      .from('overlays')
+      .from('courses')
       .select('image_url')
       .eq('id', id)
       .single();
 
     // Storage에서 이미지 삭제
     if (existing?.image_url) {
-      await removeFromStorage('overlays', [existing.image_url]);
+      await removeFromStorage('courses', [existing.image_url]);
     }
 
     // DB에서 삭제
     const { error } = await supabaseServer
-      .from('overlays')
+      .from('courses')
       .delete()
       .eq('id', id);
 
@@ -296,7 +296,7 @@ export const DELETE = withAuth(async (request: NextRequest) => {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[Overlays DELETE] Error:', error);
+    console.error('[Courses DELETE] Error:', error);
     return NextResponse.json(
       { success: false, error: '서버 오류가 발생했습니다.' },
       { status: 500 },

@@ -79,7 +79,7 @@ export default function DrawerSpotDetail({
         )}
 
         {/* Spot Name & Address */}
-        <div className="px-4 pt-3 pb-2 pr-12">
+        <div className="px-4 pt-3 pb-4 pr-12">
           <div className="flex items-start justify-between gap-3 mb-2">
             <h2 className="text-[clamp(18px,5vw,22px)] font-bold text-gray-900 leading-tight tracking-tight">
               {spot.name}

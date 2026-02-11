@@ -70,7 +70,7 @@ export default function DrawerSpotList({
   return (
     <>
       {/* === titleRef: snap 1 경계 === */}
-      <div ref={titleRef} className="px-4 pb-2">
+      <div ref={titleRef} className="px-4 pb-4">
         <div className="flex items-center gap-2.5">
           <div className="p-2 bg-blue-50 rounded-lg">
             <MapPin className="w-5 h-5 text-blue-600" />

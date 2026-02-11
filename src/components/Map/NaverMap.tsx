@@ -2,26 +2,26 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
-import { getMarkerIcon, getOverlayPinIcon } from '@/lib/marker-config';
-import type { Spot, Overlay, DrawerSelection } from '@/types';
+import { getMarkerIcon, getCoursePinIcon } from '@/lib/marker-config';
+import type { Spot, Course, DrawerSelection } from '@/types';
 
 interface NaverMapProps {
   spots: Spot[];
-  overlays?: Overlay[];
+  courses?: Course[];
   onMarkerClick: (spot: Spot) => void;
-  onOverlayPinClick: (overlay: Overlay) => void;
+  onCoursePinClick: (course: Course) => void;
   selection: DrawerSelection | null;
   targetLocation: { lat: number; lng: number } | null;
   initialCenter: { lat: number; lng: number } | null;
   onMapReady?: (map: naver.maps.Map) => void;
 }
 
-export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverlayPinClick, selection, targetLocation, initialCenter, onMapReady }: NaverMapProps) {
+export default function NaverMap({ spots, courses = [], onMarkerClick, onCoursePinClick, selection, targetLocation, initialCenter, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
-  const overlaysRef = useRef<Map<string, naver.maps.GroundOverlay>>(new Map());
-  const overlayPinsRef = useRef<Map<string, naver.maps.Marker>>(new Map());
+  const groundOverlaysRef = useRef<Map<string, naver.maps.GroundOverlay>>(new Map());
+  const coursePinsRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
   const hasMovedToInitialCenter = useRef(false);
 
@@ -81,7 +81,7 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
     if (!map || !selection) return;
     if (selection.type === 'spot') {
       map.panTo(new naver.maps.LatLng(selection.data.latitude, selection.data.longitude));
-    } else if (selection.type === 'overlay' && selection.data.pin_lat && selection.data.pin_lng) {
+    } else if (selection.type === 'course' && selection.data.pin_lat && selection.data.pin_lng) {
       map.panTo(new naver.maps.LatLng(selection.data.pin_lat, selection.data.pin_lng));
     }
   }, [map, selection]);
@@ -130,10 +130,10 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
   useEffect(() => {
     if (!isReady || !map) return;
 
-    const currentIds = new Set(overlays.map((o) => o.id));
-    const existingOverlays = overlaysRef.current;
+    const currentIds = new Set(courses.map((o) => o.id));
+    const existingOverlays = groundOverlaysRef.current;
 
-    // 더 이상 없는 오버레이 제거
+    // 더 이상 없는 GroundOverlay 제거
     existingOverlays.forEach((groundOverlay, id) => {
       if (!currentIds.has(id)) {
         groundOverlay.setMap(null);
@@ -141,17 +141,17 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
       }
     });
 
-    // 새로운 오버레이 추가
-    overlays.forEach((overlay) => {
-      if (existingOverlays.has(overlay.id)) return;
+    // 새로운 코스 오버레이 추가
+    courses.forEach((course) => {
+      if (existingOverlays.has(course.id)) return;
 
       // NW/SE → SW/NE 변환 (LatLngBounds 용)
-      const sw = new naver.maps.LatLng(overlay.se_lat, overlay.nw_lng);
-      const ne = new naver.maps.LatLng(overlay.nw_lat, overlay.se_lng);
+      const sw = new naver.maps.LatLng(course.se_lat, course.nw_lng);
+      const ne = new naver.maps.LatLng(course.nw_lat, course.se_lng);
       const bounds = new naver.maps.LatLngBounds(sw, ne);
 
       // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
-      const imageUrl = overlay.image_url.replace(
+      const imageUrl = course.image_url.replace(
         /https:\/\/[^/]+\/storage\/v1\/object\/public/,
         '/storage',
       );
@@ -159,21 +159,21 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
       const groundOverlay = new naver.maps.GroundOverlay(
         imageUrl,
         bounds,
-        { opacity: overlay.opacity, clickable: false },
+        { opacity: course.opacity, clickable: false },
       );
 
       groundOverlay.setMap(map);
-      existingOverlays.set(overlay.id, groundOverlay);
+      existingOverlays.set(course.id, groundOverlay);
     });
-  }, [isReady, map, overlays]);
+  }, [isReady, map, courses]);
 
-  // 오버레이 핀 마커 렌더링
+  // 코스 핀 마커 렌더링
   useEffect(() => {
     if (!isReady || !map) return;
 
-    const overlaysWithPin = overlays.filter((o) => o.pin_lat != null && o.pin_lng != null);
-    const currentIds = new Set(overlaysWithPin.map((o) => o.id));
-    const existingPins = overlayPinsRef.current;
+    const coursesWithPin = courses.filter((o) => o.pin_lat != null && o.pin_lng != null);
+    const currentIds = new Set(coursesWithPin.map((o) => o.id));
+    const existingPins = coursePinsRef.current;
 
     // 더 이상 없는 핀 제거
     existingPins.forEach((marker, id) => {
@@ -184,23 +184,23 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
     });
 
     // 새로운 핀 추가
-    overlaysWithPin.forEach((overlay) => {
-      if (existingPins.has(overlay.id)) return;
+    coursesWithPin.forEach((course) => {
+      if (existingPins.has(course.id)) return;
 
       const marker = new naver.maps.Marker({
-        position: new naver.maps.LatLng(overlay.pin_lat!, overlay.pin_lng!),
+        position: new naver.maps.LatLng(course.pin_lat!, course.pin_lng!),
         map,
-        icon: getOverlayPinIcon(),
+        icon: getCoursePinIcon(),
         zIndex: 50,
       });
 
       naver.maps.Event.addListener(marker, 'click', () => {
-        onOverlayPinClick(overlay);
+        onCoursePinClick(course);
       });
 
-      existingPins.set(overlay.id, marker);
+      existingPins.set(course.id, marker);
     });
-  }, [isReady, map, overlays, onOverlayPinClick]);
+  }, [isReady, map, courses, onCoursePinClick]);
 
   return (
     <div ref={containerRef} className="relative z-0 h-full w-full">

@@ -20,7 +20,7 @@ export interface Spot {
 export type SpotInsert = Omit<Spot, "id" | "created_at" | "updated_at">;
 export type SpotUpdate = Partial<SpotInsert>;
 
-export interface Overlay {
+export interface Course {
   id: string;
   name: string;
   image_url: string;
@@ -41,7 +41,7 @@ export interface Overlay {
 
 export type DrawerSelection =
   | { type: 'spot'; data: Spot }
-  | { type: 'overlay'; data: Overlay };
+  | { type: 'course'; data: Course };
 
 export type Feedback = Database['public']['Tables']['feedback']['Row'];
 

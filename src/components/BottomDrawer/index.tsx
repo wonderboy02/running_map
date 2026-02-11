@@ -5,7 +5,7 @@ import { Sheet, SheetRef } from 'react-modal-sheet';
 import { useSnapPoints } from './useSnapPoints';
 import DrawerSpotDetail from './DrawerSpotDetail';
 import DrawerSpotList from './DrawerSpotList';
-import DrawerOverlayDetail from './DrawerOverlayDetail';
+import DrawerCourseDetail from './DrawerCourseDetail';
 import type { Spot, DrawerSelection } from '@/types';
 
 interface BottomDrawerProps {
@@ -88,9 +88,9 @@ export default function BottomDrawer({
               contentRef={contentRef}
               onClose={onDeselect}
             />
-          ) : selection?.type === 'overlay' ? (
-            <DrawerOverlayDetail
-              overlay={selection.data}
+          ) : selection?.type === 'course' ? (
+            <DrawerCourseDetail
+              course={selection.data}
               titleRef={titleRef}
               contentRef={contentRef}
               onClose={onDeselect}

@@ -70,9 +70,9 @@ export function getMarkerIcon(
   };
 }
 
-export function getOverlayPinIcon(): naver.maps.HtmlIcon {
+export function getCoursePinIcon(): naver.maps.HtmlIcon {
   return {
-    content: `<div class="marker-overlay-pin"></div>`,
+    content: `<div class="marker-course-pin"></div>`,
     size: new naver.maps.Size(36, 36),
     anchor: new naver.maps.Point(18, 36),
   };

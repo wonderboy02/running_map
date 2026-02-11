@@ -5,7 +5,7 @@ import { Search, X } from 'lucide-react';
 import RecommendedTerms from './RecommendedTerms';
 import SearchResultsList from './SearchResultsList';
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
-import type { Spot, Overlay } from '@/types';
+import type { Spot, Course } from '@/types';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -13,8 +13,8 @@ interface SearchOverlayProps {
   onQueryChange: (q: string) => void;
   onClose: () => void;
   spots: Spot[];
-  overlays: Overlay[];
-  onOverlaySelect: (overlay: Overlay) => void;
+  courses: Course[];
+  onCourseSelect: (course: Course) => void;
   onSpotSelect: (spot: Spot) => void;
   onLocationSelect: (lat: number, lng: number) => void;
 }
@@ -25,16 +25,16 @@ export default function SearchOverlay({
   onQueryChange,
   onClose,
   spots,
-  overlays,
-  onOverlaySelect,
+  courses,
+  onCourseSelect,
   onSpotSelect,
   onLocationSelect,
 }: SearchOverlayProps) {
   const [isExiting, setIsExiting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { overlayResults, spotResults, externalResults, isLoading } =
-    useUnifiedSearch(query, spots, overlays);
+  const { courseResults, spotResults, externalResults, isLoading } =
+    useUnifiedSearch(query, spots, courses);
 
   const requestClose = useCallback(() => {
     if (isExiting) return;
@@ -61,12 +61,12 @@ export default function SearchOverlay({
   );
 
   // 결과 선택 시에도 exit 애니메이션을 거친 후 콜백 실행
-  const handleOverlaySelect = useCallback(
-    (overlay: Overlay) => {
-      onOverlaySelect(overlay);
+  const handleCourseSelect = useCallback(
+    (course: Course) => {
+      onCourseSelect(course);
       requestClose();
     },
-    [onOverlaySelect, requestClose],
+    [onCourseSelect, requestClose],
   );
 
   const handleSpotSelect = useCallback(
@@ -119,29 +119,31 @@ export default function SearchOverlay({
         </div>
         <button
           onClick={requestClose}
-          className="text-text-secondary flex-shrink-0 text-[clamp(13px,3.5vw,15px)] min-w-[40px] min-h-[40px] flex items-center justify-center -mr-1.5"
+          className={`text-text-secondary flex-shrink-0 text-[clamp(13px,3.5vw,15px)] min-w-[40px] min-h-[40px] flex items-center justify-center -mr-1.5 ${
+            !isExiting ? 'search-cancel-enter' : ''
+          }`}
         >
           취소
         </button>
       </div>
 
       {/* 스크롤 영역 */}
-      <div className="flex-1 overflow-y-auto">
+      <div className={`flex-1 overflow-y-auto ${!isExiting ? 'search-content-enter' : ''}`}>
         {query.trim().length === 0 ? (
           <RecommendedTerms
-            overlays={overlays}
+            courses={courses}
             spots={spots}
-            onOverlayTap={handleOverlaySelect}
+            onCourseTap={handleCourseSelect}
             onSpotTap={handleSpotSelect}
             onCategoryTap={handleCategoryTap}
           />
         ) : (
           <SearchResultsList
-            overlayResults={overlayResults}
+            courseResults={courseResults}
             spotResults={spotResults}
             externalResults={externalResults}
             isLoading={isLoading}
-            onOverlaySelect={handleOverlaySelect}
+            onCourseSelect={handleCourseSelect}
             onSpotSelect={handleSpotSelect}
             onLocationSelect={handleLocationSelect}
           />

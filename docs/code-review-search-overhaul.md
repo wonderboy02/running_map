@@ -25,7 +25,7 @@
 
 **파일**: `src/hooks/useUnifiedSearch.ts:43-64`
 
-`useGeocode`의 debounce/fetch 로직을 거의 그대로 복사함. `useGeocode`는 Admin(`SpotForm.tsx`, `admin/overlays/page.tsx`)에서 여전히 사용 중이므로 삭제 불가.
+`useGeocode`의 debounce/fetch 로직을 거의 그대로 복사함. `useGeocode`는 Admin(`SpotForm.tsx`, `admin/courses/page.tsx`)에서 여전히 사용 중이므로 삭제 불가.
 
 | 항목 | `useGeocode` | `useUnifiedSearch` |
 |------|-------------|-------------------|
@@ -38,17 +38,17 @@
 **권장 수정 (compose 패턴):**
 
 ```typescript
-export function useUnifiedSearch(query: string, spots: Spot[], overlays: Overlay[]) {
+export function useUnifiedSearch(query: string, spots: Spot[], courses: Course[]) {
   const { results: externalResults, loading: isLoading, search, clear } = useGeocode();
 
-  const overlayResults = useMemo(() => { /* 기존 유지 */ }, [query, overlays]);
+  const courseResults = useMemo(() => { /* 기존 유지 */ }, [query, courses]);
   const spotResults = useMemo(() => { /* 기존 유지 */ }, [query, spots]);
 
   useEffect(() => {
     query.trim().length >= 2 ? search(query) : clear();
   }, [query, search, clear]);
 
-  return { overlayResults, spotResults, externalResults, isLoading };
+  return { courseResults, spotResults, externalResults, isLoading };
 }
 ```
 
@@ -69,7 +69,7 @@ export function useUnifiedSearch(query: string, spots: Spot[], overlays: Overlay
 | "취소" 버튼 | `handleClose` → `isExiting=true` → animationEnd → `onClose()` | O (정상) |
 | 결과 선택 | 부모에서 즉시 `setIsSearchActive(false)` | X (즉시 unmount) |
 
-`handleOverlaySelect`, `handleSearchSpotSelect`, `handleSearchLocationSelect` 모두 부모에서 직접 `setIsSearchActive(false)` 호출하여 오버레이의 `handleClose`를 거치지 않음.
+`handleCourseSelect`, `handleSearchSpotSelect`, `handleSearchLocationSelect` 모두 부모에서 직접 `setIsSearchActive(false)` 호출하여 SearchOverlay의 `handleClose`를 거치지 않음.
 
 **권장**: 모든 close 경로를 오버레이의 애니메이션 메커니즘을 통하도록 통일하거나, 결과 선택 시 의도적으로 즉시 닫기라면 exit 애니메이션 자체를 제거.
 
@@ -85,13 +85,13 @@ props를 그대로 포워딩하는 wrapper. 자식 컴포넌트가 `React.memo`�
 
 ```typescript
 // ❌ 불필요한 래핑
-const handleOverlaySelect = useCallback(
-  (overlay: Overlay) => { onOverlaySelect(overlay); },
-  [onOverlaySelect],
+const handleCourseSelect = useCallback(
+  (course: Course) => { onCourseSelect(course); },
+  [onCourseSelect],
 );
 
 // ✅ 직접 전달
-<SearchResultsList onOverlaySelect={onOverlaySelect} ... />
+<SearchResultsList onCourseSelect={onCourseSelect} ... />
 ```
 
 `handleClose`, `handleClearQuery`는 추가 로직이 있으므로 유지 OK.
@@ -107,7 +107,7 @@ setIsSearchActive(false);
 setSearchQuery('');
 ```
 
-이 2줄이 `handleSearchClose`, `handleOverlaySelect`, `handleSearchSpotSelect`, `handleSearchLocationSelect` 4군데에서 반복.
+이 2줄이 `handleSearchClose`, `handleCourseSelect`, `handleSearchSpotSelect`, `handleSearchLocationSelect` 4군데에서 반복.
 
 **권장:**
 
@@ -208,7 +208,7 @@ const res = await fetch(url, { signal: controllerRef.current.signal });
 
 **파일**: `src/components/Search/RecommendedTerms.tsx:28`
 
-`Overlay` 타입에 `is_active` 필드가 있지만, 추천 코스 목록에서 비활성 오버레이를 필터링하지 않음. `useOverlays`에서 이미 필터링한다면 OK, 아니면 `.filter(o => o.is_active)` 추가 필요.
+`Course` 타입에 `is_active` 필드가 있지만, 추천 코스 목록에서 비활성 코스를 필터링하지 않음. `useCourses`에서 이미 필터링한다면 OK, 아니면 `.filter(o => o.is_active)` 추가 필요.
 
 ---
 
@@ -226,7 +226,7 @@ const res = await fetch(url, { signal: controllerRef.current.signal });
 ## 잘된 점
 
 - **컴포넌트 분리**: `SearchBar` 모놀리스를 `SearchOverlay` / `SearchResultsList` / `RecommendedTerms` 3개 책임으로 잘 분리 (SRP)
-- **검색 우선순위**: overlay → spot → 외부 API 순서가 `SearchResultsList`에서 명확하게 분리
+- **검색 우선순위**: course → spot → 외부 API 순서가 `SearchResultsList`에서 명확하게 분리
 - **상태 관리**: `page.tsx`에서 검색 상태를 리프팅하여 controlled component 패턴 적용 (이 규모에 적절)
 - **`useMemo` 적절 사용**: `useUnifiedSearch`의 로컬 필터링에 `useMemo` 적용 (키스트로크마다 재필터링 방지)
 - **CSS 애니메이션**: globals.css에 keyframe 정의하여 JS 번들 증가 없이 애니메이션 구현

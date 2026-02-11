@@ -3,21 +3,21 @@
 import { RefObject } from 'react';
 import { Route, Gauge, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Overlay } from '@/types';
+import type { Course } from '@/types';
 
-interface DrawerOverlayDetailProps {
-  overlay: Overlay;
+interface DrawerCourseDetailProps {
+  course: Course;
   titleRef: RefObject<HTMLDivElement | null>;
   contentRef: RefObject<HTMLDivElement | null>;
   onClose: () => void;
 }
 
-export default function DrawerOverlayDetail({
-  overlay,
+export default function DrawerCourseDetail({
+  course,
   titleRef,
   contentRef,
   onClose,
-}: DrawerOverlayDetailProps) {
+}: DrawerCourseDetailProps) {
   return (
     <>
       {/* Close Button */}
@@ -34,22 +34,22 @@ export default function DrawerOverlayDetail({
       {/* === titleRef: snap 1 경계 === */}
       <div ref={titleRef} className="px-4 pt-3 pb-4 pr-12">
         <h2 className="text-[clamp(18px,5vw,22px)] font-bold text-gray-900 leading-tight tracking-tight mb-2">
-          {overlay.name}
+          {course.name}
         </h2>
         <div className="flex items-center gap-4 text-gray-600">
-          {overlay.distance_km != null && (
+          {course.distance_km != null && (
             <div className="flex items-center gap-1.5">
               <Route className="w-4 h-4 text-emerald-600" />
               <span className="text-[clamp(13px,3.5vw,15px)] font-medium">
-                {overlay.distance_km}km
+                {course.distance_km}km
               </span>
             </div>
           )}
-          {overlay.difficulty != null && (
+          {course.difficulty != null && (
             <div className="flex items-center gap-1.5">
               <Gauge className="w-4 h-4 text-emerald-600" />
               <span className="text-[clamp(13px,3.5vw,15px)] font-medium">
-                난이도 {overlay.difficulty}/10
+                난이도 {course.difficulty}/10
               </span>
             </div>
           )}
@@ -58,10 +58,10 @@ export default function DrawerOverlayDetail({
 
       {/* === contentRef: snap 2 경계 === */}
       <div ref={contentRef} className="px-4 pb-4 space-y-4">
-        {overlay.description && (
+        {course.description && (
           <div className="p-3.5 bg-gray-50 rounded-xl">
             <p className="text-[clamp(13px,3.5vw,15px)] text-gray-700 leading-relaxed">
-              {overlay.description}
+              {course.description}
             </p>
           </div>
         )}

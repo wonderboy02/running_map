@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import type { Overlay } from '@/types';
+import type { Course } from '@/types';
 
-export function useOverlays() {
-  const [overlays, setOverlays] = useState<Overlay[]>([]);
+export function useCourses() {
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchOverlays() {
+    async function fetchCourses() {
       setLoading(true);
       const { data, error } = await supabase
-        .from('overlays')
+        .from('courses')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
@@ -21,13 +21,13 @@ export function useOverlays() {
       if (error) {
         setError(error.message);
       } else {
-        setOverlays(data as Overlay[]);
+        setCourses(data as Course[]);
       }
       setLoading(false);
     }
 
-    fetchOverlays();
+    fetchCourses();
   }, []);
 
-  return { overlays, loading, error };
+  return { courses, loading, error };
 }

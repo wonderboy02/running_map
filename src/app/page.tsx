@@ -8,8 +8,8 @@ import BottomDrawer from '@/components/BottomDrawer';
 import FloatingControls from '@/components/FloatingControls';
 import SearchOverlay from '@/components/Search/SearchOverlay';
 import { useSpots } from '@/hooks/useSpots';
-import { useOverlays } from '@/hooks/useOverlays';
-import type { Spot, Overlay, DrawerSelection } from '@/types';
+import { useCourses } from '@/hooks/useCourses';
+import type { Spot, Course, DrawerSelection } from '@/types';
 
 export default function HomePage() {
   const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']);
@@ -17,14 +17,14 @@ export default function HomePage() {
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [initialCenter, setInitialCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [naverMap, setNaverMap] = useState<naver.maps.Map | null>(null);
-  const [showOverlays, setShowOverlays] = useState(true);
+  const [showCourses, setShowCourses] = useState(true);
 
   // 검색 상태
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const { spots } = useSpots();
-  const { overlays } = useOverlays();
+  const { courses } = useCourses();
 
   const handleMapReady = useCallback((map: naver.maps.Map) => {
     setNaverMap(map);
@@ -63,11 +63,11 @@ export default function HomePage() {
     setSearchQuery('');
   }
 
-  function handleSearchOverlaySelect(overlay: Overlay) {
-    const lat = (overlay.nw_lat + overlay.se_lat) / 2;
-    const lng = (overlay.nw_lng + overlay.se_lng) / 2;
+  function handleSearchCourseSelect(course: Course) {
+    const lat = (course.nw_lat + course.se_lat) / 2;
+    const lng = (course.nw_lng + course.se_lng) / 2;
     setTargetLocation({ lat, lng });
-    setSelection({ type: 'overlay', data: overlay });
+    setSelection({ type: 'course', data: course });
   }
 
   function handleSearchSpotSelect(spot: Spot) {
@@ -83,8 +83,8 @@ export default function HomePage() {
     setSelection({ type: 'spot', data: spot });
   }, []);
 
-  const handleOverlayPinClick = useCallback((overlay: Overlay) => {
-    setSelection({ type: 'overlay', data: overlay });
+  const handleCoursePinClick = useCallback((course: Course) => {
+    setSelection({ type: 'course', data: course });
   }, []);
 
   const handleDeselect = useCallback(() => {
@@ -101,9 +101,9 @@ export default function HomePage() {
       <div className="relative flex-1">
         <NaverMap
           spots={filteredSpots}
-          overlays={showOverlays ? overlays : []}
+          courses={showCourses ? courses : []}
           onMarkerClick={handleMarkerClick}
-          onOverlayPinClick={handleOverlayPinClick}
+          onCoursePinClick={handleCoursePinClick}
           selection={selection}
           targetLocation={targetLocation}
           initialCenter={initialCenter}
@@ -113,8 +113,8 @@ export default function HomePage() {
 
       <FloatingControls
         map={naverMap}
-        showOverlays={showOverlays}
-        onToggleOverlays={setShowOverlays}
+        showCourses={showCourses}
+        onToggleCourses={setShowCourses}
       />
 
       <BottomDrawer
@@ -131,8 +131,8 @@ export default function HomePage() {
         onQueryChange={setSearchQuery}
         onClose={dismissSearch}
         spots={spots}
-        overlays={overlays}
-        onOverlaySelect={handleSearchOverlaySelect}
+        courses={courses}
+        onCourseSelect={handleSearchCourseSelect}
         onSpotSelect={handleSearchSpotSelect}
         onLocationSelect={handleSearchLocationSelect}
       />

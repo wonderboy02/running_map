@@ -3,9 +3,9 @@ import { withAuth } from '@/lib/auth/withAuth';
 import { supabaseServer } from '@/lib/supabase/server';
 import { validateImageFile, convertAndUpload } from '@/lib/image-upload';
 
-const OVERLAY_UPLOAD = { bucket: 'overlays' } as const;
+const COURSE_UPLOAD = { bucket: 'courses' } as const;
 
-interface BulkOverlayMeta {
+interface BulkCourseMeta {
   name: string;
   nw_lat: number;
   nw_lng: number;
@@ -26,7 +26,7 @@ export const POST = withAuth(async (request: NextRequest) => {
       );
     }
 
-    let metadata: BulkOverlayMeta[];
+    let metadata: BulkCourseMeta[];
     try {
       metadata = JSON.parse(metaRaw);
     } catch {
@@ -38,7 +38,7 @@ export const POST = withAuth(async (request: NextRequest) => {
 
     if (!Array.isArray(metadata) || metadata.length === 0) {
       return NextResponse.json(
-        { success: false, error: '업로드할 오버레이가 없습니다.' },
+        { success: false, error: '업로드할 코스가 없습니다.' },
         { status: 400 },
       );
     }
@@ -80,10 +80,10 @@ export const POST = withAuth(async (request: NextRequest) => {
       }
 
       try {
-        const image_url = await convertAndUpload(imageFile, OVERLAY_UPLOAD);
+        const image_url = await convertAndUpload(imageFile, COURSE_UPLOAD);
 
         const { data, error } = await supabaseServer
-          .from('overlays')
+          .from('courses')
           .insert({
             name: meta.name,
             image_url,
@@ -98,14 +98,14 @@ export const POST = withAuth(async (request: NextRequest) => {
           .single();
 
         if (error) {
-          console.error(`[Overlays Bulk] DB error for "${meta.name}":`, error);
+          console.error(`[Courses Bulk] DB error for "${meta.name}":`, error);
           errors.push({ index: i, name: meta.name, error: 'DB 저장 실패' });
         } else {
           results.push(data);
         }
       } catch (err) {
         console.error(
-          `[Overlays Bulk] Processing error for "${meta.name}":`,
+          `[Courses Bulk] Processing error for "${meta.name}":`,
           err,
         );
         errors.push({ index: i, name: meta.name, error: '이미지 처리 실패' });
@@ -121,7 +121,7 @@ export const POST = withAuth(async (request: NextRequest) => {
       errorCount: errors.length,
     });
   } catch (error) {
-    console.error('[Overlays Bulk] Error:', error);
+    console.error('[Courses Bulk] Error:', error);
     return NextResponse.json(
       { success: false, error: '서버 오류가 발생했습니다.' },
       { status: 500 },

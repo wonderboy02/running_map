@@ -13,7 +13,7 @@
 |------|------|--------|------|------|
 | 일반 스팟 | CSS HtmlIcon | `.marker-default` | 32x32 | 카테고리별 색상만 다름 |
 | 하이라이트 스팟 | CSS HtmlIcon | `.marker-highlight` | 44x44 | amber + pulse 애니메이션 |
-| 오버레이 핀 | CSS HtmlIcon | `.marker-overlay-pin` | 36x36 | green 고정 |
+| 코스 핀 | CSS HtmlIcon | `.marker-course-pin` | 36x36 | green 고정 |
 | 검색 핀 | 인라인 스타일 | - | 28x38 | red 고정 |
 
 ### 문제점
@@ -46,7 +46,7 @@
 | 스팟 (짐보관) | Inline SVG HtmlIcon | 기본 | 디자인에 따름 | `locker-default.svg` |
 | 스팟 (짐보관) | Inline SVG HtmlIcon | 선택 | 디자인에 따름 | `locker-selected.svg` |
 | 하이라이트 스팟 | Inline SVG HtmlIcon | 기본/선택 | 더 큰 사이즈 | 별도 디자인 or 기본+강조 |
-| 오버레이 핀 | Inline SVG HtmlIcon | 기본 | 디자인에 따름 | `overlay-pin.svg` |
+| 코스 핀 | Inline SVG HtmlIcon | 기본 | 디자인에 따름 | `course-pin.svg` |
 | 검색 핀 | Inline SVG HtmlIcon | - | 디자인에 따름 | `search-pin.svg` |
 
 ### 핵심 변경 사항
@@ -75,7 +75,7 @@
 │
 ├── (옵션) highlight-default.svg     ← 하이라이트 스팟용
 ├── (옵션) highlight-selected.svg
-├── (옵션) overlay-pin.svg           ← 오버레이 핀용
+├── (옵션) course-pin.svg            ← 코스 핀용
 └── (옵션) search-pin.svg            ← 검색 결과 핀용
 ```
 
@@ -121,8 +121,8 @@ const HIGHLIGHT_SVG = {
   selected: `<svg>...</svg>`,
 };
 
-// 오버레이 핀
-const OVERLAY_PIN_SVG = `<svg>...</svg>`;
+// 코스 핀
+const COURSE_PIN_SVG = `<svg>...</svg>`;
 
 // 검색 핀
 const SEARCH_PIN_SVG = `<svg>...</svg>`;
@@ -137,11 +137,11 @@ interface MarkerSize {
   anchorY: number;
 }
 
-const MARKER_SIZES: Record<'default' | 'selected' | 'highlight' | 'overlay' | 'search', MarkerSize> = {
+const MARKER_SIZES: Record<'default' | 'selected' | 'highlight' | 'course' | 'search', MarkerSize> = {
   default:   { width: 36, height: 44, anchorX: 18, anchorY: 44 },
   selected:  { width: 44, height: 52, anchorX: 22, anchorY: 52 },
   highlight: { width: 44, height: 52, anchorX: 22, anchorY: 52 },
-  overlay:   { width: 36, height: 36, anchorX: 18, anchorY: 36 },
+  course:    { width: 36, height: 36, anchorX: 18, anchorY: 36 },
   search:    { width: 28, height: 38, anchorX: 14, anchorY: 34 },
 };
 
@@ -183,11 +183,11 @@ export function getSpotMarkerIcon(
   };
 }
 
-/** 오버레이 핀 아이콘 */
-export function getOverlayPinIcon(): naver.maps.HtmlIcon {
-  const size = MARKER_SIZES.overlay;
+/** 코스 핀 아이콘 */
+export function getCoursePinIcon(): naver.maps.HtmlIcon {
+  const size = MARKER_SIZES.course;
   return {
-    content: OVERLAY_PIN_SVG,
+    content: COURSE_PIN_SVG,
     size: new naver.maps.Size(size.width, size.height),
     anchor: new naver.maps.Point(size.anchorX, size.anchorY),
   };
@@ -217,7 +217,7 @@ export function getSearchPinIcon(): naver.maps.HtmlIcon {
 ```tsx
 // src/components/Map/NaverMap.tsx
 
-import { getSpotMarkerIcon, getOverlayPinIcon, getSearchPinIcon } from '@/lib/marker-config';
+import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon } from '@/lib/marker-config';
 
 // ─── 변경 1: createMarkerIcon에 isSelected 파라미터 추가 ───
 
@@ -324,7 +324,7 @@ useEffect(() => {
 - `.marker-default`, `.marker-default::after`
 - `.marker-highlight`, `.marker-highlight::after`
 - `.marker-category-runner`, `.marker-category-shower`, `.marker-category-locker`
-- `.marker-overlay-pin`, `.marker-overlay-pin::after`
+- `.marker-course-pin`, `.marker-course-pin::after`
 - `@keyframes marker-pulse`
 
 SVG 마커로 전환하면 이 CSS들은 전부 불필요해진다.
@@ -383,7 +383,7 @@ const categoryStyles: Record<string, string> = {
 - [ ] 카테고리별 기본 마커 SVG (러너스팟, 샤워, 짐보관) × 3
 - [ ] 카테고리별 선택 마커 SVG (러너스팟, 샤워, 짐보관) × 3
 - [ ] 하이라이트 마커 SVG (기본 + 선택) × 2 (옵션 — 기본 마커에 강조 효과로 대체 가능)
-- [ ] 오버레이 핀 SVG × 1 (옵션)
+- [ ] 코스 핀 SVG × 1 (옵션)
 - [ ] 검색 핀 SVG × 1 (옵션)
 - [ ] 모든 SVG의 viewBox 크기 통일
 - [ ] 기본/선택 쌍은 같은 viewBox 유지

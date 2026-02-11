@@ -37,9 +37,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useGeocode, type GeocodeResult } from '@/hooks/useGeocode';
-import type { Overlay } from '@/types';
+import type { Course } from '@/types';
 
-interface OverlayForm {
+interface CourseForm {
   name: string;
   description: string;
   difficulty: number | '';
@@ -55,7 +55,7 @@ interface OverlayForm {
   image: File | null;
 }
 
-const EMPTY_FORM: OverlayForm = {
+const EMPTY_FORM: CourseForm = {
   name: '',
   description: '',
   difficulty: '',
@@ -94,7 +94,7 @@ function removeSpaces(s: string) {
   return s.replace(/\s/g, '');
 }
 
-function parseOverlayFilename(filename: string): {
+function parseCourseFilename(filename: string): {
   name: string;
   nwPlace: string;
   sePlace: string;
@@ -157,7 +157,7 @@ function BulkUploadDialog({
     const newItems: BulkItem[] = [];
 
     for (const file of Array.from(files)) {
-      const parsed = parseOverlayFilename(file.name);
+      const parsed = parseCourseFilename(file.name);
       if (!parsed) {
         newItems.push({
           file,
@@ -274,7 +274,7 @@ function BulkUploadDialog({
     formData.append('metadata', JSON.stringify(metadata));
 
     try {
-      const res = await fetch('/api/admin/overlays/bulk', {
+      const res = await fetch('/api/admin/courses/bulk', {
         method: 'POST',
         body: formData,
       });
@@ -319,7 +319,7 @@ function BulkUploadDialog({
     >
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>오버레이 일괄 추가</DialogTitle>
+          <DialogTitle>코스 일괄 추가</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -617,26 +617,26 @@ function CoordSearchInput({
   );
 }
 
-export default function AdminOverlaysPage() {
-  const [overlays, setOverlays] = useState<Overlay[]>([]);
+export default function AdminCoursesPage() {
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingOverlay, setEditingOverlay] = useState<Overlay | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Overlay | null>(null);
-  const [form, setForm] = useState<OverlayForm>(EMPTY_FORM);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
+  const [form, setForm] = useState<CourseForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
-  async function fetchOverlays() {
+  async function fetchCourses() {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/overlays');
+      const res = await fetch('/api/admin/courses');
       const data = await res.json();
       if (data.success) {
-        setOverlays(data.data);
+        setCourses(data.data);
       } else {
-        toast.error('오버레이 목록을 불러오는데 실패했습니다.');
+        toast.error('코스 목록을 불러오는데 실패했습니다.');
       }
     } catch {
       toast.error('서버 오류가 발생했습니다.');
@@ -645,34 +645,34 @@ export default function AdminOverlaysPage() {
   }
 
   useEffect(() => {
-    fetchOverlays();
+    fetchCourses();
   }, []);
 
   function openCreateDialog() {
-    setEditingOverlay(null);
+    setEditingCourse(null);
     setForm(EMPTY_FORM);
     setImagePreview(null);
     setDialogOpen(true);
   }
 
-  function openEditDialog(overlay: Overlay) {
-    setEditingOverlay(overlay);
+  function openEditDialog(course: Course) {
+    setEditingCourse(course);
     setForm({
-      name: overlay.name,
-      description: overlay.description || '',
-      difficulty: overlay.difficulty ?? '',
-      distance_km: overlay.distance_km ?? '',
-      nw_lat: overlay.nw_lat,
-      nw_lng: overlay.nw_lng,
-      se_lat: overlay.se_lat,
-      se_lng: overlay.se_lng,
-      pin_lat: overlay.pin_lat || 0,
-      pin_lng: overlay.pin_lng || 0,
-      opacity: overlay.opacity,
-      is_active: overlay.is_active,
+      name: course.name,
+      description: course.description || '',
+      difficulty: course.difficulty ?? '',
+      distance_km: course.distance_km ?? '',
+      nw_lat: course.nw_lat,
+      nw_lng: course.nw_lng,
+      se_lat: course.se_lat,
+      se_lng: course.se_lng,
+      pin_lat: course.pin_lat || 0,
+      pin_lng: course.pin_lng || 0,
+      opacity: course.opacity,
+      is_active: course.is_active,
       image: null,
     });
-    setImagePreview(overlay.image_url);
+    setImagePreview(course.image_url);
     setDialogOpen(true);
   }
 
@@ -696,7 +696,7 @@ export default function AdminOverlaysPage() {
       return;
     }
 
-    if (!editingOverlay && !form.image) {
+    if (!editingCourse && !form.image) {
       toast.error('이미지를 선택해주세요.');
       setSaving(false);
       return;
@@ -726,30 +726,30 @@ export default function AdminOverlaysPage() {
     }
 
     try {
-      if (editingOverlay) {
-        formData.append('id', editingOverlay.id);
-        const res = await fetch('/api/admin/overlays', {
+      if (editingCourse) {
+        formData.append('id', editingCourse.id);
+        const res = await fetch('/api/admin/courses', {
           method: 'PATCH',
           body: formData,
         });
         const data = await res.json();
         if (data.success) {
-          toast.success('오버레이가 수정되었습니다.');
+          toast.success('코스가 수정되었습니다.');
           setDialogOpen(false);
-          fetchOverlays();
+          fetchCourses();
         } else {
           toast.error(data.error || '수정에 실패했습니다.');
         }
       } else {
-        const res = await fetch('/api/admin/overlays', {
+        const res = await fetch('/api/admin/courses', {
           method: 'POST',
           body: formData,
         });
         const data = await res.json();
         if (data.success) {
-          toast.success('오버레이가 추가되었습니다.');
+          toast.success('코스가 추가되었습니다.');
           setDialogOpen(false);
-          fetchOverlays();
+          fetchCourses();
         } else {
           toast.error(data.error || '추가에 실패했습니다.');
         }
@@ -760,22 +760,22 @@ export default function AdminOverlaysPage() {
     setSaving(false);
   }
 
-  async function handleToggleActive(overlay: Overlay) {
+  async function handleToggleActive(course: Course) {
     const formData = new FormData();
-    formData.append('id', overlay.id);
-    formData.append('toggle_active', String(!overlay.is_active));
+    formData.append('id', course.id);
+    formData.append('toggle_active', String(!course.is_active));
 
     try {
-      const res = await fetch('/api/admin/overlays', {
+      const res = await fetch('/api/admin/courses', {
         method: 'PATCH',
         body: formData,
       });
       const data = await res.json();
       if (data.success) {
         toast.success(
-          `"${overlay.name}" ${!overlay.is_active ? '활성화' : '비활성화'}됨`,
+          `"${course.name}" ${!course.is_active ? '활성화' : '비활성화'}됨`,
         );
-        fetchOverlays();
+        fetchCourses();
       } else {
         toast.error(data.error || '변경에 실패했습니다.');
       }
@@ -788,15 +788,15 @@ export default function AdminOverlaysPage() {
     if (!deleteTarget) return;
 
     try {
-      const res = await fetch('/api/admin/overlays', {
+      const res = await fetch('/api/admin/courses', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: deleteTarget.id }),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('오버레이가 삭제되었습니다.');
-        fetchOverlays();
+        toast.success('코스가 삭제되었습니다.');
+        fetchCourses();
       } else {
         toast.error(data.error || '삭제에 실패했습니다.');
       }
@@ -809,7 +809,7 @@ export default function AdminOverlaysPage() {
   return (
     <div className="p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold">오버레이 관리</h1>
+        <h1 className="text-lg font-bold">코스 관리</h1>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => setBulkDialogOpen(true)}>
             <Upload className="mr-1 h-4 w-4" />
@@ -826,23 +826,23 @@ export default function AdminOverlaysPage() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
-      ) : overlays.length === 0 ? (
+      ) : courses.length === 0 ? (
         <div className="text-text-secondary py-12 text-center text-sm">
-          등록된 오버레이가 없습니다.
+          등록된 코스가 없습니다.
         </div>
       ) : (
         <div className="space-y-3">
-          {overlays.map((overlay) => (
+          {courses.map((course) => (
             <div
-              key={overlay.id}
+              key={course.id}
               className="border-border bg-surface flex items-start gap-3 rounded-lg border p-3"
             >
               {/* 썸네일 */}
               <div className="bg-surface-dim flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-md">
-                {overlay.image_url ? (
+                {course.image_url ? (
                   <img
-                    src={overlay.image_url}
-                    alt={overlay.name}
+                    src={course.image_url}
+                    alt={course.name}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -853,28 +853,28 @@ export default function AdminOverlaysPage() {
               {/* 정보 */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="truncate font-medium">{overlay.name}</p>
+                  <p className="truncate font-medium">{course.name}</p>
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs ${
-                      overlay.is_active
+                      course.is_active
                         ? 'bg-green-100 text-green-700'
                         : 'bg-gray-100 text-gray-500'
                     }`}
                   >
-                    {overlay.is_active ? '활성' : '비활성'}
+                    {course.is_active ? '활성' : '비활성'}
                   </span>
                 </div>
-                {(overlay.distance_km || overlay.difficulty) && (
+                {(course.distance_km || course.difficulty) && (
                   <p className="text-text-secondary mt-0.5 text-xs">
-                    {overlay.distance_km && `${overlay.distance_km}km`}
-                    {overlay.distance_km && overlay.difficulty && ' · '}
-                    {overlay.difficulty && `난이도 ${overlay.difficulty}/10`}
+                    {course.distance_km && `${course.distance_km}km`}
+                    {course.distance_km && course.difficulty && ' · '}
+                    {course.difficulty && `난이도 ${course.difficulty}/10`}
                   </p>
                 )}
                 <p className="text-text-secondary mt-0.5 text-xs">
-                  NW({overlay.nw_lat.toFixed(4)}, {overlay.nw_lng.toFixed(4)}) →
-                  SE({overlay.se_lat.toFixed(4)}, {overlay.se_lng.toFixed(4)})
-                  &nbsp;· 투명도 {Math.round(overlay.opacity * 100)}%
+                  NW({course.nw_lat.toFixed(4)}, {course.nw_lng.toFixed(4)}) →
+                  SE({course.se_lat.toFixed(4)}, {course.se_lng.toFixed(4)})
+                  &nbsp;· 투명도 {Math.round(course.opacity * 100)}%
                 </p>
               </div>
 
@@ -883,15 +883,15 @@ export default function AdminOverlaysPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleToggleActive(overlay)}
+                  onClick={() => handleToggleActive(course)}
                   className="h-8 px-2 text-xs"
                 >
-                  {overlay.is_active ? '끄기' : '켜기'}
+                  {course.is_active ? '끄기' : '켜기'}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => openEditDialog(overlay)}
+                  onClick={() => openEditDialog(course)}
                   className="h-8 w-8"
                 >
                   <Pencil className="h-4 w-4" />
@@ -899,7 +899,7 @@ export default function AdminOverlaysPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setDeleteTarget(overlay)}
+                  onClick={() => setDeleteTarget(course)}
                   className="h-8 w-8 text-red-500 hover:text-red-600"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -915,7 +915,7 @@ export default function AdminOverlaysPage() {
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editingOverlay ? '오버레이 수정' : '오버레이 추가'}
+              {editingCourse ? '코스 수정' : '코스 추가'}
             </DialogTitle>
           </DialogHeader>
 
@@ -991,7 +991,7 @@ export default function AdminOverlaysPage() {
 
             {/* 이미지 업로드 */}
             <div className="space-y-1.5">
-              <Label>{editingOverlay ? '이미지 (변경 시 선택)' : '이미지 *'}</Label>
+              <Label>{editingCourse ? '이미지 (변경 시 선택)' : '이미지 *'}</Label>
               <Input
                 type="file"
                 accept="image/*"
@@ -1051,13 +1051,13 @@ export default function AdminOverlaysPage() {
             {/* 활성화 */}
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="overlay-active"
+                id="course-active"
                 checked={form.is_active}
                 onCheckedChange={(checked) =>
                   setForm((prev) => ({ ...prev, is_active: !!checked }))
                 }
               />
-              <Label htmlFor="overlay-active" className="cursor-pointer font-normal">
+              <Label htmlFor="course-active" className="cursor-pointer font-normal">
                 활성화
               </Label>
             </div>
@@ -1073,7 +1073,7 @@ export default function AdminOverlaysPage() {
                 취소
               </Button>
               <Button type="submit" disabled={saving} className="flex-1">
-                {saving ? '저장 중...' : editingOverlay ? '수정' : '추가'}
+                {saving ? '저장 중...' : editingCourse ? '수정' : '추가'}
               </Button>
             </div>
           </form>
@@ -1084,7 +1084,7 @@ export default function AdminOverlaysPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>오버레이 삭제</AlertDialogTitle>
+            <AlertDialogTitle>코스 삭제</AlertDialogTitle>
             <AlertDialogDescription>
               &quot;{deleteTarget?.name}&quot;을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
             </AlertDialogDescription>
@@ -1102,14 +1102,14 @@ export default function AdminOverlaysPage() {
       <BulkUploadDialog
         open={bulkDialogOpen}
         onOpenChange={setBulkDialogOpen}
-        onUploaded={fetchOverlays}
+        onUploaded={fetchCourses}
       />
 
       {/* Supabase Storage 안내 */}
-      {overlays.length === 0 && !loading && (
+      {courses.length === 0 && !loading && (
         <div className="border-border mt-6 rounded-lg border border-dashed p-4">
           <p className="text-text-secondary text-xs">
-            <strong>Setup:</strong> Supabase Dashboard에서 &quot;overlays&quot; Storage 버킷을
+            <strong>Setup:</strong> Supabase Dashboard에서 &quot;courses&quot; Storage 버킷을
             생성하세요 (Public 접근 허용).
           </p>
         </div>

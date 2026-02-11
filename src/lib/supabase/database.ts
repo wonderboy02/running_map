@@ -29,28 +29,7 @@ export type Database = {
         }
         Relationships: []
       }
-      feedback: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          is_read: boolean
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          is_read?: boolean
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          is_read?: boolean
-        }
-        Relationships: []
-      }
-      overlays: {
+      courses: {
         Row: {
           created_at: string | null
           description: string | null
@@ -104,6 +83,27 @@ export type Database = {
           se_lat?: number
           se_lng?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
         }
         Relationships: []
       }
