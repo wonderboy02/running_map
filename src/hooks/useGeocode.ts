@@ -17,11 +17,13 @@ export function useGeocode() {
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controllerRef = useRef<AbortController | null>(null);
 
   const search = useCallback((query: string) => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
+    controllerRef.current?.abort();
 
     if (!query || query.trim().length < 2) {
       setResults([]);
@@ -32,19 +34,23 @@ export function useGeocode() {
     setLoading(true);
 
     timerRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/geocode?query=${encodeURIComponent(query.trim())}`);
-        const data = await res.json();
+      const controller = new AbortController();
+      controllerRef.current = controller;
 
-        if (data.addresses) {
-          setResults(data.addresses);
-        } else {
-          setResults([]);
-        }
-      } catch {
+      try {
+        const res = await fetch(
+          `/api/geocode?query=${encodeURIComponent(query.trim())}`,
+          { signal: controller.signal },
+        );
+        const data = await res.json();
+        setResults(data.addresses || []);
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return;
         setResults([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }, 500);
   }, []);
@@ -53,6 +59,7 @@ export function useGeocode() {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
+    controllerRef.current?.abort();
     setResults([]);
     setLoading(false);
   }, []);

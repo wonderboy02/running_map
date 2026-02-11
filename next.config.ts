@@ -8,7 +8,20 @@ const nextConfig: NextConfig = {
         hostname: "btxtexwnlirtabwzfckz.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
     ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/storage/:path*",
+        destination:
+          "https://btxtexwnlirtabwzfckz.supabase.co/storage/v1/object/public/:path*",
+      },
+    ];
   },
 };
 

@@ -2,29 +2,39 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
-import { getMarkerIcon } from '@/lib/marker-config';
-import type { Spot, Overlay } from '@/types';
+import { getMarkerIcon, getOverlayPinIcon } from '@/lib/marker-config';
+import type { Spot, Overlay, DrawerSelection } from '@/types';
 
 interface NaverMapProps {
   spots: Spot[];
   overlays?: Overlay[];
   onMarkerClick: (spot: Spot) => void;
-  selectedSpot: Spot | null;
+  onOverlayPinClick: (overlay: Overlay) => void;
+  selection: DrawerSelection | null;
   targetLocation: { lat: number; lng: number } | null;
   initialCenter: { lat: number; lng: number } | null;
+  onMapReady?: (map: naver.maps.Map) => void;
 }
 
-export default function NaverMap({ spots, overlays = [], onMarkerClick, selectedSpot, targetLocation, initialCenter }: NaverMapProps) {
+export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverlayPinClick, selection, targetLocation, initialCenter, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const overlaysRef = useRef<Map<string, naver.maps.GroundOverlay>>(new Map());
+  const overlayPinsRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
   const hasMovedToInitialCenter = useRef(false);
 
   const createMarkerIcon = useCallback((spot: Spot) => {
     return getMarkerIcon(spot.is_highlighted, spot.categories);
   }, []);
+
+  // map 준비 시 부모에게 전달
+  useEffect(() => {
+    if (isReady && map && onMapReady) {
+      onMapReady(map);
+    }
+  }, [isReady, map, onMapReady]);
 
   // 마커 생성 및 업데이트
   useEffect(() => {
@@ -66,11 +76,15 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, selected
     });
   }, [isReady, map, spots, createMarkerIcon, onMarkerClick]);
 
-  // 선택된 마커로 지도 이동
+  // 선택된 마커/핀으로 지도 이동
   useEffect(() => {
-    if (!map || !selectedSpot) return;
-    map.panTo(new naver.maps.LatLng(selectedSpot.latitude, selectedSpot.longitude));
-  }, [map, selectedSpot]);
+    if (!map || !selection) return;
+    if (selection.type === 'spot') {
+      map.panTo(new naver.maps.LatLng(selection.data.latitude, selection.data.longitude));
+    } else if (selection.type === 'overlay' && selection.data.pin_lat && selection.data.pin_lng) {
+      map.panTo(new naver.maps.LatLng(selection.data.pin_lat, selection.data.pin_lng));
+    }
+  }, [map, selection]);
 
   // 초기 위치로 이동 (핀 없이, 한 번만)
   useEffect(() => {
@@ -136,8 +150,14 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, selected
       const ne = new naver.maps.LatLng(overlay.nw_lat, overlay.se_lng);
       const bounds = new naver.maps.LatLngBounds(sw, ne);
 
+      // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
+      const imageUrl = overlay.image_url.replace(
+        /https:\/\/[^/]+\/storage\/v1\/object\/public/,
+        '/storage',
+      );
+
       const groundOverlay = new naver.maps.GroundOverlay(
-        overlay.image_url,
+        imageUrl,
         bounds,
         { opacity: overlay.opacity, clickable: false },
       );
@@ -147,8 +167,43 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, selected
     });
   }, [isReady, map, overlays]);
 
+  // 오버레이 핀 마커 렌더링
+  useEffect(() => {
+    if (!isReady || !map) return;
+
+    const overlaysWithPin = overlays.filter((o) => o.pin_lat != null && o.pin_lng != null);
+    const currentIds = new Set(overlaysWithPin.map((o) => o.id));
+    const existingPins = overlayPinsRef.current;
+
+    // 더 이상 없는 핀 제거
+    existingPins.forEach((marker, id) => {
+      if (!currentIds.has(id)) {
+        marker.setMap(null);
+        existingPins.delete(id);
+      }
+    });
+
+    // 새로운 핀 추가
+    overlaysWithPin.forEach((overlay) => {
+      if (existingPins.has(overlay.id)) return;
+
+      const marker = new naver.maps.Marker({
+        position: new naver.maps.LatLng(overlay.pin_lat!, overlay.pin_lng!),
+        map,
+        icon: getOverlayPinIcon(),
+        zIndex: 50,
+      });
+
+      naver.maps.Event.addListener(marker, 'click', () => {
+        onOverlayPinClick(overlay);
+      });
+
+      existingPins.set(overlay.id, marker);
+    });
+  }, [isReady, map, overlays, onOverlayPinClick]);
+
   return (
-    <div ref={containerRef} className="relative h-full w-full">
+    <div ref={containerRef} className="relative z-0 h-full w-full">
       {!isReady && (
         <div className="flex h-full items-center justify-center bg-surface-dim">
           <p className="text-text-secondary text-sm">지도를 불러오는 중...</p>

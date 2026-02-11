@@ -126,6 +126,28 @@ body {
   background-color: #6b7280;
 }
 
+.marker-overlay-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50% 50% 50% 0;
+  background-color: #10b981;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.marker-overlay-pin::after {
+  content: "";
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: white;
+  transform: rotate(45deg);
+}
+
 @keyframes marker-pulse {
   0%,
   100% {
@@ -158,4 +180,35 @@ body {
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* 검색 오버레이 애니메이션 */
+.search-overlay-enter {
+  animation: search-overlay-in 250ms ease-out forwards;
+}
+
+.search-overlay-exit {
+  animation: search-overlay-out 200ms ease-in forwards;
+}
+
+@keyframes search-overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes search-overlay-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }

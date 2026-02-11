@@ -25,9 +25,16 @@ src/
 │       └── components/     # Admin 전용 컴포넌트 (SpotForm)
 ├── components/             # 공용 컴포넌트
 │   ├── Map/                # 네이버 지도 (NaverMap, MapControls)
+│   ├── BottomDrawer/       # 통합 Bottom Drawer (snap point 기반)
+│   │   ├── index.tsx       # Sheet + snap 관리 + 콘텐츠 스위칭
+│   │   ├── useSnapPoints.ts # DOM 측정 → snap point 계산 훅
+│   │   ├── DrawerSpotDetail.tsx # 스팟 상세 콘텐츠
+│   │   └── DrawerSpotList.tsx   # 스팟 목록 콘텐츠
 │   └── ui/                 # shadcn/ui 컴포넌트 (button, input, badge 등)
 ├── lib/                    # 유틸리티
 │   ├── supabase/           # Supabase 클라이언트 (client, server, middleware)
+│   ├── auth/               # withAuth HOF (Admin API 인증)
+│   ├── image-upload.ts     # 이미지 검증 + WebP 변환 + Storage 업로드/삭제
 │   ├── utils.ts            # cn() 유틸리티 (shadcn/ui)
 │   └── marker-config.ts    # 마커 설정 (카테고리별 색상, 아이콘 생성)
 ├── hooks/                  # 커스텀 훅 (useSpots, useSearch, useNaverMap, useGeocode)
@@ -396,8 +403,8 @@ npm run gen:types
 - [x] useSpots 훅 (`src/hooks/useSpots.ts`)
 - [x] 마커 표시 (일반 + 하이라이트 + 카테고리별 색상 구분)
 - [x] 마커 설정 시스템 (`src/lib/marker-config.ts`)
-- [x] 마커 클릭 → Bottom Sheet (`src/components/BottomSheet.tsx` → shadcn Sheet)
-- [x] Bottom Sheet → 상세 페이지 전환 (`src/app/spot/[id]/page.tsx`)
+- [x] 마커 클릭 → Bottom Drawer (`src/components/BottomDrawer/` — 통합 snap point 기반)
+- [x] Bottom Drawer → 상세 페이지 전환 (`src/app/spot/[id]/page.tsx`)
 - [x] 지도 유형 전환 (일반/위성/혼합/지형) (`src/components/Map/MapControls.tsx`)
 - [x] 현재 위치 버튼 (브라우저 Geolocation API)
 
@@ -429,7 +436,7 @@ npm run gen:types
 - [x] shadcn/ui 통합 (components.json, utils.ts, globals.css)
 - [x] 컴포넌트 14개 설치 (button, input, label, textarea, badge, card, sheet, dialog, sonner, select, checkbox, toggle, alert-dialog, separator)
 - [x] Toaster 추가 (layout.tsx)
-- [x] 기존 컴포넌트 리팩터링 (BottomSheet, Header, FilterChips, FABMenu, SpotCard, admin 페이지 등)
+- [x] 기존 컴포넌트 리팩터링 (BottomDrawer, Header, FilterChips, FABMenu, SpotCard, admin 페이지 등)
 - [x] lucide-react 아이콘 통합
 
 ### Phase 5.6: 문서
@@ -450,6 +457,111 @@ npm run gen:types
 - 모호하거나 이상한 부분이 있으면 user 에게 반드시 물어보고 확실하게 처리
 - **깔끔하고 권장된 구조**로 코딩할 것, 계획이 그렇지 않다면 계획에 대해 좀 더 명확히 논의
 - 이 컴퓨터는 window 기반 powershell 을 사용하니까 명령어를 그에 맞춰 사용
+
+### shadcn/ui 사용 기준
+
+- **폼 요소**(`input`, `textarea`, `label`, `select`)는 반드시 shadcn 컴포넌트(`Input`, `Textarea`, `Label`, `Select`)를 사용
+- **`<button>`은 무조건 `<Button>`으로 바꾸지 않음** — 드롭다운 아이템, 이미지 오버레이 컨트롤, 커스텀 shape(FAB, 칩 등) 등 shadcn Button 스타일을 90% 이상 override해야 하면 raw `<button>` 사용
+
+### ⚠️ 유틸리티 / 공통 코드 중복 방지
+
+**새로운 유틸리티 함수나 헬퍼를 만들기 전에 반드시 기존 코드를 먼저 검색하라.**
+
+1. `src/lib/` 디렉토리에 이미 같은 역할의 유틸이 있는지 확인
+2. 다른 API Route나 컴포넌트에서 동일한 로직을 로컬 함수로 갖고 있는지 Grep으로 검색
+3. 이미 존재하면 → 기존 유틸을 import해서 재사용하거나, 파라미터화하여 공통 유틸로 추출
+4. 새로 만들어야 한다면 → `src/lib/`에 공통 유틸로 생성하고, 기존 중복 코드도 함께 리팩터링
+
+**현재 존재하는 공통 유틸:**
+
+| 파일 | 내용 |
+|------|------|
+| `src/lib/image-upload.ts` | 이미지 검증(`validateImageFile`), WebP 변환+업로드(`convertAndUpload`), Storage 삭제(`removeFromStorage`) |
+| `src/lib/utils.ts` | `cn()` (Tailwind 클래스 병합) |
+| `src/lib/marker-config.ts` | 카테고리별 마커 색상/아이콘 |
+| `src/lib/naver-map-utils.ts` | 네이버 지도 유틸 |
+| `src/lib/auth/withAuth.ts` | Admin API 인증 HOF |
+
+## BottomDrawer 컨벤션
+
+### 아키텍처
+
+`src/components/BottomDrawer/`는 **하나의 Sheet 인스턴스**를 유지하며 콘텐츠만 교체하는 구조:
+
+```
+BottomDrawer (index.tsx)     ← Sheet 인스턴스 (항상 isOpen={true})
+├── DrawerSpotDetail.tsx     ← selectedSpot이 있을 때
+└── DrawerSpotList.tsx       ← selectedSpot이 null일 때
+```
+
+- Sheet는 **절대 언마운트되지 않음** → 전환 애니메이션이 부드러움
+- `disableDismiss={true}` → 사용자가 완전히 닫을 수 없음 (최소 title snap 유지)
+
+### Snap Point 체계 (4단계)
+
+```
+snapPoints = [0, peekPx, titlePx, contentPx, maxHeight]
+              │    │       │         │          └─ index 4: full (75vh, 스크롤 가능)
+              │    │       │         └─ index 3: content (주요 콘텐츠)
+              │    │       └─ index 2: title (사진+이름+주소 / 요약바)
+              │    └─ index 1: peek (drag handle bar만)
+              └─ index 0: (내부용, disableDismiss로 도달 불가)
+```
+
+| 단계 | Index | 보이는 것 | 진입 시점 |
+|------|-------|----------|----------|
+| **Peek** | 1 | drag handle bar만 | 기본 상태, X 버튼 (스팟 해제) |
+| **Title** | 2 | + 사진 + 스팟명 + 주소 (detail) / 요약바 (list) | 핀 클릭 |
+| **Content** | 3 | + 카테고리 + 설명 + 버튼 | 위로 드래그 |
+| **Full** | 4 | 75vh 전체, 스크롤 가능 | 위로 더 드래그 |
+
+- `useSnapPoints` 훅이 `titleRef`, `contentRef`의 DOM 높이를 측정하여 픽셀 값 계산
+- `peekPx` = `HEADER_HEIGHT` (40px, drag handle만)
+- 윈도우 리사이즈 시 자동 재계산
+- 측정 불가 시 fallback: `[0, 40, 0.15, 0.45, 0.75]`
+
+### 새 Drawer 콘텐츠 추가 시 규칙
+
+1. **`titleRef` / `contentRef` 필수**: 모든 콘텐츠 컴포넌트는 props로 `titleRef`와 `contentRef`를 받아 snap 경계를 지정
+2. **titleRef**: snap 1에서 보이는 영역 (drag handle + 이 div까지)
+3. **contentRef**: snap 2에서 추가로 보이는 영역 (titleRef 아래)
+4. **나머지 콘텐츠**: snap 3(full)에서만 노출
+
+```tsx
+interface DrawerNewContentProps {
+  titleRef: RefObject<HTMLDivElement | null>;
+  contentRef: RefObject<HTMLDivElement | null>;
+  // ... 기타 props
+}
+
+export default function DrawerNewContent({ titleRef, contentRef, ... }: DrawerNewContentProps) {
+  return (
+    <>
+      <div ref={titleRef}>  {/* snap 1 경계 */}
+        {/* 제목, 요약 등 최소 정보 */}
+      </div>
+      <div ref={contentRef}>  {/* snap 2 경계 */}
+        {/* 주요 콘텐츠 */}
+      </div>
+      {/* snap 3에서만 보이는 추가 콘텐츠 */}
+    </>
+  );
+}
+```
+
+5. **index.tsx 수정**: 새 콘텐츠 모드 추가 시 조건부 렌더링과 snap 전환 로직 추가
+6. **스크롤**: full snap(index 4)에서만 활성화 — `disableScroll={({ currentSnap }) => currentSnap !== 4}`
+7. **snap 전환**: 핀 클릭 → `snapTo(2)` (title), 해제 → `snapTo(1)` (peek)
+
+### ❌ 하지 말 것
+
+- 별도의 `Sheet` 인스턴스를 새로 만들지 않음 → 반드시 `BottomDrawer/index.tsx`에 콘텐츠를 추가
+- `titleRef`/`contentRef` 없이 콘텐츠를 만들지 않음 → snap point 계산이 깨짐
+- Sheet의 `isOpen`을 `false`로 바꾸지 않음 → 항상 `true` 유지
+
+### ⚠️ Storage 파일 삭제 필수
+
+**DB에서 레코드를 삭제할 때, 해당 레코드에 연결된 Storage 파일(사진, 이미지)도 반드시 함께 삭제해야 한다.** 개별 삭제든 일괄 삭제든 모두 적용. `removeFromStorage()` (`src/lib/image-upload.ts`) 사용.
 
 ## 이미지 최적화 가이드
 

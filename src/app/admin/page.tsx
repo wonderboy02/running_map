@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Star, Pencil, Trash2, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,8 +41,33 @@ export default function AdminDashboard() {
   }, []);
 
   async function handleDelete(id: string) {
-    await supabase.from('spots').delete().eq('id', id);
-    fetchSpots();
+    try {
+      // Storage에서 사진 파일 삭제
+      const { data: spot } = await supabase.from('spots').select('photos').eq('id', id).single();
+      if (spot?.photos && spot.photos.length > 0) {
+        try {
+          const res = await fetch('/api/admin/spot-photos', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls: spot.photos }),
+          });
+          if (!res.ok) console.error('사진 파일 정리 실패:', res.status);
+        } catch (err) {
+          console.error('사진 파일 정리 중 오류:', err);
+        }
+      }
+
+      const { error } = await supabase.from('spots').delete().eq('id', id);
+      if (error) {
+        toast.error('삭제에 실패했습니다: ' + error.message);
+        return;
+      }
+      toast.success('장소가 삭제되었습니다.');
+      fetchSpots();
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast.error('삭제 중 오류가 발생했습니다.');
+    }
   }
 
   async function handleToggleHighlight(spot: Spot) {

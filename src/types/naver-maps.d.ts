@@ -36,6 +36,9 @@ declare namespace naver.maps {
     mapTypeControl?: boolean;
     scaleControl?: boolean;
     tileTransition?: boolean;
+    mapDataControl?: boolean;
+    logoControl?: boolean;
+    logoControlOptions?: { position?: number };
   }
 
   interface MarkerOptions {

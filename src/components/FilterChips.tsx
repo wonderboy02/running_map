@@ -10,7 +10,7 @@ interface FilterChipsProps {
 
 export default function FilterChips({ activeFilters, onToggle }: FilterChipsProps) {
   return (
-    <div className="absolute top-[56px] left-0 right-0 z-20 px-4 pointer-events-none">
+    <div className="absolute top-[48px] left-0 right-0 z-20 px-4 pointer-events-none">
       <div className="flex gap-2 justify-start pointer-events-auto">
         {CATEGORIES.map((category) => {
           const isActive = activeFilters.includes(category);
