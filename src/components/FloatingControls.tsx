@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Eye, EyeOff, LocateFixed, MessageCircle } from 'lucide-react';
+import { Eye, EyeOff, LocateFixed, Send } from 'lucide-react';
 import { toast } from 'sonner';
-
-const FEEDBACK_URL = 'https://forms.gle/placeholder';
+import FeedbackDialog from '@/components/FeedbackDialog';
 
 interface FloatingControlsProps {
   map: naver.maps.Map | null;
@@ -18,6 +17,7 @@ export default function FloatingControls({
   onToggleOverlays,
 }: FloatingControlsProps) {
   const [locating, setLocating] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const handleLocate = useCallback(() => {
     if (!map) return;
@@ -77,16 +77,16 @@ export default function FloatingControls({
           />
         </button>
 
-        <a
-          href={FEEDBACK_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => setFeedbackOpen(true)}
           className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-md transition-transform hover:scale-105"
           aria-label="의견 보내기"
         >
-          <MessageCircle className="h-5 w-5" />
-        </a>
+          <Send className="h-5 w-5" />
+        </button>
       </div>
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   );
 }

@@ -203,7 +203,7 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
   }, [isReady, map, overlays, onOverlayPinClick]);
 
   return (
-    <div ref={containerRef} className="relative h-full w-full">
+    <div ref={containerRef} className="relative z-0 h-full w-full">
       {!isReady && (
         <div className="flex h-full items-center justify-center bg-surface-dim">
           <p className="text-text-secondary text-sm">지도를 불러오는 중...</p>

@@ -32,7 +32,7 @@ export default function DrawerOverlayDetail({
       </Button>
 
       {/* === titleRef: snap 1 경계 === */}
-      <div ref={titleRef} className="px-4 pt-3 pb-2 pr-12">
+      <div ref={titleRef} className="px-4 pt-3 pb-4 pr-12">
         <h2 className="text-[clamp(18px,5vw,22px)] font-bold text-gray-900 leading-tight tracking-tight mb-2">
           {overlay.name}
         </h2>

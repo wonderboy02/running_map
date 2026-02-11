@@ -1,3 +1,5 @@
+import type { Database } from '@/lib/supabase/database';
+
 export interface Spot {
   id: string;
   name: string;
@@ -40,6 +42,8 @@ export interface Overlay {
 export type DrawerSelection =
   | { type: 'spot'; data: Spot }
   | { type: 'overlay'; data: Overlay };
+
+export type Feedback = Database['public']['Tables']['feedback']['Row'];
 
 export const CATEGORIES = [
   "러너스팟",
