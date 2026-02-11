@@ -47,7 +47,7 @@ export default function FloatingControls({
   return (
     <>
       {/* 오른쪽 상단: 오버레이 토글 */}
-      <div className="fixed right-3 top-[104px] z-[35] flex flex-col items-center">
+      <div className="fixed right-3 top-[104px] z-[25] flex flex-col items-center">
         <button
           onClick={() => onToggleOverlays(!showOverlays)}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-md transition-colors"
@@ -65,7 +65,7 @@ export default function FloatingControls({
       </div>
 
       {/* 오른쪽 하단: 내 위치 + 피드백 */}
-      <div className="fixed bottom-[60px] right-4 z-[35] flex flex-col items-center gap-2">
+      <div className="fixed bottom-[60px] right-4 z-[25] flex flex-col items-center gap-2">
         <button
           onClick={handleLocate}
           disabled={locating}

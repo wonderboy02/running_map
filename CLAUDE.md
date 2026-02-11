@@ -563,6 +563,27 @@ export default function DrawerNewContent({ titleRef, contentRef, ... }: DrawerNe
 
 **DB에서 레코드를 삭제할 때, 해당 레코드에 연결된 Storage 파일(사진, 이미지)도 반드시 함께 삭제해야 한다.** 개별 삭제든 일괄 삭제든 모두 적용. `removeFromStorage()` (`src/lib/image-upload.ts`) 사용.
 
+## Z-Index 컨벤션
+
+지도 기반 모바일 앱이므로 레이어 순서가 중요합니다. 새 컴포넌트 추가 시 아래 표를 기준으로 z-index를 부여하세요.
+
+| z-index | 레이어 | 컴포넌트 | 비고 |
+|---------|--------|----------|------|
+| 0 | 지도 | `NaverMap` | `z-0` |
+| 10 | 지도 내 컨트롤 | `MapControls` | 지도 위 버튼 (위성/지형 전환) |
+| 20 | 필터 칩 | `FilterChips` | 헤더 바로 아래 |
+| **25** | **플로팅 버튼** | **`FloatingControls`** | 내 위치, 피드백, 오버레이 토글 — **드로어보다 아래** |
+| **30** | **Bottom Drawer** | **`BottomDrawer` (Sheet)** | `style={{ zIndex: 30 }}` |
+| 40 | 헤더 | `Header` | 최상단 고정 |
+| 50 | 모달/다이얼로그 | shadcn/ui `Dialog`, `AlertDialog`, `Sheet`, `Tooltip` | 기본값 유지 |
+| 60 | 검색 오버레이 | `SearchOverlay` | 전체화면 오버레이 |
+
+### 규칙
+
+- **플로팅 버튼(25)은 드로어(30)보다 반드시 낮게** — 드로어가 올라오면 FAB 버튼을 자연스럽게 덮음
+- shadcn/ui 컴포넌트(Dialog 등)의 `z-50`은 수정하지 않음
+- 새 레이어 추가 시 위 표에 기록하고, 기존 값 사이에 배치
+
 ## 이미지 최적화 가이드
 
 - **유저 대면 이미지는 반드시 `next/image` (`<Image>`) 사용** — `<img>` 태그 금지
