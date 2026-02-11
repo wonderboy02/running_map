@@ -29,6 +29,63 @@ export type Database = {
         }
         Relationships: []
       }
+      overlays: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          difficulty: number | null
+          distance_km: number | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          name: string
+          nw_lat: number
+          nw_lng: number
+          opacity: number
+          pin_lat: number | null
+          pin_lng: number | null
+          se_lat: number
+          se_lng: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          difficulty?: number | null
+          distance_km?: number | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          name: string
+          nw_lat: number
+          nw_lng: number
+          opacity?: number
+          pin_lat?: number | null
+          pin_lng?: number | null
+          se_lat: number
+          se_lng: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          difficulty?: number | null
+          distance_km?: number | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          name?: string
+          nw_lat?: number
+          nw_lng?: number
+          opacity?: number
+          pin_lat?: number | null
+          pin_lng?: number | null
+          se_lat?: number
+          se_lng?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       spots: {
         Row: {
           address: string

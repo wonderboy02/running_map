@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Loader2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Search, Loader2, X, MapPin } from 'lucide-react';
 import { useNaverSearch } from '@/hooks/useNaverSearch';
 import { SearchResultsTable } from './SearchResultsTable';
 import { checkDuplicateBatch } from '@/lib/duplicate-checker';
@@ -15,6 +16,7 @@ export function NaverSearchSection() {
   const [resultsWithDuplicateCheck, setResultsWithDuplicateCheck] = useState<any[]>([]);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const [bulkSearching, setBulkSearching] = useState(false);
+  const [addressFilter, setAddressFilter] = useState('');
   const [bulkStats, setBulkStats] = useState<{
     total: number;
     noResults: number;
@@ -224,6 +226,20 @@ export function NaverSearchSection() {
     checkDuplicates();
   }, [results]);
 
+  // 주소 필터 적용
+  const filteredResults = useMemo(() => {
+    const trimmed = addressFilter.trim();
+    if (!trimmed) return resultsWithDuplicateCheck;
+
+    return resultsWithDuplicateCheck.filter(item => {
+      // 결과 없음 항목은 항상 필터링에서 제외 (숨김)
+      if (item.noResult) return false;
+
+      const addr = (item.roadAddress || '') + ' ' + (item.address || '');
+      return addr.includes(trimmed);
+    });
+  }, [resultsWithDuplicateCheck, addressFilter]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -270,12 +286,12 @@ export function NaverSearchSection() {
         <p className="text-xs text-text-secondary">
           여러 장소를 한 번에 검색합니다. 한 줄에 하나씩 입력하세요.
         </p>
-        <textarea
-          placeholder="장소명을 줄바꿈으로 입력&#10;예:&#10;강남역 카페&#10;홍대 사우나&#10;신촌 헬스장"
+        <Textarea
+          placeholder={"장소명을 줄바꿈으로 입력\n예:\n강남역 카페\n홍대 사우나\n신촌 헬스장"}
           value={bulkQuery}
           onChange={(e) => setBulkQuery(e.target.value)}
           disabled={loading || bulkSearching}
-          className="w-full h-32 px-3 py-2 border border-border rounded-md resize-y font-mono text-sm"
+          className="h-32 resize-y font-mono"
         />
         <Button
           onClick={handleBulkSearch}
@@ -335,16 +351,43 @@ export function NaverSearchSection() {
 
       {!checkingDuplicates && resultsWithDuplicateCheck.length > 0 && (
         <div className="bg-surface rounded-lg border border-border p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="font-medium shrink-0">
               검색 결과{' '}
               <span className="text-text-secondary text-sm">
-                ({resultsWithDuplicateCheck.length}건)
+                {addressFilter.trim()
+                  ? `(${filteredResults.length}건 / 전체 ${resultsWithDuplicateCheck.length}건)`
+                  : `(${resultsWithDuplicateCheck.length}건)`}
               </span>
             </h4>
+
+            {/* 주소 필터 */}
+            <div className="relative w-64">
+              <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
+              <Input
+                placeholder="주소 필터 (예: 강남구, 마포)"
+                value={addressFilter}
+                onChange={(e) => setAddressFilter(e.target.value)}
+                className="pl-8 pr-8 h-8 text-sm"
+              />
+              {addressFilter && (
+                <button
+                  onClick={() => setAddressFilter('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
 
-          <SearchResultsTable results={resultsWithDuplicateCheck} />
+          {filteredResults.length > 0 ? (
+            <SearchResultsTable results={filteredResults} />
+          ) : (
+            <div className="text-center py-4 text-sm text-text-secondary">
+              &quot;{addressFilter}&quot; 주소에 해당하는 결과가 없습니다.
+            </div>
+          )}
         </div>
       )}
 

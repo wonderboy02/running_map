@@ -28,9 +28,18 @@ export interface Overlay {
   se_lng: number;
   opacity: number;
   is_active: boolean;
+  description: string | null;
+  difficulty: number | null;
+  distance_km: number | null;
+  pin_lat: number | null;
+  pin_lng: number | null;
   created_at: string;
   updated_at: string;
 }
+
+export type DrawerSelection =
+  | { type: 'spot'; data: Spot }
+  | { type: 'overlay'; data: Overlay };
 
 export const CATEGORIES = [
   "러너스팟",

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Search, Loader2 } from 'lucide-react';
+import { MapPin, Search, Loader2, Plus, X, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { CATEGORIES } from '@/types';
 import type { Spot, SpotInsert } from '@/types';
@@ -60,6 +60,18 @@ export default function SpotForm({ spot }: SpotFormProps) {
   const [addressQuery, setAddressQuery] = useState(spot?.address ?? '');
   const [showResults, setShowResults] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 사진 관련 상태
+  const [pendingPhotos, setPendingPhotos] = useState<{ file: File; preview: string }[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<string[]>(spot?.photos ?? []);
+  const [removedPhotos, setRemovedPhotos] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const pendingPhotosRef = useRef(pendingPhotos);
+  pendingPhotosRef.current = pendingPhotos;
+
+  const MAX_PHOTOS = 5;
+  const totalPhotos = existingPhotos.length + pendingPhotos.length;
 
   const { results, loading: geocodeLoading, search, clear } = useGeocode();
 
@@ -85,6 +97,67 @@ export default function SpotForm({ spot }: SpotFormProps) {
         : [...prev.categories, cat],
     }));
   }
+
+  // 사진 핸들러
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      const remaining = MAX_PHOTOS - totalPhotos;
+      if (remaining <= 0) return;
+
+      const selected = files.slice(0, remaining);
+      const newPending = selected.map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+      setPendingPhotos((prev) => [...prev, ...newPending]);
+
+      // input value 초기화 (같은 파일 재선택 허용)
+      e.target.value = '';
+    },
+    [totalPhotos],
+  );
+
+  function removeExistingPhoto(index: number) {
+    const url = existingPhotos[index];
+    setRemovedPhotos((prev) => [...prev, url]);
+    setExistingPhotos((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function removePendingPhoto(index: number) {
+    setPendingPhotos((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
+
+  function moveExistingPhoto(index: number, dir: -1 | 1) {
+    setExistingPhotos((prev) => {
+      const arr = [...prev];
+      const target = index + dir;
+      if (target < 0 || target >= arr.length) return prev;
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+      return arr;
+    });
+  }
+
+  function movePendingPhoto(index: number, dir: -1 | 1) {
+    setPendingPhotos((prev) => {
+      const arr = [...prev];
+      const realIndex = index;
+      const target = realIndex + dir;
+      if (target < 0 || target >= arr.length) return prev;
+      [arr[realIndex], arr[target]] = [arr[target], arr[realIndex]];
+      return arr;
+    });
+  }
+
+  // 메모리 누수 방지: 언마운트 시 ObjectURL 해제
+  useEffect(() => {
+    return () => {
+      pendingPhotosRef.current.forEach((p) => URL.revokeObjectURL(p.preview));
+    };
+  }, []);
 
   function handleAddressInput(value: string) {
     setAddressQuery(value);
@@ -124,27 +197,83 @@ export default function SpotForm({ spot }: SpotFormProps) {
       return;
     }
 
-    if (isEdit && spot) {
-      const { error } = await supabase.from('spots').update(form).eq('id', spot.id);
+    try {
+      // 1. 대기 중 사진 업로드
+      let newUrls: string[] = [];
+      if (pendingPhotos.length > 0) {
+        setUploading(true);
+        const formData = new FormData();
+        pendingPhotos.forEach((p) => formData.append('images', p.file));
 
-      if (error) {
-        toast.error('수정에 실패했습니다: ' + error.message);
-        setSaving(false);
-        return;
-      }
-      toast.success('장소가 수정되었습니다.');
-    } else {
-      const { error } = await supabase.from('spots').insert(form);
+        const res = await fetch('/api/admin/spot-photos', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) {
+          toast.error(`사진 업로드 실패 (HTTP ${res.status})`);
+          setSaving(false);
+          setUploading(false);
+          return;
+        }
+        const result = await res.json();
 
-      if (error) {
-        toast.error('추가에 실패했습니다: ' + error.message);
-        setSaving(false);
-        return;
+        if (!result.success) {
+          toast.error('사진 업로드 실패: ' + result.error);
+          setSaving(false);
+          setUploading(false);
+          return;
+        }
+        newUrls = result.urls;
+        setUploading(false);
       }
-      toast.success('장소가 추가되었습니다.');
+
+      // 2. 삭제된 사진 Storage 정리
+      if (removedPhotos.length > 0) {
+        try {
+          const deleteRes = await fetch('/api/admin/spot-photos', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls: removedPhotos }),
+          });
+          if (!deleteRes.ok) {
+            console.error('사진 파일 정리 실패:', deleteRes.status);
+            toast.warning('일부 사진 파일 정리에 실패했습니다.');
+          }
+        } catch (err) {
+          console.error('사진 파일 정리 중 오류:', err);
+          toast.warning('사진 파일 정리 중 오류가 발생했습니다.');
+        }
+      }
+
+      // 3. 최종 photos 배열 조합
+      const finalPhotos = [...existingPhotos, ...newUrls];
+      const submitData = { ...form, photos: finalPhotos };
+
+      if (isEdit && spot) {
+        const { error } = await supabase.from('spots').update(submitData).eq('id', spot.id);
+        if (error) {
+          toast.error('수정에 실패했습니다: ' + error.message);
+          setSaving(false);
+          return;
+        }
+        toast.success('장소가 수정되었습니다.');
+      } else {
+        const { error } = await supabase.from('spots').insert(submitData);
+        if (error) {
+          toast.error('추가에 실패했습니다: ' + error.message);
+          setSaving(false);
+          return;
+        }
+        toast.success('장소가 추가되었습니다.');
+      }
+
+      router.push('/admin');
+    } catch (error) {
+      console.error('Submit error:', error);
+      toast.error('저장 중 오류가 발생했습니다.');
+      setSaving(false);
+      setUploading(false);
     }
-
-    router.push('/admin');
   }
 
   return (
@@ -290,6 +419,119 @@ export default function SpotForm({ spot }: SpotFormProps) {
           rows={3}
           placeholder="장소에 대한 간단한 설명"
         />
+      </div>
+
+      {/* 사진 */}
+      <div className="space-y-1.5">
+        <Label>
+          사진 ({totalPhotos}/{MAX_PHOTOS})
+        </Label>
+        <div className="grid grid-cols-4 gap-2">
+          {/* 기존 사진 */}
+          {existingPhotos.map((url, i) => (
+            <div
+              key={`existing-${i}`}
+              className="group relative aspect-square overflow-hidden rounded-lg border bg-gray-100"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt={`사진 ${i + 1}`} className="h-full w-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center gap-0.5 bg-black/0 opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                {i > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => moveExistingPhoto(i, -1)}
+                    className="rounded-full bg-white/90 p-1 shadow-sm"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {i < existingPhotos.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => moveExistingPhoto(i, 1)}
+                    className="rounded-full bg-white/90 p-1 shadow-sm"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => removeExistingPhoto(i)}
+                className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white shadow-sm"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+
+          {/* 대기 중 사진 */}
+          {pendingPhotos.map((p, i) => (
+            <div
+              key={`pending-${i}`}
+              className="group relative aspect-square overflow-hidden rounded-lg border border-dashed border-blue-300 bg-blue-50"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.preview} alt={`새 사진 ${i + 1}`} className="h-full w-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center gap-0.5 bg-black/0 opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                {i > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => movePendingPhoto(i, -1)}
+                    className="rounded-full bg-white/90 p-1 shadow-sm"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {i < pendingPhotos.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => movePendingPhoto(i, 1)}
+                    className="rounded-full bg-white/90 p-1 shadow-sm"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => removePendingPhoto(i)}
+                className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white shadow-sm"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <div className="absolute bottom-0 left-0 right-0 bg-blue-500/80 py-0.5 text-center text-[10px] font-medium text-white">
+                대기중
+              </div>
+            </div>
+          ))}
+
+          {/* 추가 버튼 */}
+          {totalPhotos < MAX_PHOTOS && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 text-gray-400 transition-colors hover:border-gray-400 hover:bg-gray-100 hover:text-gray-500"
+            >
+              <Plus className="h-5 w-5" />
+              <span className="text-[10px] font-medium">추가</span>
+            </button>
+          )}
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+        {uploading && (
+          <div className="flex items-center gap-2 text-sm text-blue-600">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            사진 업로드 중...
+          </div>
+        )}
       </div>
 
       {/* 전화번호 */}

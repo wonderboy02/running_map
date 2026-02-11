@@ -153,11 +153,15 @@ running_map/
 │   │   │   ├── NaverMap.tsx        # 네이버 지도 컴포넌트 (use client)
 │   │   │   ├── MapMarker.tsx       # 마커 컴포넌트
 │   │   │   └── MapControls.tsx     # 지도 컨트롤 (현위치 등)
+│   │   ├── BottomDrawer/           # 통합 Bottom Drawer (snap point 기반)
+│   │   │   ├── index.tsx           # Sheet + snap 관리 + 콘텐츠 스위칭
+│   │   │   ├── useSnapPoints.ts    # DOM 측정 → snap point 계산 훅
+│   │   │   ├── DrawerSpotDetail.tsx # 스팟 상세 콘텐츠
+│   │   │   └── DrawerSpotList.tsx  # 스팟 목록 콘텐츠
 │   │   ├── Header.tsx              # 헤더 (앱 이름 + 검색)
 │   │   ├── SearchBar.tsx           # 검색창
 │   │   ├── FilterChips.tsx         # 카테고리 필터 칩
-│   │   ├── BottomSheet.tsx         # Bottom Sheet 컴포넌트
-│   │   ├── SpotCard.tsx            # Bottom Sheet 내 장소 카드
+│   │   ├── SpotCard.tsx            # 장소 카드
 │   │   ├── FABMenu.tsx             # 플로팅 액션 버튼 + dropup 메뉴
 │   │   └── ui/                     # 공통 UI 컴포넌트
 │   ├── lib/

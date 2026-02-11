@@ -19,9 +19,16 @@ interface NaverLocalResponse {
   display: number;
 }
 
-// HTML 태그 제거
+// HTML 태그 제거 + HTML 엔티티 디코딩
 function stripHtmlTags(str: string): string {
-  return str.replace(/<[^>]*>/g, '');
+  return str
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&apos;/g, "'");
 }
 
 // KATECH 좌표계 → WGS84 변환

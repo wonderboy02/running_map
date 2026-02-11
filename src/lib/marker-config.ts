@@ -70,6 +70,14 @@ export function getMarkerIcon(
   };
 }
 
+export function getOverlayPinIcon(): naver.maps.HtmlIcon {
+  return {
+    content: `<div class="marker-overlay-pin"></div>`,
+    size: new naver.maps.Size(36, 36),
+    anchor: new naver.maps.Point(18, 36),
+  };
+}
+
 export function createImageMarkerIcon(
   imageUrl: string,
   size: { width: number; height: number } = { width: 36, height: 36 }

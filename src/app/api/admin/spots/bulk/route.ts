@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
 import { supabaseServer } from '@/lib/supabase/server';
+import { removeFromStorage } from '@/lib/image-upload';
 
 interface SpotInsertData {
   name: string;
@@ -234,6 +235,23 @@ export const DELETE = withAuth(async (request: NextRequest) => {
         { success: false, error: '삭제할 장소가 선택되지 않았습니다.' },
         { status: 400 }
       );
+    }
+
+    // Storage에서 사진 파일 정리
+    const { data: spots } = await supabaseServer
+      .from('spots')
+      .select('photos')
+      .in('id', spotIds);
+
+    if (spots) {
+      const allPhotos = spots.flatMap((s) => s.photos ?? []);
+      if (allPhotos.length > 0) {
+        try {
+          await removeFromStorage('spot-photos', allPhotos);
+        } catch (err) {
+          console.error('[Bulk Delete] 사진 파일 정리 실패:', err);
+        }
+      }
     }
 
     const { error } = await supabaseServer
