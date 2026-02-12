@@ -177,13 +177,16 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
     });
   }, [isReady, map, courses]);
 
-  // 코스 핀 마커 렌더링
+  // 코스 핀 마커 렌더링 (선택 상태 반영)
+  // 스팟 마커와 별도 effect — 데이터 소스(courses)와 라이프사이클이 다르기 때문
   useEffect(() => {
     if (!isReady || !map) return;
 
     const coursesWithPin = courses.filter((o) => o.pin_lat != null && o.pin_lng != null);
     const currentIds = new Set(coursesWithPin.map((o) => o.id));
     const existingPins = coursePinsRef.current;
+    const selectedCourseId =
+      selection?.type === 'course' ? selection.data.id : null;
 
     // 더 이상 없는 핀 제거
     existingPins.forEach((marker, id) => {
@@ -193,24 +196,30 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
       }
     });
 
-    // 새로운 핀 추가
+    // 새로운 핀 추가 또는 기존 핀 아이콘 업데이트
     coursesWithPin.forEach((course) => {
-      if (existingPins.has(course.id)) return;
+      const isSelected = course.id === selectedCourseId;
+      const existing = existingPins.get(course.id);
 
-      const marker = new naver.maps.Marker({
-        position: new naver.maps.LatLng(course.pin_lat!, course.pin_lng!),
-        map,
-        icon: getCoursePinIcon(),
-        zIndex: 50,
-      });
+      if (existing) {
+        existing.setIcon(getCoursePinIcon(isSelected, course.name));
+        existing.setZIndex(isSelected ? 200 : 50);
+      } else {
+        const marker = new naver.maps.Marker({
+          position: new naver.maps.LatLng(course.pin_lat!, course.pin_lng!),
+          map,
+          icon: getCoursePinIcon(isSelected, course.name),
+          zIndex: isSelected ? 200 : 50,
+        });
 
-      naver.maps.Event.addListener(marker, 'click', () => {
-        onCoursePinClick(course);
-      });
+        naver.maps.Event.addListener(marker, 'click', () => {
+          onCoursePinClick(course);
+        });
 
-      existingPins.set(course.id, marker);
+        existingPins.set(course.id, marker);
+      }
     });
-  }, [isReady, map, courses, onCoursePinClick]);
+  }, [isReady, map, courses, onCoursePinClick, selection]);
 
   return (
     <div ref={containerRef} className="relative z-0 h-full w-full">

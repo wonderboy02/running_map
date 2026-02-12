@@ -1,7 +1,45 @@
+/**
+ * marker-config.ts — 마커 아이콘 설정 (PNG 기반)
+ *
+ * ┌─ 구조 ──────────────────────────────────────────────┐
+ * │ 1. 사이즈   BASE_SIZES (공통) + CATEGORY_SIZES (오버라이드) │
+ * │ 2. 이미지   SPOT_IMAGES (카테고리별) + COURSE_IMAGES        │
+ * │ 3. 캡션     CAPTION_* 상수 + truncateName, escapeHtml       │
+ * │ 4. 헬퍼     buildCaptionedIcon, buildPngIcon                │
+ * │ 5. 프리로드  preloadMarkerImages                            │
+ * │ 6. 공개 API  getSpotMarkerIcon / getCoursePinIcon /         │
+ * │              getSearchPinIcon                               │
+ * └─────────────────────────────────────────────────────┘
+ *
+ * 사이즈 규칙:
+ *  - 모든 PNG 마커는 BASE_SIZES (default 20×20, selected 25×36) 적용
+ *  - 특정 카테고리만 다르면 CATEGORY_SIZES에 오버라이드 등록
+ *  - 검색 핀은 CSS 기반이므로 인라인 사이즈 사용
+ *
+ * 캡션 규칙:
+ *  - name이 있으면 buildCaptionedIcon → 이미지 아래 텍스트
+ *  - name이 없으면 bare 이미지만 반환
+ */
 import type { Category } from '@/types';
 
-// ─── 카테고리별 마커 이미지 경로 ─────────────────────
-const MARKER_IMAGES: Record<Category, { default: string; selected: string }> = {
+// ─── 마커 크기/앵커 설정 ──────────────────────────────
+// 원형(default): 앵커 = 중앙, 핀형(selected): 앵커 = 중앙 하단
+interface MarkerSize {
+  width: number;
+  height: number;
+  anchorX: number;
+  anchorY: number;
+}
+
+/** 전 마커 공통 기본 사이즈 (원본의 약 1/4) */
+const BASE_SIZES = {
+  default:  { width: 20, height: 20, anchorX: 10, anchorY: 10 },
+  selected: { width: 25, height: 36, anchorX: 13, anchorY: 36 },
+} satisfies Record<string, MarkerSize>;
+
+// ─── 마커 이미지 경로 ────────────────────────────────
+// 스팟·코스 모두 { default, selected } 형태로 통일
+const SPOT_IMAGES: Record<Category, { default: string; selected: string }> = {
   러너스팟: {
     default: '/markers/runner-default.png',
     selected: '/markers/runner-selected.png',
@@ -16,21 +54,18 @@ const MARKER_IMAGES: Record<Category, { default: string; selected: string }> = {
   },
 };
 
-// ─── 마커 크기/앵커 설정 (원본의 절반) ───────────────
-// 기본(원형 78x78 → 39x39): 앵커 = 중앙
-// 선택(핀형 99x143 → 50x72): 앵커 = 중앙 하단
-interface MarkerSize {
-  width: number;
-  height: number;
-  anchorX: number;
-  anchorY: number;
-}
+const COURSE_IMAGES = {
+  default: '/markers/course-default.png',
+  selected: '/markers/course-selected.png',
+};
 
-const MARKER_SIZES: Record<'default' | 'selected' | 'course' | 'search', MarkerSize> = {
-  default:  { width: 20, height: 20, anchorX: 10, anchorY: 10 },
-  selected: { width: 25, height: 36, anchorX: 13, anchorY: 36 },
-  course:   { width: 20, height: 20, anchorX: 10, anchorY: 10 },
-  search:   { width: 14, height: 19, anchorX: 7,  anchorY: 17 },
+// ─── 카테고리별 사이즈 오버라이드 ─────────────────────
+// BASE_SIZES와 다른 카테고리만 등록
+const CATEGORY_SIZES: Partial<Record<Category, { default: MarkerSize; selected: MarkerSize }>> = {
+  러너스팟: {
+    default:  { width: 24, height: 24, anchorX: 12, anchorY: 12 },  // 기본의 120%
+    selected: { width: 30, height: 43, anchorX: 15, anchorY: 43 },  // 기본의 120%
+  },
 };
 
 // ─── 캡션 설정 ──────────────────────────────────────
@@ -54,7 +89,9 @@ function escapeHtml(str: string): string {
 const CAPTION_TEXT_SHADOW =
   '-0.5px -0.5px 0 #fff,0.5px -0.5px 0 #fff,-0.5px 0.5px 0 #fff,0.5px 0.5px 0 #fff,0 -0.5px 0 #fff,0 0.5px 0 #fff,-0.5px 0 0 #fff,0.5px 0 0 #fff';
 
-/** 마커 아이콘 HTML + 캡션 텍스트를 감싸는 컨테이너 생성 */
+// ─── 내부 헬퍼 ──────────────────────────────────────
+
+/** 캡션이 달린 아이콘 컨테이너 생성 */
 function buildCaptionedIcon(
   innerHtml: string,
   name: string,
@@ -62,7 +99,7 @@ function buildCaptionedIcon(
 ): naver.maps.HtmlIcon {
   const caption = escapeHtml(truncateName(name));
   const containerW = CAPTION_CONTAINER_WIDTH;
-  const containerH = innerAnchorY * 2 + 2 + CAPTION_HEIGHT; // rough height
+  const containerH = innerAnchorY * 2 + 2 + CAPTION_HEIGHT;
 
   const content = `<div style="display:flex;flex-direction:column;align-items:center;width:${containerW}px;">`
     + innerHtml
@@ -77,10 +114,22 @@ function buildCaptionedIcon(
   };
 }
 
+/** PNG img 태그 → name 유무에 따라 bare / captioned 아이콘 반환 */
+function buildPngIcon(imgSrc: string, size: MarkerSize, name?: string): naver.maps.HtmlIcon {
+  const imgHtml = `<img src="${imgSrc}" width="${size.width}" height="${size.height}" style="display:block;" alt="" />`;
+
+  if (!name) {
+    return {
+      content: imgHtml,
+      size: new naver.maps.Size(size.width, size.height),
+      anchor: new naver.maps.Point(size.anchorX, size.anchorY),
+    };
+  }
+
+  return buildCaptionedIcon(imgHtml, name, size.anchorY);
+}
+
 // ─── 프리로드 ───────────────────────────────────────
-// MARKER_IMAGES에 새 카테고리를 추가하면 자동으로 프리로드됩니다.
-// 마커 외 별도 PNG(코스 아이콘, 로고 등)를 추가할 경우
-// 아래 함수 내부에 `new Image().src = '경로'`를 추가하세요.
 
 let _preloaded = false;
 
@@ -89,10 +138,12 @@ export function preloadMarkerImages(): void {
   if (_preloaded || typeof window === 'undefined') return;
   _preloaded = true;
 
-  Object.values(MARKER_IMAGES).forEach(({ default: def, selected }) => {
-    new Image().src = def;
-    new Image().src = selected;
-  });
+  const allImages = [
+    ...Object.values(SPOT_IMAGES).flatMap(({ default: d, selected: s }) => [d, s]),
+    COURSE_IMAGES.default,
+    COURSE_IMAGES.selected,
+  ];
+  allImages.forEach((src) => { new Image().src = src; });
 }
 
 // ─── 공개 API ────────────────────────────────────────
@@ -112,45 +163,32 @@ export function getSpotMarkerIcon(
 ): naver.maps.HtmlIcon {
   const category = (categories[0] ?? '러너스팟') as Category;
   const state = isSelected ? 'selected' : 'default';
-  const images = MARKER_IMAGES[category] ?? MARKER_IMAGES['러너스팟'];
-  const imgSize = MARKER_SIZES[state];
+  const images = SPOT_IMAGES[category] ?? SPOT_IMAGES['러너스팟'];
+  const size = CATEGORY_SIZES[category]?.[state] ?? BASE_SIZES[state];
 
-  // 캡션 없음: 이미지만 반환
-  if (!name) {
-    return {
-      content: `<img src="${images[state]}" width="${imgSize.width}" height="${imgSize.height}" style="display:block;" alt="" />`,
-      size: new naver.maps.Size(imgSize.width, imgSize.height),
-      anchor: new naver.maps.Point(imgSize.anchorX, imgSize.anchorY),
-    };
-  }
-
-  // 캡션 있음: 이미지 + 텍스트 컨테이너
-  const imgHtml = `<img src="${images[state]}" width="${imgSize.width}" height="${imgSize.height}" style="display:block;" alt="" />`;
-  return buildCaptionedIcon(imgHtml, name, imgSize.anchorY);
+  return buildPngIcon(images[state], size, name);
 }
 
-/** 코스 핀 아이콘 (목업 — 추후 디자인 교체) */
-export function getCoursePinIcon(): naver.maps.HtmlIcon {
-  const size = MARKER_SIZES.course;
-  return {
-    content: `<div style="display:flex;align-items:center;justify-content:center;width:${size.width}px;height:${size.height}px;border-radius:50%;background:#10b981;box-shadow:0 1px 4px rgba(16,185,129,0.4);"><div style="width:6px;height:6px;border-radius:50%;background:white;"></div></div>`,
-    size: new naver.maps.Size(size.width, size.height),
-    anchor: new naver.maps.Point(size.anchorX, size.anchorY),
-  };
+/** 코스 핀 아이콘 (PNG 기반 + 캡션) */
+export function getCoursePinIcon(isSelected = false, name?: string): naver.maps.HtmlIcon {
+  const state = isSelected ? 'selected' : 'default';
+  const size = BASE_SIZES[state];
+
+  return buildPngIcon(COURSE_IMAGES[state], size, name);
 }
 
 /** 검색 결과 핀 아이콘 — 브랜드 컬러 원형 (기본 마커의 60%) + 캡션 */
 export function getSearchPinIcon(name?: string): naver.maps.HtmlIcon {
-  const dotSize = 12; // 기본 마커(20)의 60%
+  const dotSize = 12;
+  const dotHtml = `<div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#152558;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>`;
 
   if (!name) {
     return {
-      content: `<div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#152558;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>`,
+      content: dotHtml,
       size: new naver.maps.Size(dotSize, dotSize),
       anchor: new naver.maps.Point(dotSize / 2, dotSize / 2),
     };
   }
 
-  const dotHtml = `<div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#152558;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>`;
   return buildCaptionedIcon(dotHtml, name, dotSize / 2);
 }

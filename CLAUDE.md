@@ -478,7 +478,7 @@ npm run gen:types
 |------|------|
 | `src/lib/image-upload.ts` | 이미지 검증(`validateImageFile`), WebP 변환+업로드(`convertAndUpload`), Storage 삭제(`removeFromStorage`) |
 | `src/lib/utils.ts` | `cn()` (Tailwind 클래스 병합) |
-| `src/lib/marker-config.ts` | 마커 아이콘 (PNG 기반, `getSpotMarkerIcon()`, `getCoursePinIcon()`, `getSearchPinIcon()`) |
+| `src/lib/marker-config.ts` | 마커 아이콘 (PNG 기반, `getSpotMarkerIcon()`, `getCoursePinIcon(isSelected?, name?)`, `getSearchPinIcon()`) |
 | `src/lib/category-config.ts` | 카테고리 배지 스타일 (`getCategoryBadgeStyle()`) |
 | `src/lib/naver-map-utils.ts` | 네이버 지도 유틸 |
 | `src/lib/auth/withAuth.ts` | Admin API 인증 HOF |
@@ -611,7 +611,7 @@ export default function DrawerNewContent({ titleRef, contentRef, ... }: DrawerNe
 ### 아키텍처
 
 마커 아이콘은 **PNG 이미지 기반**으로 `naver.maps.HtmlIcon`의 `<img>` 태그로 렌더링.
-CSS 기반 마커 스타일은 사용하지 않음.
+CSS 기반 마커 스타일은 사용하지 않음 (검색 핀만 예외).
 
 - **설정 파일**: `src/lib/marker-config.ts`
 - **이미지 경로**: `public/markers/`
@@ -620,46 +620,60 @@ CSS 기반 마커 스타일은 사용하지 않음.
 
 ```
 public/markers/
-├── runner-default.png    # 러너스팟 기본 (원형, 78x78 원본)
-├── runner-selected.png   # 러너스팟 선택 (핀형, 99x143 원본)
-├── shower-default.png    # 샤워 기본
-├── shower-selected.png   # 샤워 선택
-├── locker-default.png    # 짐보관 기본
-└── locker-selected.png   # 짐보관 선택
+├── runner-default.png    # 러너스팟 기본 (원형, 82x82)
+├── runner-selected.png   # 러너스팟 선택 (핀형, 99x143)
+├── shower-default.png    # 샤워 기본 (원형, 78x78)
+├── shower-selected.png   # 샤워 선택 (핀형, 99x143)
+├── locker-default.png    # 짐보관 기본 (원형, 78x78)
+├── locker-selected.png   # 짐보관 선택 (핀형, 99x143)
+├── course-default.png    # 코스 기본 (원형, 97x97)
+└── course-selected.png   # 코스 선택 (핀형, 99x143)
 ```
 
-### 사이즈 컨벤션 (원본의 1/4 축소)
+### 사이즈 체계
 
-| 상태 | 원본 PNG | 표시 크기 | 앵커 위치 | 설명 |
-|------|----------|----------|----------|------|
-| **default** (기본) | 78x78 | **20x20** | 중앙 (10, 10) | 원형 마커, 미선택 |
-| **selected** (선택) | 99x143 | **25x36** | 중앙 하단 (13, 36) | 핀형 마커, 선택됨 |
-| **course** (코스 핀) | - | **20x20** | 중앙 (10, 10) | 목업, 추후 디자인 교체 |
-| **search** (검색 핀) | - | **14x19** | 중앙 하단 (7, 17) | 빨간 물방울 (인라인) |
+**공통 기본 사이즈 (`BASE_SIZES`):**
 
-- **축소 비율**: 원본 → 1/4 (레티나 대응: 4x 해상도 PNG를 CSS 크기로 축소)
-- **앵커 규칙**: 원형 마커는 **중앙**, 핀형 마커는 **중앙 하단** (지도 좌표 포인트)
+| 상태 | 표시 크기 | 앵커 위치 | 설명 |
+|------|----------|----------|------|
+| **default** | **20x20** | 중앙 (10, 10) | 원형 마커, 미선택 |
+| **selected** | **25x36** | 중앙 하단 (13, 36) | 핀형 마커, 선택됨 |
+
+- 샤워, 짐보관, 코스는 `BASE_SIZES` 그대로 사용
+- **카테고리별 오버라이드 (`CATEGORY_SIZES`)**: 특정 카테고리만 다른 사이즈가 필요할 때 등록
+
+| 카테고리 | default | selected | 비고 |
+|---------|---------|----------|------|
+| 러너스팟 | 24x24 | 30x43 | 기본의 120% |
+
+- **검색 핀**: CSS 기반 (12x12 dot), `MARKER_SIZES`에 포함하지 않음
+- **앵커 규칙**: 원형 = 중앙, 핀형 = 중앙 하단
 
 ### 공개 API
 
-| 함수 | 용도 | 반환 |
-|------|------|------|
-| `getSpotMarkerIcon(categories, isHighlighted, isSelected)` | 스팟 마커 | `HtmlIcon` |
-| `getCoursePinIcon()` | 코스 핀 (목업) | `HtmlIcon` |
-| `getSearchPinIcon()` | 검색 결과 핀 | `HtmlIcon` |
+| 함수 | 용도 | 캡션 지원 |
+|------|------|----------|
+| `getSpotMarkerIcon(categories, isHighlighted, isSelected, name?)` | 스팟 마커 | O |
+| `getCoursePinIcon(isSelected?, name?)` | 코스 핀 | O |
+| `getSearchPinIcon(name?)` | 검색 결과 핀 | O |
+
+- `name`을 넘기면 `buildCaptionedIcon`으로 아이콘 아래 캡션 표시
+- 내부적으로 `buildPngIcon` 헬퍼가 bare/captioned 분기를 처리
 
 ### 새 카테고리 마커 추가 시
 
-1. Figma에서 **2x Export** → `public/markers/{name}-default.png`, `{name}-selected.png`
-2. `marker-config.ts`의 `MARKER_IMAGES`에 경로 추가
+1. Figma에서 Export → `public/markers/{name}-default.png`, `{name}-selected.png`
+2. `marker-config.ts`의 `SPOT_IMAGES`에 경로 추가
 3. `CATEGORIES` 배열 (`src/types/index.ts`)에 카테고리 추가
 4. `category-config.ts`에 뱃지 스타일 추가
+5. (선택) 기본 사이즈와 다르면 `CATEGORY_SIZES`에 오버라이드 등록
 
 ### ❌ 하지 말 것
 
 - `globals.css`에 `.marker-*` CSS 클래스를 만들지 않음 → PNG `<img>` 사용
-- 마커 사이즈를 컴포넌트에서 하드코딩하지 않음 → `MARKER_SIZES`에서 관리
+- 마커 사이즈를 컴포넌트에서 하드코딩하지 않음 → `BASE_SIZES` / `CATEGORY_SIZES`에서 관리
 - SVG 내부에 base64 PNG가 포함된 파일을 사용하지 않음 → 순수 PNG 사용
+- 코스/스팟 구분 없이 `{ default, selected }` 이미지 쌍 구조를 유지
 
 ## NaverMap 마커 useEffect 패턴
 

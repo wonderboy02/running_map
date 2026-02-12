@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Eye, EyeOff, LocateFixed, Send } from 'lucide-react';
+import Image from 'next/image';
+import { LocateFixed, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import FeedbackDialog from '@/components/FeedbackDialog';
 
@@ -50,16 +51,24 @@ export default function FloatingControls({
       <div className="fixed right-3 top-[104px] z-[25] flex flex-col items-center">
         <button
           onClick={() => onToggleCourses(!showCourses)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface shadow-md transition-colors"
+          className="h-10 w-10 rounded-full shadow-md transition-transform active:scale-95"
           aria-label="코스 토글"
         >
-          {showCourses ? (
-            <Eye className="h-[18px] w-[18px] text-primary" />
-          ) : (
-            <EyeOff className="h-[18px] w-[18px] text-text-muted" />
-          )}
+          <Image
+            src={showCourses ? '/logo/course_on.png' : '/logo/course_off.png'}
+            alt="코스 토글"
+            width={40}
+            height={40}
+            className="rounded-full"
+          />
         </button>
-        <span className="mt-0.5 text-[10px] font-medium text-text-secondary">
+        <span
+          className="mt-0.5 text-[10px] font-semibold text-black"
+          style={{
+            textShadow:
+              '-0.5px -0.5px 0 #fff,0.5px -0.5px 0 #fff,-0.5px 0.5px 0 #fff,0.5px 0.5px 0 #fff,0 -0.5px 0 #fff,0 0.5px 0 #fff,-0.5px 0 0 #fff,0.5px 0 0 #fff',
+          }}
+        >
           {showCourses ? '코스 ON' : '코스 OFF'}
         </span>
       </div>

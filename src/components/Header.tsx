@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { X } from 'lucide-react';
 
 interface HeaderProps {
@@ -46,7 +47,13 @@ export default function Header({
               : 'max-w-[160px] opacity-100 translate-x-0'
           }`}
         >
-          <div className="w-8 h-8 bg-surface-dim rounded-lg" />
+          <Image
+            src="/logo/logo.png"
+            alt="Runner's Spot"
+            width={25}
+            height={32}
+            priority
+          />
         </div>
 
         {/* 검색바 — 동일한 input 엘리먼트가 비활성/활성 전환 */}
