@@ -5,15 +5,10 @@ import { MapPin, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { openNaverMap } from '@/lib/naver-map-utils';
+import { getCategoryBadgeStyle } from '@/lib/category-config';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Spot } from '@/types';
-
-const CATEGORY_BADGE_COLORS: Record<string, string> = {
-  러너스팟: 'bg-blue-50 text-blue-700 border-blue-200',
-  샤워: 'bg-slate-50 text-slate-700 border-slate-200',
-  짐보관: 'bg-gray-50 text-gray-700 border-gray-200',
-};
 
 interface DrawerSpotDetailProps {
   spot: Spot;
@@ -69,8 +64,8 @@ export default function DrawerSpotDetail({
             )}
           </div>
         ) : isRunnerSpot ? (
-          <div className="relative h-32 bg-gray-100 flex items-center justify-center">
-            <div className="text-center text-gray-500">
+          <div className="relative h-32 bg-surface-dim flex items-center justify-center">
+            <div className="text-center text-text-secondary">
               <p className="text-sm font-medium">사진 없음</p>
             </div>
           </div>
@@ -81,16 +76,16 @@ export default function DrawerSpotDetail({
         {/* Spot Name & Address */}
         <div className="px-4 pt-3 pb-4 pr-12">
           <div className="flex items-start justify-between gap-3 mb-2">
-            <h2 className="text-[clamp(18px,5vw,22px)] font-bold text-gray-900 leading-tight tracking-tight">
+            <h2 className="text-[clamp(18px,5vw,22px)] font-bold text-text leading-tight tracking-tight">
               {spot.name}
             </h2>
             {spot.is_highlighted && (
-              <Badge className="bg-amber-500/10 text-amber-700 border-amber-200 flex-shrink-0 text-[clamp(12px,3vw,13px)] px-2 py-0.5">
+              <Badge className="bg-highlight-muted text-highlight-foreground border-highlight-border flex-shrink-0 text-[clamp(12px,3vw,13px)] px-2 py-0.5">
                 ⭐ 추천
               </Badge>
             )}
           </div>
-          <div className="flex items-start gap-2 text-gray-600">
+          <div className="flex items-start gap-2 text-text-secondary">
             <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <p className="text-[clamp(13px,3.5vw,15px)] leading-relaxed">{spot.address}</p>
           </div>
@@ -101,25 +96,21 @@ export default function DrawerSpotDetail({
       <div ref={contentRef} className="px-4 pb-4 space-y-4">
         {/* Categories */}
         <div className="flex flex-wrap gap-1.5">
-          {spot.categories.map((cat) => {
-            const colorClass =
-              CATEGORY_BADGE_COLORS[cat] || 'bg-gray-100 text-gray-700 border-gray-200';
-            return (
+          {spot.categories.map((cat) => (
               <Badge
                 key={cat}
                 variant="outline"
-                className={`${colorClass} text-[clamp(12px,3vw,14px)] px-2.5 py-1`}
+                className={`${getCategoryBadgeStyle(cat)} text-[clamp(12px,3vw,14px)] px-2.5 py-1`}
               >
                 {cat}
               </Badge>
-            );
-          })}
+          ))}
         </div>
 
         {/* Description */}
         {spot.description && (
-          <div className="p-3.5 bg-gray-50 rounded-xl">
-            <p className="text-[clamp(13px,3.5vw,15px)] text-gray-700 leading-relaxed">
+          <div className="p-3.5 bg-surface-dim rounded-xl">
+            <p className="text-[clamp(13px,3.5vw,15px)] text-text-secondary leading-relaxed">
               {spot.description}
             </p>
           </div>
@@ -129,7 +120,7 @@ export default function DrawerSpotDetail({
         <div className="space-y-2 pt-1">
           <Button
             onClick={() => openNaverMap(spot)}
-            className="w-full h-11 bg-[#03C75A] hover:bg-[#02b350] text-white font-semibold rounded-xl text-[clamp(13px,3.5vw,15px)] flex items-center justify-center gap-2 shadow-sm"
+            className="w-full h-11 bg-naver hover:bg-naver-hover text-white font-semibold rounded-xl text-[clamp(13px,3.5vw,15px)] flex items-center justify-center gap-2 shadow-sm"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />

@@ -25,16 +25,16 @@ export default function FloatingControls({
       <div className="fixed right-3 top-[104px] z-[25] flex flex-col items-center">
         <button
           onClick={() => onToggleCourses(!showCourses)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-md transition-colors"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface shadow-md transition-colors"
           aria-label="코스 토글"
         >
           {showCourses ? (
             <Eye className="h-[18px] w-[18px] text-primary" />
           ) : (
-            <EyeOff className="h-[18px] w-[18px] text-gray-400" />
+            <EyeOff className="h-[18px] w-[18px] text-text-muted" />
           )}
         </button>
-        <span className="mt-0.5 text-[10px] font-medium text-gray-500">
+        <span className="mt-0.5 text-[10px] font-medium text-text-secondary">
           {showCourses ? '코스 ON' : '코스 OFF'}
         </span>
       </div>
@@ -46,7 +46,7 @@ export default function FloatingControls({
           className={`flex h-12 w-12 items-center justify-center rounded-full shadow-md transition-colors ${
             isFollowing
               ? 'bg-primary text-white'
-              : 'border border-gray-200 bg-white text-gray-700'
+              : 'border border-border bg-surface text-text-secondary'
           }`}
           aria-label={isFollowing ? '따라가기 해제' : '내 위치로 이동'}
         >

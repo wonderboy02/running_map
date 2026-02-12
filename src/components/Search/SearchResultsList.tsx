@@ -13,7 +13,7 @@ interface SearchResultsListProps {
   isLoading: boolean;
   onCourseSelect: (course: Course) => void;
   onSpotSelect: (spot: Spot) => void;
-  onLocationSelect: (lat: number, lng: number) => void;
+  onLocationSelect: (lat: number, lng: number, name?: string) => void;
 }
 
 export default function SearchResultsList({
@@ -44,7 +44,7 @@ export default function SearchResultsList({
               onClick={() => onCourseSelect(course)}
               className="flex items-center gap-2.5 w-full py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
             >
-              <Route className="w-4 h-4 flex-shrink-0 text-blue-600" />
+              <Route className="w-4 h-4 flex-shrink-0 text-primary" />
               <span className="text-text text-[clamp(13px,3.5vw,15px)] font-medium truncate">
                 {course.name}
               </span>
@@ -101,12 +101,12 @@ export default function SearchResultsList({
           {externalResults.map((result, i) => (
             <button
               key={i}
-              onClick={() => onLocationSelect(result.latitude, result.longitude)}
+              onClick={() => onLocationSelect(result.latitude, result.longitude, result.placeName || result.roadAddress)}
               className="flex items-start gap-2.5 w-full py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
             >
               <MapPin
                 className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                  result.source === 'place' ? 'text-highlight-dark' : 'text-primary'
+                  result.source === 'place' ? 'text-highlight-foreground' : 'text-primary'
                 }`}
               />
               <div className="min-w-0 flex-1">

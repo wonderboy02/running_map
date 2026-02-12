@@ -15,7 +15,7 @@ export default function SpotCard({ spot }: SpotCardProps) {
       <div className="mb-1 flex items-start justify-between">
         <h3 className="text-text text-lg font-bold">{spot.name}</h3>
         {spot.is_highlighted && (
-          <Badge variant="secondary" className="bg-highlight/10 text-highlight-dark ml-2 flex-shrink-0">
+          <Badge variant="secondary" className="bg-highlight-muted text-highlight-foreground ml-2 flex-shrink-0">
             추천
           </Badge>
         )}

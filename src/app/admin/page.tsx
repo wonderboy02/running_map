@@ -102,7 +102,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold">{spot.name}</h3>
                       {spot.is_highlighted && (
-                        <Badge variant="secondary" className="bg-highlight/10 text-highlight-dark">
+                        <Badge variant="secondary" className="bg-highlight-muted text-highlight-foreground">
                           추천
                         </Badge>
                       )}
@@ -129,7 +129,7 @@ export default function AdminDashboard() {
                     size="sm"
                     onClick={() => handleToggleHighlight(spot)}
                     className={
-                      spot.is_highlighted ? 'bg-highlight/10 text-highlight-dark' : ''
+                      spot.is_highlighted ? 'bg-highlight-muted text-highlight-foreground' : ''
                     }
                   >
                     <Star className="mr-1 h-3 w-3" />

@@ -36,7 +36,7 @@ src/
 │   ├── auth/               # withAuth HOF (Admin API 인증)
 │   ├── image-upload.ts     # 이미지 검증 + WebP 변환 + Storage 업로드/삭제
 │   ├── utils.ts            # cn() 유틸리티 (shadcn/ui)
-│   └── marker-config.ts    # 마커 설정 (카테고리별 색상, 아이콘 생성)
+│   └── marker-config.ts    # 마커 아이콘 설정 (PNG 기반, 카테고리별 default/selected)
 ├── hooks/                  # 커스텀 훅 (useSpots, useSearch, useNaverMap, useGeocode)
 ├── types/                  # TypeScript 타입 정의
 └── styles/                 # 글로벌 스타일 (globals.css)
@@ -67,7 +67,7 @@ supabase/migrations/        # DB 마이그레이션 SQL
 - **유틸리티**: `src/lib/utils.ts` (`cn()` 함수)
 - **아이콘**: `lucide-react`
 - **토스트**: `sonner` (`layout.tsx`에 `<Toaster>` 포함)
-- **설치된 컴포넌트**: button, input, label, textarea, badge, card, sheet, dialog, sonner, select, checkbox, toggle, alert-dialog, separator
+- **설치된 컴포넌트**: button, input, label, textarea, badge, card, sheet, dialog, sonner, select, checkbox, alert-dialog, separator
 - **추가 설치**: `npx shadcn@latest add [component-name]`
 
 ## Naver Maps API 설정
@@ -434,7 +434,7 @@ npm run gen:types
 ### Phase 5.5: UI 라이브러리 (shadcn/ui)
 
 - [x] shadcn/ui 통합 (components.json, utils.ts, globals.css)
-- [x] 컴포넌트 14개 설치 (button, input, label, textarea, badge, card, sheet, dialog, sonner, select, checkbox, toggle, alert-dialog, separator)
+- [x] 컴포넌트 12개 설치 (button, input, label, textarea, badge, card, sheet, dialog, sonner, select, checkbox, alert-dialog, separator)
 - [x] Toaster 추가 (layout.tsx)
 - [x] 기존 컴포넌트 리팩터링 (BottomDrawer, Header, FilterChips, FABMenu, SpotCard, admin 페이지 등)
 - [x] lucide-react 아이콘 통합
@@ -478,7 +478,8 @@ npm run gen:types
 |------|------|
 | `src/lib/image-upload.ts` | 이미지 검증(`validateImageFile`), WebP 변환+업로드(`convertAndUpload`), Storage 삭제(`removeFromStorage`) |
 | `src/lib/utils.ts` | `cn()` (Tailwind 클래스 병합) |
-| `src/lib/marker-config.ts` | 카테고리별 마커 색상/아이콘 |
+| `src/lib/marker-config.ts` | 마커 아이콘 (PNG 기반, `getSpotMarkerIcon()`, `getCoursePinIcon()`, `getSearchPinIcon()`) |
+| `src/lib/category-config.ts` | 카테고리 배지 스타일 (`getCategoryBadgeStyle()`) |
 | `src/lib/naver-map-utils.ts` | 네이버 지도 유틸 |
 | `src/lib/auth/withAuth.ts` | Admin API 인증 HOF |
 
@@ -583,6 +584,109 @@ export default function DrawerNewContent({ titleRef, contentRef, ... }: DrawerNe
 - **플로팅 버튼(25)은 드로어(30)보다 반드시 낮게** — 드로어가 올라오면 FAB 버튼을 자연스럽게 덮음
 - shadcn/ui 컴포넌트(Dialog 등)의 `z-50`은 수정하지 않음
 - 새 레이어 추가 시 위 표에 기록하고, 기존 값 사이에 배치
+
+## 디자인 토큰 시스템
+
+- **상세 문서**: `docs/design-system.md` (3-Tier 구조, 전체 토큰 레퍼런스, Do/Don't)
+- **토큰 정의**: `src/styles/globals.css` → `@theme inline {}` 블록
+- **카테고리 배지 설정**: `src/lib/category-config.ts` (`getCategoryBadgeStyle()`)
+- **마커 아이콘**: `src/lib/marker-config.ts` (PNG 기반) — 아래 "마커 아이콘 컨벤션" 섹션 참조
+
+### 색상 사용 Do/Don't (요약)
+
+| Do | Don't |
+|----|-------|
+| `bg-surface-dim` | `bg-gray-50`, `bg-gray-100` |
+| `text-text` / `text-text-secondary` / `text-text-muted` | `text-gray-900` / `text-gray-600` / `text-gray-400` |
+| `border-border` / `border-border-strong` | `border-gray-200` / `border-gray-300` |
+| `bg-naver hover:bg-naver-hover` | `bg-[#03C75A]` |
+| `text-course` | `text-emerald-600` |
+| `bg-highlight-muted text-highlight-foreground` | `bg-amber-500/10 text-amber-700` |
+| `getCategoryBadgeStyle(cat)` | 컴포넌트 내 인라인 `CATEGORY_BADGE_COLORS` |
+
+> Admin 내부 상태 배지(green/red/yellow)는 Tailwind 팔레트 직접 사용 허용.
+
+## 마커 아이콘 컨벤션
+
+### 아키텍처
+
+마커 아이콘은 **PNG 이미지 기반**으로 `naver.maps.HtmlIcon`의 `<img>` 태그로 렌더링.
+CSS 기반 마커 스타일은 사용하지 않음.
+
+- **설정 파일**: `src/lib/marker-config.ts`
+- **이미지 경로**: `public/markers/`
+
+### 파일 구조
+
+```
+public/markers/
+├── runner-default.png    # 러너스팟 기본 (원형, 78x78 원본)
+├── runner-selected.png   # 러너스팟 선택 (핀형, 99x143 원본)
+├── shower-default.png    # 샤워 기본
+├── shower-selected.png   # 샤워 선택
+├── locker-default.png    # 짐보관 기본
+└── locker-selected.png   # 짐보관 선택
+```
+
+### 사이즈 컨벤션 (원본의 1/4 축소)
+
+| 상태 | 원본 PNG | 표시 크기 | 앵커 위치 | 설명 |
+|------|----------|----------|----------|------|
+| **default** (기본) | 78x78 | **20x20** | 중앙 (10, 10) | 원형 마커, 미선택 |
+| **selected** (선택) | 99x143 | **25x36** | 중앙 하단 (13, 36) | 핀형 마커, 선택됨 |
+| **course** (코스 핀) | - | **20x20** | 중앙 (10, 10) | 목업, 추후 디자인 교체 |
+| **search** (검색 핀) | - | **14x19** | 중앙 하단 (7, 17) | 빨간 물방울 (인라인) |
+
+- **축소 비율**: 원본 → 1/4 (레티나 대응: 4x 해상도 PNG를 CSS 크기로 축소)
+- **앵커 규칙**: 원형 마커는 **중앙**, 핀형 마커는 **중앙 하단** (지도 좌표 포인트)
+
+### 공개 API
+
+| 함수 | 용도 | 반환 |
+|------|------|------|
+| `getSpotMarkerIcon(categories, isHighlighted, isSelected)` | 스팟 마커 | `HtmlIcon` |
+| `getCoursePinIcon()` | 코스 핀 (목업) | `HtmlIcon` |
+| `getSearchPinIcon()` | 검색 결과 핀 | `HtmlIcon` |
+
+### 새 카테고리 마커 추가 시
+
+1. Figma에서 **2x Export** → `public/markers/{name}-default.png`, `{name}-selected.png`
+2. `marker-config.ts`의 `MARKER_IMAGES`에 경로 추가
+3. `CATEGORIES` 배열 (`src/types/index.ts`)에 카테고리 추가
+4. `category-config.ts`에 뱃지 스타일 추가
+
+### ❌ 하지 말 것
+
+- `globals.css`에 `.marker-*` CSS 클래스를 만들지 않음 → PNG `<img>` 사용
+- 마커 사이즈를 컴포넌트에서 하드코딩하지 않음 → `MARKER_SIZES`에서 관리
+- SVG 내부에 base64 PNG가 포함된 파일을 사용하지 않음 → 순수 PNG 사용
+
+## NaverMap 마커 useEffect 패턴
+
+`NaverMap.tsx`에서 스팟 마커의 **데이터 동기화 + 선택 상태 반영**은 **단일 useEffect**에서 처리한다.
+
+### 구조
+
+```
+useEffect — 마커 동기화
+  deps: [isReady, map, spots, createMarkerIcon, onMarkerClick, selection]
+  역할: 마커 생성/제거 + 위치·아이콘·zIndex 업데이트 (선택 상태 포함)
+```
+
+- `spots` 변경 → 마커 추가/제거 + 전체 아이콘 갱신
+- `selection` 변경 → 전체 마커의 선택 상태(아이콘/zIndex) 갱신
+- 스팟 수십~수백 개에서 `setIcon()` 전체 순회 비용은 < 1ms로 무시 가능
+
+### 규칙
+
+1. **마커 아이콘/zIndex 결정 로직은 이 effect 한 곳에만 존재** — 중복 없음
+2. `selection`에서 `selectedSpotId`를 파생하여 각 마커의 `isSelected` 판단
+3. 새로운 마커 상태(예: hover)를 추가할 때도 이 effect 내에서 처리
+
+### ❌ 하지 말 것
+
+- 선택 상태 전환을 별도 useEffect로 분리하지 않음 → ref 기반 교차 결합 발생, 복잡도만 증가
+- `prevSelectedSpotIdRef` 같은 mutable ref로 effect 간 상태를 공유하지 않음 → deps에서 직접 파생
 
 ## 이미지 최적화 가이드
 

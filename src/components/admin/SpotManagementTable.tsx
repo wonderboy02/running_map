@@ -307,7 +307,7 @@ export function SpotManagementTable() {
                     </td>
                     <td className="py-3 text-center">
                       {spot.is_highlighted && (
-                        <Badge className="bg-highlight/10 text-highlight-dark">
+                        <Badge className="bg-highlight-muted text-highlight-foreground">
                           추천
                         </Badge>
                       )}
