@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { haversineDistance } from '@/lib/naver-map-utils';
 
 export interface MyLocationPosition {
   lat: number;
@@ -13,22 +14,12 @@ const MIN_MOVE_METERS = 3;
 const THROTTLE_MS = 500;
 const SMOOTHING_FACTOR = 0.3;
 
-/** 두 좌표 간 대략적 거리 (미터), Haversine 근사 */
-function distanceMeters(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+/** GeolocationPositionError → 문자열 에러 코드 */
+function mapGeolocationError(err: GeolocationPositionError): string {
+  if (err.code === err.PERMISSION_DENIED) return 'permission_denied';
+  if (err.code === err.POSITION_UNAVAILABLE) return 'position_unavailable';
+  if (err.code === err.TIMEOUT) return 'timeout';
+  return 'unknown';
 }
 
 /**
@@ -43,6 +34,7 @@ function distanceMeters(
 export function useMyLocation() {
   const [position, setPosition] = useState<MyLocationPosition | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasOrientationSensor, setHasOrientationSensor] = useState(false);
 
   const lastPosRef = useRef<{ lat: number; lng: number } | null>(null);
   const lastUpdateRef = useRef(0);
@@ -51,12 +43,19 @@ export function useMyLocation() {
   const gpsHeadingRef = useRef<number | null>(null);
   const compassHeadingRef = useRef<number | null>(null);
   const compassCleanupRef = useRef<(() => void) | null>(null);
+  const orientationDetectedRef = useRef(false);
 
   // 나침반(DeviceOrientation) 리스너 부착 — 한 번만 호출됨
   const attachCompass = useCallback(() => {
     if (compassCleanupRef.current) return; // 이미 부착됨
 
     function handleOrientation(e: DeviceOrientationEvent) {
+      // 최초 수신 시 방향 센서 존재 확인 (PC에는 센서가 없어 이벤트가 안 들어옴)
+      if (!orientationDetectedRef.current) {
+        orientationDetectedRef.current = true;
+        setHasOrientationSensor(true);
+      }
+
       const wkHeading = (
         e as DeviceOrientationEvent & { webkitCompassHeading?: number }
       ).webkitCompassHeading;
@@ -109,8 +108,8 @@ export function useMyLocation() {
       try {
         const state = await DOE.requestPermission();
         if (state === 'granted') attachCompass();
-      } catch {
-        // 권한 거부 — 나침반 없이 진행
+      } catch (e) {
+        console.warn('[useMyLocation] 나침반 권한 요청 실패:', e);
       }
     }
   }, [attachCompass]);
@@ -131,7 +130,7 @@ export function useMyLocation() {
 
         // jitter 방지: 3m 미만 이동 무시 (첫 위치는 통과)
         if (lastPosRef.current) {
-          const dist = distanceMeters(
+          const dist = haversineDistance(
             lastPosRef.current.lat,
             lastPosRef.current.lng,
             latitude,
@@ -176,11 +175,7 @@ export function useMyLocation() {
           accuracy,
         });
       },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setError('permission_denied');
-        }
-      },
+      (err) => setError(mapGeolocationError(err)),
       {
         enableHighAccuracy: true,
         maximumAge: 3000,
@@ -202,5 +197,26 @@ export function useMyLocation() {
     };
   }, [attachCompass]);
 
-  return { position, error, requestCompassPermission };
+  // 위치 재시도 — 버튼 클릭 시 한 번 더 getCurrentPosition 호출
+  const retryLocation = useCallback(() => {
+    if (!navigator.geolocation) return;
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        lastPosRef.current = { lat: latitude, lng: longitude };
+        lastUpdateRef.current = Date.now();
+        setPosition({
+          lat: latitude,
+          lng: longitude,
+          heading: compassHeadingRef.current,
+          accuracy,
+        });
+      },
+      (err) => setError(mapGeolocationError(err)),
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 },
+    );
+  }, []);
+
+  return { position, error, hasOrientationSensor, requestCompassPermission, retryLocation };
 }

@@ -46,26 +46,31 @@ export default function FloatingControls({
 
       {/* 오른쪽 하단: 내 위치 + 피드백 */}
       <div className="fixed bottom-[60px] right-4 z-[25] flex flex-col items-center gap-2">
-        <button
-          onClick={onToggleFollow}
-          className={`flex h-12 w-12 items-center justify-center rounded-full shadow-md transition-colors ${
-            isLocating
-              ? 'bg-primary/70 text-white'
-              : isFollowing
-                ? 'bg-primary text-white'
-                : 'border border-border bg-surface text-text-secondary'
-          }`}
-          aria-label={isLocating ? '위치 확인 중' : isFollowing ? '따라가기 해제' : '내 위치로 이동'}
-          disabled={isLocating}
-        >
-          {isLocating ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : isFollowing ? (
-            <Navigation className="h-5 w-5" />
-          ) : (
-            <LocateFixed className="h-5 w-5" />
-          )}
-        </button>
+        <div className="flex flex-col items-center">
+          <button
+            onClick={onToggleFollow}
+            className={`flex h-12 w-12 items-center justify-center rounded-full shadow-md transition-colors ${
+              isLocating
+                ? 'bg-primary/70 text-white'
+                : isFollowing
+                  ? 'bg-primary text-white'
+                  : 'border border-border bg-surface text-text-secondary'
+            }`}
+            aria-label={isLocating ? '위치 확인 중' : isFollowing ? '따라가기 해제' : '내 위치로 이동'}
+            disabled={isLocating}
+          >
+            {isLocating ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isFollowing ? (
+              <Navigation className="h-5 w-5" />
+            ) : (
+              <LocateFixed className="h-5 w-5" />
+            )}
+          </button>
+          <span className="text-shadow-outline mt-0.5 text-[10px] font-semibold text-text">
+            {isLocating ? '확인 중...' : isFollowing ? '네비게이션' : '내 위치'}
+          </span>
+        </div>
 
         <div className="flex flex-col items-center">
           <button

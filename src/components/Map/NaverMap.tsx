@@ -17,13 +17,21 @@ interface NaverMapProps {
   onMarkerClick: (spot: Spot) => void;
   onCoursePinClick: (course: Course) => void;
   selection: DrawerSelection | null;
+  selectionViewOverride?: {
+    swLat: number;
+    swLng: number;
+    neLat: number;
+    neLng: number;
+    padding?: number;
+  } | null;
+  onSelectionViewApplied?: () => void;
   targetLocation: { lat: number; lng: number; name?: string } | null;
   myLocation?: MyLocationPosition | null;
   onMapDrag?: () => void;
   onMapReady?: (map: naver.maps.Map) => void;
 }
 
-export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
+export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, selectionViewOverride, onSelectionViewApplied, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
@@ -91,9 +99,37 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     });
   }, [isReady, map, spots, createMarkerIcon, onMarkerClick, selection]);
 
-  // 선택된 마커/핀으로 지도 이동
+  // selectionViewOverride를 ref로 관리 — deps에서 제거하여 null 전환 시 effect 재실행 방지
+  const selectionViewOverrideRef = useRef(selectionViewOverride);
+  selectionViewOverrideRef.current = selectionViewOverride;
+
+  // 선택된 마커/핀으로 지도 이동 (또는 override된 bounds 적용)
   useEffect(() => {
     if (!map || !selection) return;
+
+    const override = selectionViewOverrideRef.current;
+
+    // 필터 토글 등에서 bounds override가 있으면 부드럽게 이동
+    if (override) {
+      const bounds = new naver.maps.LatLngBounds(
+        new naver.maps.LatLng(override.swLat, override.swLng),
+        new naver.maps.LatLng(override.neLat, override.neLng),
+      );
+      const padding = override.padding ?? 60;
+      map.panToBounds(
+        bounds,
+        { duration: 500, easing: 'easeOutCubic' },
+        { top: padding, right: padding, bottom: padding, left: padding },
+      );
+      // 애니메이션 완료 후 과도한 줌인 방지
+      const listener = naver.maps.Event.addListener(map, 'idle', () => {
+        naver.maps.Event.removeListener(listener);
+        if (map.getZoom() > 15) map.setZoom(15);
+      });
+      onSelectionViewApplied?.();
+      return;
+    }
+
     if (selection.type === 'spot') {
       map.panTo(new naver.maps.LatLng(selection.data.latitude, selection.data.longitude));
     } else if (selection.type === 'course') {
@@ -105,7 +141,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       );
       map.fitBounds(bounds, { padding: 60 });
     }
-  }, [map, selection]);
+  }, [map, selection, onSelectionViewApplied]);
 
   // 내 위치 파란 점 마커 표시/업데이트
   useEffect(() => {
