@@ -200,3 +200,58 @@ body {
   from { opacity: 1; }
   to { opacity: 0; }
 }
+
+/* 내 위치 파란 점 마커 */
+.my-location-marker {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.my-location-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #4285f4;
+  border: 3px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 2;
+}
+
+.my-location-heading-cone {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-bottom: 24px solid rgba(66, 133, 244, 0.3);
+  z-index: 1;
+}
+
+.my-location-pulse {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: rgba(66, 133, 244, 0.25);
+  animation: my-location-pulse-ring 2s ease-out infinite;
+  z-index: 0;
+}
+
+@keyframes my-location-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}

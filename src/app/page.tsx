@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import NaverMap from '@/components/Map/NaverMap';
 import Header from '@/components/Header';
 import FilterChips from '@/components/FilterChips';
@@ -9,15 +9,16 @@ import FloatingControls from '@/components/FloatingControls';
 import SearchOverlay from '@/components/Search/SearchOverlay';
 import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
+import { useMyLocation } from '@/hooks/useMyLocation';
 import type { Spot, Course, DrawerSelection } from '@/types';
 
 export default function HomePage() {
   const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']);
   const [selection, setSelection] = useState<DrawerSelection | null>(null);
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [initialCenter, setInitialCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [naverMap, setNaverMap] = useState<naver.maps.Map | null>(null);
   const [showCourses, setShowCourses] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   // 검색 상태
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -26,26 +27,38 @@ export default function HomePage() {
 
   const { spots } = useSpots();
   const { courses } = useCourses();
+  const { position: myLocation, requestCompassPermission } = useMyLocation();
+
+  // 팔로우 중이고 위치가 갱신되면 지도 이동
+  const prevLocationRef = useRef(myLocation);
+  useEffect(() => {
+    if (!naverMap || !myLocation || !isFollowing) return;
+    // 위치가 실제로 변경됐을 때만 panTo
+    const prev = prevLocationRef.current;
+    if (!prev || prev.lat !== myLocation.lat || prev.lng !== myLocation.lng) {
+      naverMap.panTo(new naver.maps.LatLng(myLocation.lat, myLocation.lng));
+    }
+    prevLocationRef.current = myLocation;
+  }, [naverMap, myLocation, isFollowing]);
 
   const handleMapReady = useCallback((map: naver.maps.Map) => {
     setNaverMap(map);
   }, []);
 
-  // 초기 진입 시 현재 위치로 이동 (핀 없이)
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setInitialCenter({ lat: latitude, lng: longitude });
-      },
-      () => {
-        console.log('위치 권한이 거부되었습니다. 기본 위치를 표시합니다.');
-      },
-      { enableHighAccuracy: true, timeout: 5000 },
-    );
+  const handleMapDrag = useCallback(() => {
+    setIsFollowing(false);
   }, []);
+
+  const handleToggleFollow = useCallback(() => {
+    if (!isFollowing) {
+      // OFF → ON: iOS 나침반 권한 요청 (사용자 제스처 필요)
+      requestCompassPermission();
+      if (naverMap && myLocation) {
+        naverMap.panTo(new naver.maps.LatLng(myLocation.lat, myLocation.lng));
+      }
+    }
+    setIsFollowing((prev) => !prev);
+  }, [isFollowing, naverMap, myLocation, requestCompassPermission]);
 
   const filteredSpots = spots.filter((spot) => {
     if (activeFilters.length === 0) return true;
@@ -116,15 +129,17 @@ export default function HomePage() {
           onCoursePinClick={handleCoursePinClick}
           selection={selection}
           targetLocation={targetLocation}
-          initialCenter={initialCenter}
+          myLocation={myLocation}
+          onMapDrag={handleMapDrag}
           onMapReady={handleMapReady}
         />
       </div>
 
       <FloatingControls
-        map={naverMap}
         showCourses={showCourses}
         onToggleCourses={setShowCourses}
+        isFollowing={isFollowing}
+        onToggleFollow={handleToggleFollow}
       />
 
       <BottomDrawer
