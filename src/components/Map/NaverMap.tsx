@@ -28,6 +28,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const groundOverlaysRef = useRef<Map<string, naver.maps.GroundOverlay>>(new Map());
+  const overlayUrlsRef = useRef<Map<string, string>>(new Map());
   const coursePinsRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
   const myLocationMarkerRef = useRef<MyLocationMarker | null>(null);
@@ -190,8 +191,12 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   }, [map, targetLocation]);
 
   // GroundOverlay 렌더링 — 인스턴스는 유지하고 showCourses로 가시성만 토글
+  // selection deps 포함: 코스 선택 시 highlight_image_url로 이미지 교체
   useEffect(() => {
     if (!isReady || !map) return;
+
+    const selectedCourseId =
+      selection?.type === 'course' ? selection.data.id : null;
 
     const currentIds = new Set(courses.map((o) => o.id));
     const existingOverlays = groundOverlaysRef.current;
@@ -201,26 +206,39 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       if (!currentIds.has(id)) {
         groundOverlay.setMap(null);
         existingOverlays.delete(id);
+        overlayUrlsRef.current.delete(id);
       }
     });
 
-    // 새로운 코스 오버레이 추가 또는 기존 가시성 토글
+    // 새로운 코스 오버레이 추가 또는 기존 이미지 교체 + 가시성 토글
     courses.forEach((course) => {
       const existing = existingOverlays.get(course.id);
+      const isSelected = course.id === selectedCourseId;
+
+      // 하이라이팅 이미지가 있고 선택된 경우 → 하이라이팅 URL 사용
+      const targetUrl = (isSelected && course.highlight_image_url)
+        ? course.highlight_image_url
+        : course.image_url;
+
+      // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
+      const imageUrl = targetUrl.replace(
+        /https:\/\/[^/]+\/storage\/v1\/object\/public/,
+        '/storage',
+      );
 
       if (existing) {
+        // URL이 실제로 변경된 경우에만 setUrl() 호출 — 불필요한 이미지 리로드/깜빡임 방지
+        const prevUrl = overlayUrlsRef.current.get(course.id);
+        if (prevUrl !== imageUrl) {
+          existing.setUrl(imageUrl);
+          overlayUrlsRef.current.set(course.id, imageUrl);
+        }
         existing.setMap(showCourses ? map : null);
       } else {
         // NW/SE → SW/NE 변환 (LatLngBounds 용)
         const sw = new naver.maps.LatLng(course.se_lat, course.nw_lng);
         const ne = new naver.maps.LatLng(course.nw_lat, course.se_lng);
         const bounds = new naver.maps.LatLngBounds(sw, ne);
-
-        // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
-        const imageUrl = course.image_url.replace(
-          /https:\/\/[^/]+\/storage\/v1\/object\/public/,
-          '/storage',
-        );
 
         const groundOverlay = new naver.maps.GroundOverlay(
           imageUrl,
@@ -230,9 +248,10 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
 
         groundOverlay.setMap(showCourses ? map : null);
         existingOverlays.set(course.id, groundOverlay);
+        overlayUrlsRef.current.set(course.id, imageUrl);
       }
     });
-  }, [isReady, map, courses, showCourses]);
+  }, [isReady, map, courses, showCourses, selection]);
 
   // 코스 핀 마커 렌더링 (선택 상태 + 가시성 반영)
   // 스팟 마커와 별도 effect — 데이터 소스(courses)와 라이프사이클이 다르기 때문

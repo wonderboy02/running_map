@@ -53,6 +53,7 @@ interface CourseForm {
   opacity: number;
   is_active: boolean;
   image: File | null;
+  highlight_image: File | null;
 }
 
 const EMPTY_FORM: CourseForm = {
@@ -69,6 +70,7 @@ const EMPTY_FORM: CourseForm = {
   opacity: 1.0,
   is_active: true,
   image: null,
+  highlight_image: null,
 };
 
 // --- Bulk Upload ---
@@ -626,6 +628,8 @@ export default function AdminCoursesPage() {
   const [form, setForm] = useState<CourseForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [highlightPreview, setHighlightPreview] = useState<string | null>(null);
+  const [removeHighlight, setRemoveHighlight] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
   async function fetchCourses() {
@@ -652,6 +656,8 @@ export default function AdminCoursesPage() {
     setEditingCourse(null);
     setForm(EMPTY_FORM);
     setImagePreview(null);
+    setHighlightPreview(null);
+    setRemoveHighlight(false);
     setDialogOpen(true);
   }
 
@@ -671,8 +677,11 @@ export default function AdminCoursesPage() {
       opacity: course.opacity,
       is_active: course.is_active,
       image: null,
+      highlight_image: null,
     });
     setImagePreview(course.image_url);
+    setHighlightPreview(course.highlight_image_url);
+    setRemoveHighlight(false);
     setDialogOpen(true);
   }
 
@@ -682,6 +691,16 @@ export default function AdminCoursesPage() {
       setForm((prev) => ({ ...prev, image: file }));
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleHighlightImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setForm((prev) => ({ ...prev, highlight_image: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => setHighlightPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   }
@@ -723,6 +742,12 @@ export default function AdminCoursesPage() {
     if (form.pin_lng) formData.append('pin_lng', String(form.pin_lng));
     if (form.image) {
       formData.append('image', form.image);
+    }
+    if (form.highlight_image) {
+      formData.append('highlight_image', form.highlight_image);
+    }
+    if (removeHighlight) {
+      formData.append('remove_highlight_image', 'true');
     }
 
     try {
@@ -1004,6 +1029,39 @@ export default function AdminCoursesPage() {
                     alt="미리보기"
                     className="max-h-40 w-full object-contain"
                   />
+                </div>
+              )}
+            </div>
+
+            {/* 하이라이팅 이미지 업로드 */}
+            <div className="space-y-1.5">
+              <Label>하이라이팅 이미지 (선택)</Label>
+              <p className="text-text-secondary text-xs">
+                코스 선택 시 강조 표시할 이미지. 미등록 시 기본 이미지 유지.
+              </p>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleHighlightImageChange}
+              />
+              {highlightPreview && (
+                <div className="bg-surface-dim relative mt-2 overflow-hidden rounded-md">
+                  <img
+                    src={highlightPreview}
+                    alt="하이라이팅 미리보기"
+                    className="max-h-40 w-full object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHighlightPreview(null);
+                      setForm((prev) => ({ ...prev, highlight_image: null }));
+                      setRemoveHighlight(true);
+                    }}
+                    className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white transition-colors hover:bg-black/70"
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </button>
                 </div>
               )}
             </div>

@@ -24,6 +24,7 @@ export interface Course {
   id: string;
   name: string;
   image_url: string;
+  highlight_image_url: string | null;
   nw_lat: number;
   nw_lng: number;
   se_lat: number;
