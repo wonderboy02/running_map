@@ -95,12 +95,22 @@ export class MyLocationMarker {
 
   private buildIcon(heading: number | null): naver.maps.HtmlIcon {
     const rotation = heading != null ? heading : 0;
-    const coneHtml =
-      heading != null ? `<div class="my-location-heading-cone"></div>` : '';
+
+    // SVG 삼각형: 밑변(점 근처) → 꼭짓점(먼 곳) 그라데이션
+    // 20x26 뷰박스, 밑변 16px(점 크기와 일치), 높이 26px
+    const coneSvg = heading != null
+      ? `<div class="my-location-heading-cone"><svg width="20" height="26" viewBox="0 0 20 26" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="hg" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stop-color="#4285F4" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#4285F4" stop-opacity="0.05"/>
+          </linearGradient></defs>
+          <path d="M10 0 L18 26 Q10 22 2 26 Z" fill="url(#hg)"/>
+        </svg></div>`
+      : '';
 
     return {
       content: `<div class="my-location-marker" style="transform:rotate(${rotation}deg)">
-        ${coneHtml}
+        ${coneSvg}
         <div class="my-location-dot"></div>
         <div class="my-location-pulse"></div>
       </div>`,
