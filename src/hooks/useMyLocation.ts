@@ -34,7 +34,10 @@ function mapGeolocationError(err: GeolocationPositionError): string {
 export function useMyLocation() {
   const [position, setPosition] = useState<MyLocationPosition | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [hasOrientationSensor, setHasOrientationSensor] = useState(false);
+  const [hasOrientationSensor, setHasOrientationSensor] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  });
 
   const lastPosRef = useRef<{ lat: number; lng: number } | null>(null);
   const lastUpdateRef = useRef(0);
@@ -108,8 +111,9 @@ export function useMyLocation() {
       try {
         const state = await DOE.requestPermission();
         if (state === 'granted') attachCompass();
+        // 'denied'는 정상 흐름 — 나침반 없이 위치만 사용
       } catch (e) {
-        console.warn('[useMyLocation] 나침반 권한 요청 실패:', e);
+        console.error('[useMyLocation] 나침반 권한 요청 중 예외:', e);
       }
     }
   }, [attachCompass]);
@@ -199,7 +203,10 @@ export function useMyLocation() {
 
   // 위치 재시도 — 버튼 클릭 시 한 번 더 getCurrentPosition 호출
   const retryLocation = useCallback(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setError('geolocation_unsupported');
+      return;
+    }
     setError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {

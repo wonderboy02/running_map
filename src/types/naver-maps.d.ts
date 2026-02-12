@@ -96,6 +96,7 @@ declare namespace naver.maps {
       transitionOptions?: TransitionOptions,
       margin?: { top?: number; right?: number; bottom?: number; left?: number },
     ): void;
+    morph(coord: LatLng, zoom?: number, transitionOptions?: TransitionOptions): void;
     fitBounds(bounds: LatLngBounds, options?: { padding?: number }): void;
     destroy(): void;
     setOptions(options: Partial<MapOptions>): void;

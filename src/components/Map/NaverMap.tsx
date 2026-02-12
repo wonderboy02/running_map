@@ -39,6 +39,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   const coursePinsRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
   const myLocationMarkerRef = useRef<MyLocationMarker | null>(null);
+  const maxZoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasMovedToInitialPos = useRef(false);
 
   const createMarkerIcon = useCallback((spot: Spot, isSelected: boolean) => {
@@ -100,6 +101,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   }, [isReady, map, spots, createMarkerIcon, onMarkerClick, selection]);
 
   // selectionViewOverride를 ref로 관리 — deps에서 제거하여 null 전환 시 effect 재실행 방지
+  // NOTE: selectionViewOverride는 반드시 selection과 함께 설정해야 함 (이 effect는 selection 변경 시만 실행)
   const selectionViewOverrideRef = useRef(selectionViewOverride);
   selectionViewOverrideRef.current = selectionViewOverride;
 
@@ -116,16 +118,18 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         new naver.maps.LatLng(override.neLat, override.neLng),
       );
       const padding = override.padding ?? 60;
+      // 과도한 줌인 방지 — panToBounds가 maxZoom을 존중하므로 일시적으로 제한
+      if (maxZoomTimerRef.current) clearTimeout(maxZoomTimerRef.current);
+      map.setOptions({ maxZoom: 15 });
       map.panToBounds(
         bounds,
         { duration: 500, easing: 'easeOutCubic' },
         { top: padding, right: padding, bottom: padding, left: padding },
       );
-      // 애니메이션 완료 후 과도한 줌인 방지
-      const listener = naver.maps.Event.addListener(map, 'idle', () => {
-        naver.maps.Event.removeListener(listener);
-        if (map.getZoom() > 15) map.setZoom(15);
-      });
+      maxZoomTimerRef.current = setTimeout(() => {
+        map.setOptions({ maxZoom: 18 });
+        maxZoomTimerRef.current = null;
+      }, 600);
       onSelectionViewApplied?.();
       return;
     }
@@ -141,6 +145,14 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       );
       map.fitBounds(bounds, { padding: 60 });
     }
+
+    return () => {
+      if (maxZoomTimerRef.current) {
+        clearTimeout(maxZoomTimerRef.current);
+        maxZoomTimerRef.current = null;
+        map.setOptions({ maxZoom: 18 });
+      }
+    };
   }, [map, selection, onSelectionViewApplied]);
 
   // 내 위치 파란 점 마커 표시/업데이트

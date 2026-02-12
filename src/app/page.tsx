@@ -74,8 +74,12 @@ export default function HomePage() {
 
       requestCompassPermission();
       if (naverMap && myLocation) {
-        if (naverMap.getZoom() < 15) naverMap.setZoom(15);
-        naverMap.panTo(new naver.maps.LatLng(myLocation.lat, myLocation.lng));
+        const targetZoom = Math.max(15, naverMap.getZoom());
+        naverMap.morph(
+          new naver.maps.LatLng(myLocation.lat, myLocation.lng),
+          targetZoom,
+          { duration: 500, easing: 'easeOutCubic' },
+        );
       }
     }
     setIsFollowing((prev) => !prev);
@@ -104,9 +108,18 @@ export default function HomePage() {
     }
 
     if (locationError) {
-      if (locationError === 'permission_denied') rollbackWithToast('permission');
-      else if (!hasOrientationSensor) rollbackWithToast('pc');
-      else rollbackWithToast('generic');
+      if (locationError === 'permission_denied') {
+        rollbackWithToast('permission');
+      } else if (locationError === 'geolocation_unsupported' || !hasOrientationSensor) {
+        rollbackWithToast('pc');
+      } else if (locationError === 'timeout') {
+        setIsFollowing(false);
+        toast.error('위치를 가져오는 데 시간이 오래 걸려요.', {
+          description: 'GPS 신호가 약할 수 있어요. 잠시 후 다시 시도해주세요.',
+        });
+      } else {
+        rollbackWithToast('generic');
+      }
       return;
     }
 
