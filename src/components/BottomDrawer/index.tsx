@@ -41,8 +41,7 @@ export default function BottomDrawer({
     return () => cancelAnimationFrame(raf);
   }, [mounted, recalculate]);
 
-  // selection 변경 시: 콘텐츠 전환 → snap point 재계산 예약
-  const pendingSnapRef = useRef<number | null>(null);
+  // selection 변경 시: 콘텐츠 전환 → snap point 재계산 + snap 이동
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -51,19 +50,24 @@ export default function BottomDrawer({
       return;
     }
 
-    // 새 콘텐츠 렌더 후 DOM 측정 → snapPoints state 업데이트 예약
-    pendingSnapRef.current = selection ? 2 : 1;
-    const raf = requestAnimationFrame(() => recalculate());
-    return () => cancelAnimationFrame(raf);
-  }, [selection]); // eslint-disable-line react-hooks/exhaustive-deps
+    const targetSnap = selection ? 2 : 1;
+    let cancelled = false;
 
-  // snapPoints가 실제로 업데이트된 후 snap 이동 실행
-  useEffect(() => {
-    if (pendingSnapRef.current === null) return;
-    const target = pendingSnapRef.current;
-    pendingSnapRef.current = null;
-    sheetRef.current?.snapTo(target);
-  }, [snapPoints]);
+    // Double-rAF: DOM 커밋 → snap points 재계산 → React flush → snap 이동
+    // 1st frame: recalculate()가 새 콘텐츠 DOM을 측정하고 setSnapPoints() 호출
+    // 2nd frame: React가 snapPoints state를 반영한 뒤 snapTo()가 올바른 값으로 실행
+    requestAnimationFrame(() => {
+      if (cancelled) return;
+      recalculate();
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        sheetRef.current?.snapTo(targetSnap);
+      });
+    });
+
+    return () => { cancelled = true; };
+  // recalculate는 stable identity (useCallback + useRef deps)
+  }, [selection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mounted) return null;
 
