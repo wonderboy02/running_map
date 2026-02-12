@@ -96,12 +96,11 @@ export class MyLocationMarker {
   private buildIcon(heading: number | null): naver.maps.HtmlIcon {
     const rotation = heading != null ? heading : 0;
 
-    // SVG 삼각형: 밑변(점 근처) → 꼭짓점(먼 곳) 그라데이션
-    // 20x26 뷰박스, 밑변 16px(점 크기와 일치), 높이 26px
+    // SVG 삼각형 (40x52): 끝(뾰족)이 불투명, 밑변(점 근처)이 투명
     const coneSvg = heading != null
-      ? `<div class="my-location-heading-cone"><svg width="20" height="26" viewBox="0 0 20 26" xmlns="http://www.w3.org/2000/svg">
-          <defs><linearGradient id="hg" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stop-color="#4285F4" stop-opacity="0.4"/>
+      ? `<div class="my-location-heading-cone"><svg width="40" height="52" viewBox="0 0 20 26" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4285F4" stop-opacity="0.5"/>
             <stop offset="100%" stop-color="#4285F4" stop-opacity="0.05"/>
           </linearGradient></defs>
           <path d="M10 0 L18 26 Q10 22 2 26 Z" fill="url(#hg)"/>
@@ -114,8 +113,8 @@ export class MyLocationMarker {
         <div class="my-location-dot"></div>
         <div class="my-location-pulse"></div>
       </div>`,
-      size: new naver.maps.Size(60, 60),
-      anchor: new naver.maps.Point(30, 30),
+      size: new naver.maps.Size(120, 120),
+      anchor: new naver.maps.Point(60, 60),
     };
   }
 }

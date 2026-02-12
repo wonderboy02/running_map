@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, LocateFixed, Navigation, Send } from 'lucide-react';
+import { Eye, EyeOff, Loader2, LocateFixed, Navigation, Send } from 'lucide-react';
 import FeedbackDialog from '@/components/FeedbackDialog';
 
 interface FloatingControlsProps {
   showCourses: boolean;
   onToggleCourses: (checked: boolean) => void;
   isFollowing: boolean;
+  isLocating: boolean;
   onToggleFollow: () => void;
 }
 
@@ -15,6 +16,7 @@ export default function FloatingControls({
   showCourses,
   onToggleCourses,
   isFollowing,
+  isLocating,
   onToggleFollow,
 }: FloatingControlsProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -44,13 +46,18 @@ export default function FloatingControls({
         <button
           onClick={onToggleFollow}
           className={`flex h-12 w-12 items-center justify-center rounded-full shadow-md transition-colors ${
-            isFollowing
-              ? 'bg-primary text-white'
-              : 'border border-border bg-surface text-text-secondary'
+            isLocating
+              ? 'bg-primary/70 text-white'
+              : isFollowing
+                ? 'bg-primary text-white'
+                : 'border border-border bg-surface text-text-secondary'
           }`}
-          aria-label={isFollowing ? '따라가기 해제' : '내 위치로 이동'}
+          aria-label={isLocating ? '위치 확인 중' : isFollowing ? '따라가기 해제' : '내 위치로 이동'}
+          disabled={isLocating}
         >
-          {isFollowing ? (
+          {isLocating ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isFollowing ? (
             <Navigation className="h-5 w-5" />
           ) : (
             <LocateFixed className="h-5 w-5" />

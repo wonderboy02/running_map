@@ -139,6 +139,7 @@ export default function HomePage() {
         showCourses={showCourses}
         onToggleCourses={setShowCourses}
         isFollowing={isFollowing}
+        isLocating={isFollowing && myLocation === null}
         onToggleFollow={handleToggleFollow}
       />
 
