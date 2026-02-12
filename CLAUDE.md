@@ -9,7 +9,7 @@
 - **지도**: Naver Map JavaScript API v3
 - **배포**: Vercel
 - **상세 기획**: `IMPLEMENTATION.md` 참조
-- **변경 이력**: `docs/changelog-v0.2.md` 참조
+- **변경 이력**: `docs/changelog/` 참조
 
 ## 디렉토리 구조
 
@@ -43,9 +43,9 @@ src/
 
 public/markers/             # 커스텀 마커 이미지
 docs/                       # 문서
-├── naver-maps-reference.md # Naver Maps API 레퍼런스
-├── bulk-upload-spec.md     # 벌크 업로드 스펙
-└── changelog-v0.2.md       # 변경 이력 (v0.2)
+├── changelog/              # 버전별 변경 이력 (v0.2.md, v0.3.md, ...)
+├── specs/                  # 미구현 기능 스펙 (구현 완료 시 삭제)
+└── reference/              # 상시 참조 레퍼런스 (design-system, naver-maps)
 supabase/migrations/        # DB 마이그레이션 SQL
 ```
 
@@ -142,7 +142,7 @@ NAVER_MAP_CLIENT_SECRET=your_client_secret_here
 
 ### 프로젝트 문서
 
-- **Naver Maps API 레퍼런스**: `docs/naver-maps-reference.md` (Map, Marker, Event, GroundOverlay 등 주요 API 정리)
+- **Naver Maps API 레퍼런스**: `docs/reference/naver-maps.md` (Map, Marker, Event, GroundOverlay 등 주요 API 정리)
   - **GroundOverlay**: 지도 위에 투명도가 있는 이미지를 오버레이하는 방법 (러닝 코스 하이라이트, 구역 표시 등에 활용)
 
 ### 트러블슈팅
@@ -441,9 +441,8 @@ npm run gen:types
 
 ### Phase 5.6: 문서
 
-- [x] Naver Maps API 레퍼런스 (`docs/naver-maps-reference.md`)
-- [x] 벌크 업로드 스펙 (`docs/bulk-upload-spec.md`)
-- [x] 변경 이력 (`docs/changelog-v0.2.md`)
+- [x] Naver Maps API 레퍼런스 (`docs/reference/naver-maps.md`)
+- [x] 변경 이력 (`docs/changelog/`)
 
 ### Phase 6: 배포 및 마무리
 
@@ -457,6 +456,26 @@ npm run gen:types
 - 모호하거나 이상한 부분이 있으면 user 에게 반드시 물어보고 확실하게 처리
 - **깔끔하고 권장된 구조**로 코딩할 것, 계획이 그렇지 않다면 계획에 대해 좀 더 명확히 논의
 - 이 컴퓨터는 window 기반 powershell 을 사용하니까 명령어를 그에 맞춰 사용
+
+### docs/ 폴더 컨벤션
+
+```
+docs/
+├── changelog/    # 버전별 변경 이력 (v0.2.md, v0.3.md, ...)
+├── specs/        # 미구현 기능 스펙
+└── reference/    # 상시 참조 레퍼런스
+```
+
+| 폴더 | 용도 | 파일 생명주기 |
+|------|------|--------------|
+| `changelog/` | 버전별 변경 이력 기록 | 영구 보관, 새 버전마다 `v{X}.md` 추가 |
+| `specs/` | 구현 예정 기능의 설계 스펙 | **구현 완료 시 삭제** |
+| `reference/` | 디자인 시스템, API 레퍼런스 등 | 상시 유지, 내용 갱신 |
+
+**규칙:**
+- 스펙 문서는 `specs/`에만 생성하고, 구현이 끝나면 반드시 삭제
+- 일회성 코드 리뷰, 마이그레이션 기록 등은 문서로 남기지 않음 (git history로 대체)
+- `reference/` 문서는 CLAUDE.md에서 경로를 참조하므로, 파일명 변경 시 CLAUDE.md도 함께 수정
 
 ### shadcn/ui 사용 기준
 
@@ -587,7 +606,7 @@ export default function DrawerNewContent({ titleRef, contentRef, ... }: DrawerNe
 
 ## 디자인 토큰 시스템
 
-- **상세 문서**: `docs/design-system.md` (3-Tier 구조, 전체 토큰 레퍼런스, Do/Don't)
+- **상세 문서**: `docs/reference/design-system.md` (3-Tier 구조, 전체 토큰 레퍼런스, Do/Don't)
 - **토큰 정의**: `src/styles/globals.css` → `@theme inline {}` 블록
 - **카테고리 배지 설정**: `src/lib/category-config.ts` (`getCategoryBadgeStyle()`)
 - **마커 아이콘**: `src/lib/marker-config.ts` (PNG 기반) — 아래 "마커 아이콘 컨벤션" 섹션 참조

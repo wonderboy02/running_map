@@ -62,13 +62,7 @@ export default function FloatingControls({
             className="rounded-full"
           />
         </button>
-        <span
-          className="mt-0.5 text-[10px] font-semibold text-black"
-          style={{
-            textShadow:
-              '-0.5px -0.5px 0 #fff,0.5px -0.5px 0 #fff,-0.5px 0.5px 0 #fff,0.5px 0.5px 0 #fff,0 -0.5px 0 #fff,0 0.5px 0 #fff,-0.5px 0 0 #fff,0.5px 0 0 #fff',
-          }}
-        >
+        <span className="text-shadow-outline mt-0.5 text-[10px] font-semibold text-text">
           {showCourses ? '코스 ON' : '코스 OFF'}
         </span>
       </div>
@@ -86,13 +80,18 @@ export default function FloatingControls({
           />
         </button>
 
-        <button
-          onClick={() => setFeedbackOpen(true)}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-md transition-transform hover:scale-105"
-          aria-label="의견 보내기"
-        >
-          <Send className="h-5 w-5" />
-        </button>
+        <div className="flex flex-col items-center">
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-md transition-transform hover:scale-105"
+            aria-label="의견 보내기"
+          >
+            <Send className="h-5 w-5" />
+          </button>
+          <span className="text-shadow-outline mt-0.5 text-[10px] font-semibold text-text">
+            의견 보내기
+          </span>
+        </div>
       </div>
 
       <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />

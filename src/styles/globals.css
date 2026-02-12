@@ -162,6 +162,15 @@ body {
   display: none;
 }
 
+/* 지도 위 라벨 텍스트 아웃라인 (가독성 확보) */
+.text-shadow-outline {
+  text-shadow:
+    -0.5px -0.5px 0 #fff, 0.5px -0.5px 0 #fff,
+    -0.5px  0.5px 0 #fff, 0.5px  0.5px 0 #fff,
+     0     -0.5px 0 #fff, 0      0.5px 0 #fff,
+    -0.5px  0     0 #fff, 0.5px  0     0 #fff;
+}
+
 /* 검색 콘텐츠 패널 — 부드러운 fade */
 .search-panel-enter {
   animation: search-panel-in 200ms ease-out forwards;

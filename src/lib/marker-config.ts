@@ -20,7 +20,7 @@
  *  - name이 있으면 buildCaptionedIcon → 이미지 아래 텍스트
  *  - name이 없으면 bare 이미지만 반환
  */
-import type { Category } from '@/types';
+import { CATEGORIES, type Category } from '@/types';
 
 // ─── 마커 크기/앵커 설정 ──────────────────────────────
 // 원형(default): 앵커 = 중앙, 핀형(selected): 앵커 = 중앙 하단
@@ -150,7 +150,7 @@ export function preloadMarkerImages(): void {
 
 /**
  * 스팟 마커 아이콘 반환
- * @param categories - 스팟의 카테고리 배열 (첫 번째 카테고리 사용)
+ * @param categories - 스팟의 카테고리 배열 (CATEGORIES 우선순위: 러너스팟 > 샤워 > 짐보관)
  * @param isHighlighted - 하이라이트 여부 (현재는 selected와 동일 취급)
  * @param isSelected - 현재 선택된 마커인지
  * @param name - 스팟 이름 (캡션으로 표시)
@@ -161,7 +161,7 @@ export function getSpotMarkerIcon(
   isSelected: boolean,
   name?: string,
 ): naver.maps.HtmlIcon {
-  const category = (categories[0] ?? '러너스팟') as Category;
+  const category = CATEGORIES.find((c) => categories.includes(c)) ?? '러너스팟';
   const state = isSelected ? 'selected' : 'default';
   const images = SPOT_IMAGES[category] ?? SPOT_IMAGES['러너스팟'];
   const size = CATEGORY_SIZES[category]?.[state] ?? BASE_SIZES[state];
