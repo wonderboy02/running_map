@@ -8,6 +8,7 @@ import type { Spot, Course, DrawerSelection } from '@/types';
 interface NaverMapProps {
   spots: Spot[];
   courses?: Course[];
+  showCourses?: boolean;
   onMarkerClick: (spot: Spot) => void;
   onCoursePinClick: (course: Course) => void;
   selection: DrawerSelection | null;
@@ -16,7 +17,7 @@ interface NaverMapProps {
   onMapReady?: (map: naver.maps.Map) => void;
 }
 
-export default function NaverMap({ spots, courses = [], onMarkerClick, onCoursePinClick, selection, targetLocation, initialCenter, onMapReady }: NaverMapProps) {
+export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, initialCenter, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
@@ -136,7 +137,7 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
     map.panTo(position);
   }, [map, targetLocation]);
 
-  // GroundOverlay 렌더링
+  // GroundOverlay 렌더링 — 인스턴스는 유지하고 showCourses로 가시성만 토글
   useEffect(() => {
     if (!isReady || !map) return;
 
@@ -151,33 +152,37 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
       }
     });
 
-    // 새로운 코스 오버레이 추가
+    // 새로운 코스 오버레이 추가 또는 기존 가시성 토글
     courses.forEach((course) => {
-      if (existingOverlays.has(course.id)) return;
+      const existing = existingOverlays.get(course.id);
 
-      // NW/SE → SW/NE 변환 (LatLngBounds 용)
-      const sw = new naver.maps.LatLng(course.se_lat, course.nw_lng);
-      const ne = new naver.maps.LatLng(course.nw_lat, course.se_lng);
-      const bounds = new naver.maps.LatLngBounds(sw, ne);
+      if (existing) {
+        existing.setMap(showCourses ? map : null);
+      } else {
+        // NW/SE → SW/NE 변환 (LatLngBounds 용)
+        const sw = new naver.maps.LatLng(course.se_lat, course.nw_lng);
+        const ne = new naver.maps.LatLng(course.nw_lat, course.se_lng);
+        const bounds = new naver.maps.LatLngBounds(sw, ne);
 
-      // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
-      const imageUrl = course.image_url.replace(
-        /https:\/\/[^/]+\/storage\/v1\/object\/public/,
-        '/storage',
-      );
+        // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
+        const imageUrl = course.image_url.replace(
+          /https:\/\/[^/]+\/storage\/v1\/object\/public/,
+          '/storage',
+        );
 
-      const groundOverlay = new naver.maps.GroundOverlay(
-        imageUrl,
-        bounds,
-        { opacity: course.opacity, clickable: false },
-      );
+        const groundOverlay = new naver.maps.GroundOverlay(
+          imageUrl,
+          bounds,
+          { opacity: course.opacity, clickable: false },
+        );
 
-      groundOverlay.setMap(map);
-      existingOverlays.set(course.id, groundOverlay);
+        groundOverlay.setMap(showCourses ? map : null);
+        existingOverlays.set(course.id, groundOverlay);
+      }
     });
-  }, [isReady, map, courses]);
+  }, [isReady, map, courses, showCourses]);
 
-  // 코스 핀 마커 렌더링 (선택 상태 반영)
+  // 코스 핀 마커 렌더링 (선택 상태 + 가시성 반영)
   // 스팟 마커와 별도 effect — 데이터 소스(courses)와 라이프사이클이 다르기 때문
   useEffect(() => {
     if (!isReady || !map) return;
@@ -196,7 +201,7 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
       }
     });
 
-    // 새로운 핀 추가 또는 기존 핀 아이콘 업데이트
+    // 새로운 핀 추가 또는 기존 핀 아이콘/가시성 업데이트
     coursesWithPin.forEach((course) => {
       const isSelected = course.id === selectedCourseId;
       const existing = existingPins.get(course.id);
@@ -204,10 +209,11 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
       if (existing) {
         existing.setIcon(getCoursePinIcon(isSelected, course.name));
         existing.setZIndex(isSelected ? 200 : 50);
+        existing.setMap(showCourses ? map : null);
       } else {
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(course.pin_lat!, course.pin_lng!),
-          map,
+          map: showCourses ? map : null,
           icon: getCoursePinIcon(isSelected, course.name),
           zIndex: isSelected ? 200 : 50,
         });
@@ -219,7 +225,7 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
         existingPins.set(course.id, marker);
       }
     });
-  }, [isReady, map, courses, onCoursePinClick, selection]);
+  }, [isReady, map, courses, onCoursePinClick, selection, showCourses]);
 
   return (
     <div ref={containerRef} className="relative z-0 h-full w-full">

@@ -120,7 +120,8 @@ export default function HomePage() {
       <div className="relative flex-1">
         <NaverMap
           spots={filteredSpots}
-          courses={showCourses ? courses : []}
+          courses={courses}
+          showCourses={showCourses}
           onMarkerClick={handleMarkerClick}
           onCoursePinClick={handleCoursePinClick}
           selection={selection}
