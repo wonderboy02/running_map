@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
 import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages } from '@/lib/marker-config';
+import {
+  MyLocationMarker,
+  type MyLocationState,
+} from '@/components/Map/MyLocationMarker';
+import type { MyLocationPosition } from '@/hooks/useMyLocation';
 import type { Spot, Course, DrawerSelection } from '@/types';
 
 interface NaverMapProps {
@@ -13,18 +18,20 @@ interface NaverMapProps {
   onCoursePinClick: (course: Course) => void;
   selection: DrawerSelection | null;
   targetLocation: { lat: number; lng: number; name?: string } | null;
-  initialCenter: { lat: number; lng: number } | null;
+  myLocation?: MyLocationPosition | null;
+  onMapDrag?: () => void;
   onMapReady?: (map: naver.maps.Map) => void;
 }
 
-export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, initialCenter, onMapReady }: NaverMapProps) {
+export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const groundOverlaysRef = useRef<Map<string, naver.maps.GroundOverlay>>(new Map());
   const coursePinsRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
-  const hasMovedToInitialCenter = useRef(false);
+  const myLocationMarkerRef = useRef<MyLocationMarker | null>(null);
+  const hasMovedToInitialPos = useRef(false);
 
   const createMarkerIcon = useCallback((spot: Spot, isSelected: boolean) => {
     return getSpotMarkerIcon(spot.categories, spot.is_highlighted, isSelected, spot.name);
@@ -100,14 +107,59 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     }
   }, [map, selection]);
 
-  // 초기 위치로 이동 (핀 없이, 한 번만)
+  // 내 위치 파란 점 마커 표시/업데이트
   useEffect(() => {
-    if (!map || !initialCenter || hasMovedToInitialCenter.current) return;
+    if (!isReady || !map) return;
 
-    const position = new naver.maps.LatLng(initialCenter.lat, initialCenter.lng);
-    map.panTo(position);
-    hasMovedToInitialCenter.current = true;
-  }, [map, initialCenter]);
+    if (!myLocation) {
+      // 위치 없음 → 마커 제거
+      if (myLocationMarkerRef.current) {
+        myLocationMarkerRef.current.destroy();
+        myLocationMarkerRef.current = null;
+      }
+      return;
+    }
+
+    const state: MyLocationState = {
+      lat: myLocation.lat,
+      lng: myLocation.lng,
+      heading: myLocation.heading,
+      accuracy: myLocation.accuracy,
+    };
+
+    if (!myLocationMarkerRef.current) {
+      myLocationMarkerRef.current = new MyLocationMarker(map, state);
+
+      // 첫 위치 수신 시 한 번만 지도 이동
+      if (!hasMovedToInitialPos.current) {
+        map.panTo(new naver.maps.LatLng(state.lat, state.lng));
+        hasMovedToInitialPos.current = true;
+      }
+    } else {
+      myLocationMarkerRef.current.update(state);
+    }
+  }, [isReady, map, myLocation]);
+
+  // 지도 드래그 감지 → 부모에게 알림
+  useEffect(() => {
+    if (!isReady || !map || !onMapDrag) return;
+
+    const listener = naver.maps.Event.addListener(map, 'dragstart', () => {
+      onMapDrag();
+    });
+
+    return () => {
+      naver.maps.Event.removeListener(listener);
+    };
+  }, [isReady, map, onMapDrag]);
+
+  // MyLocationMarker 언마운트 시 cleanup
+  useEffect(() => {
+    return () => {
+      myLocationMarkerRef.current?.destroy();
+      myLocationMarkerRef.current = null;
+    };
+  }, []);
 
   // 검색 핀 표시/제거 — 외부 검색 결과 전용
   useEffect(() => {

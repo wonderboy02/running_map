@@ -1,49 +1,26 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
-import { LocateFixed, Send } from 'lucide-react';
-import { toast } from 'sonner';
+import { Loader2, LocateFixed, Navigation, Send } from 'lucide-react';
 import FeedbackDialog from '@/components/FeedbackDialog';
 
 interface FloatingControlsProps {
-  map: naver.maps.Map | null;
   showCourses: boolean;
   onToggleCourses: (checked: boolean) => void;
+  isFollowing: boolean;
+  isLocating: boolean;
+  onToggleFollow: () => void;
 }
 
 export default function FloatingControls({
-  map,
   showCourses,
   onToggleCourses,
+  isFollowing,
+  isLocating,
+  onToggleFollow,
 }: FloatingControlsProps) {
-  const [locating, setLocating] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-
-  const handleLocate = useCallback(() => {
-    if (!map) return;
-    if (!navigator.geolocation) {
-      toast.error('이 브라우저에서는 위치 서비스를 사용할 수 없습니다.');
-      return;
-    }
-
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const latlng = new naver.maps.LatLng(latitude, longitude);
-        map.panTo(latlng);
-        map.setZoom(15);
-        setLocating(false);
-        toast.success('현재 위치로 이동했습니다.');
-      },
-      () => {
-        setLocating(false);
-        toast.error('위치 정보를 가져올 수 없습니다.');
-      },
-      { enableHighAccuracy: true, timeout: 5000 },
-    );
-  }, [map]);
 
   return (
     <>
@@ -70,14 +47,24 @@ export default function FloatingControls({
       {/* 오른쪽 하단: 내 위치 + 피드백 */}
       <div className="fixed bottom-[60px] right-4 z-[25] flex flex-col items-center gap-2">
         <button
-          onClick={handleLocate}
-          disabled={locating}
-          className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-surface text-text-secondary shadow-md transition-colors"
-          aria-label="현재 위치"
+          onClick={onToggleFollow}
+          className={`flex h-12 w-12 items-center justify-center rounded-full shadow-md transition-colors ${
+            isLocating
+              ? 'bg-primary/70 text-white'
+              : isFollowing
+                ? 'bg-primary text-white'
+                : 'border border-border bg-surface text-text-secondary'
+          }`}
+          aria-label={isLocating ? '위치 확인 중' : isFollowing ? '따라가기 해제' : '내 위치로 이동'}
+          disabled={isLocating}
         >
-          <LocateFixed
-            className={`h-5 w-5 ${locating ? 'animate-pulse text-primary' : ''}`}
-          />
+          {isLocating ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isFollowing ? (
+            <Navigation className="h-5 w-5" />
+          ) : (
+            <LocateFixed className="h-5 w-5" />
+          )}
         </button>
 
         <div className="flex flex-col items-center">
