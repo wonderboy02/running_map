@@ -71,30 +71,39 @@ export default function HomePage() {
   }, []);
 
   function handleSearchCourseSelect(course: Course) {
-    const lat = (course.nw_lat + course.se_lat) / 2;
-    const lng = (course.nw_lng + course.se_lng) / 2;
-    setTargetLocation({ lat, lng });
+    setTargetLocation(null);
     setSelection({ type: 'course', data: course });
+    // 코스 토글이 꺼져 있으면 켜기
+    setShowCourses(true);
   }
 
   function handleSearchSpotSelect(spot: Spot) {
+    setTargetLocation(null);
     setSelection({ type: 'spot', data: spot });
-    setTargetLocation({ lat: spot.latitude, lng: spot.longitude });
+    // 해당 스팟의 카테고리가 필터에 없으면 추가 (마커가 보이도록)
+    setActiveFilters((prev) => {
+      const missing = spot.categories.filter((cat) => !prev.includes(cat));
+      return missing.length > 0 ? [...prev, ...missing] : prev;
+    });
   }
 
   function handleSearchLocationSelect(lat: number, lng: number, name?: string) {
+    setSelection(null); // 드로어 닫기 (외부 결과엔 상세가 없음)
     setTargetLocation({ lat, lng, name });
   }
 
   const handleMarkerClick = useCallback((spot: Spot) => {
+    setTargetLocation(null);
     setSelection({ type: 'spot', data: spot });
   }, []);
 
   const handleCoursePinClick = useCallback((course: Course) => {
+    setTargetLocation(null);
     setSelection({ type: 'course', data: course });
   }, []);
 
   const handleDeselect = useCallback(() => {
+    setTargetLocation(null);
     setSelection(null);
   }, []);
 

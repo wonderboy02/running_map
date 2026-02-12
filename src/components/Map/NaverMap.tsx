@@ -88,8 +88,14 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
     if (!map || !selection) return;
     if (selection.type === 'spot') {
       map.panTo(new naver.maps.LatLng(selection.data.latitude, selection.data.longitude));
-    } else if (selection.type === 'course' && selection.data.pin_lat && selection.data.pin_lng) {
-      map.panTo(new naver.maps.LatLng(selection.data.pin_lat, selection.data.pin_lng));
+    } else if (selection.type === 'course') {
+      // 코스 전체를 보여주는 fitBounds
+      const course = selection.data;
+      const bounds = new naver.maps.LatLngBounds(
+        new naver.maps.LatLng(course.se_lat, course.nw_lng),
+        new naver.maps.LatLng(course.nw_lat, course.se_lng),
+      );
+      map.fitBounds(bounds, { padding: 60 });
     }
   }, [map, selection]);
 
@@ -102,15 +108,18 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
     hasMovedToInitialCenter.current = true;
   }, [map, initialCenter]);
 
-  // 검색 결과 위치로 지도 이동 + 핀 표시
+  // 검색 핀 표시/제거 — 외부 검색 결과 전용
   useEffect(() => {
-    if (!map || !targetLocation) return;
+    if (!map) return;
 
-    // 기존 검색 핀 제거
+    // 기존 검색 핀 항상 제거
     if (searchPinRef.current) {
       searchPinRef.current.setMap(null);
       searchPinRef.current = null;
     }
+
+    // targetLocation이 없으면 핀 제거만 하고 종료
+    if (!targetLocation) return;
 
     const position = new naver.maps.LatLng(targetLocation.lat, targetLocation.lng);
 
@@ -122,20 +131,10 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
       zIndex: 200,
     });
 
-    // 코스 선택: bounds에 맞춰 자동 줌
-    if (selection?.type === 'course') {
-      const course = selection.data;
-      const bounds = new naver.maps.LatLngBounds(
-        new naver.maps.LatLng(course.se_lat, course.nw_lng),
-        new naver.maps.LatLng(course.nw_lat, course.se_lng),
-      );
-      map.fitBounds(bounds, { padding: 60 });
-    } else {
-      // 스팟/주소: 현재 줌 유지, 너무 멀면 최소 14
-      if (map.getZoom() < 14) map.setZoom(14);
-      map.panTo(position);
-    }
-  }, [map, targetLocation]); // selection은 targetLocation과 동시에 갱신됨
+    // 외부 검색 결과: 현재 줌 유지, 너무 멀면 최소 14
+    if (map.getZoom() < 14) map.setZoom(14);
+    map.panTo(position);
+  }, [map, targetLocation]);
 
   // GroundOverlay 렌더링
   useEffect(() => {
