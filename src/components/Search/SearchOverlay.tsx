@@ -17,7 +17,7 @@ interface SearchOverlayProps {
   courses: Course[];
   onCourseSelect: (course: Course) => void;
   onSpotSelect: (spot: Spot) => void;
-  onLocationSelect: (lat: number, lng: number) => void;
+  onLocationSelect: (lat: number, lng: number, name?: string) => void;
 }
 
 export default function SearchOverlay({
@@ -66,8 +66,8 @@ export default function SearchOverlay({
   );
 
   const handleLocationSelect = useCallback(
-    (lat: number, lng: number) => {
-      onLocationSelect(lat, lng);
+    (lat: number, lng: number, name?: string) => {
+      onLocationSelect(lat, lng, name);
       onRequestClose();
     },
     [onLocationSelect, onRequestClose],

@@ -46,7 +46,7 @@ export default function Header({
               : 'max-w-[160px] opacity-100 translate-x-0'
           }`}
         >
-          <div className="w-8 h-8 bg-gray-300 rounded-lg" />
+          <div className="w-8 h-8 bg-surface-dim rounded-lg" />
         </div>
 
         {/* 검색바 — 동일한 input 엘리먼트가 비활성/활성 전환 */}

@@ -3,6 +3,12 @@
 import { CATEGORIES } from '@/types';
 import { Check } from 'lucide-react';
 
+const CHIP_ACTIVE_STYLES: Record<string, string> = {
+  러너스팟: 'bg-cat-runner text-white border-cat-runner',
+  샤워: 'bg-cat-shower text-white border-cat-shower',
+  짐보관: 'bg-cat-locker text-text border-cat-locker',
+};
+
 interface FilterChipsProps {
   activeFilters: string[];
   onToggle: (category: string) => void;
@@ -29,8 +35,8 @@ export default function FilterChips({ activeFilters, onToggle }: FilterChipsProp
                 min-h-[40px]
                 ${
                   isActive
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white/95 text-gray-700 border-gray-200 hover:bg-white hover:border-gray-300'
+                    ? CHIP_ACTIVE_STYLES[category] ?? 'bg-primary text-white border-primary'
+                    : 'bg-surface/95 text-text-secondary border-border hover:bg-surface hover:border-border-strong'
                 }
               `}
             >

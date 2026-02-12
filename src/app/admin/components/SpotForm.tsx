@@ -319,7 +319,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
                 onClick={() => handleSelectAddress(result)}
                 className="hover:bg-surface-dim flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm transition-colors"
               >
-                <MapPin className={`mt-0.5 h-4 w-4 flex-shrink-0 ${result.source === 'place' ? 'text-highlight-dark' : 'text-primary'}`} />
+                <MapPin className={`mt-0.5 h-4 w-4 flex-shrink-0 ${result.source === 'place' ? 'text-highlight-foreground' : 'text-primary'}`} />
                 <div className="min-w-0 flex-1">
                   {result.placeName ? (
                     <>
@@ -399,7 +399,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
                 key={cat}
                 variant={isActive ? 'default' : 'outline'}
                 className={`cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                  isActive ? 'bg-primary text-white hover:bg-primary-dark' : ''
+                  isActive ? 'bg-primary text-white hover:bg-primary-hover' : ''
                 }`}
                 onClick={() => toggleCategory(cat)}
               >

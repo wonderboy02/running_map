@@ -60,7 +60,7 @@ export default function RecommendedTerms({
                 onClick={() => onSpotTap(spot)}
                 className="flex items-start gap-2.5 py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
               >
-                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-highlight-dark" />
+                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-highlight-foreground" />
                 <div className="min-w-0 flex-1">
                   <p className="text-text text-[clamp(13px,3.5vw,15px)] font-medium truncate">
                     {spot.name}

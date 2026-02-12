@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
-import { getMarkerIcon, getCoursePinIcon } from '@/lib/marker-config';
+import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages } from '@/lib/marker-config';
 import type { Spot, Course, DrawerSelection } from '@/types';
 
 interface NaverMapProps {
@@ -11,7 +11,7 @@ interface NaverMapProps {
   onMarkerClick: (spot: Spot) => void;
   onCoursePinClick: (course: Course) => void;
   selection: DrawerSelection | null;
-  targetLocation: { lat: number; lng: number } | null;
+  targetLocation: { lat: number; lng: number; name?: string } | null;
   initialCenter: { lat: number; lng: number } | null;
   onMapReady?: (map: naver.maps.Map) => void;
 }
@@ -25,23 +25,28 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
   const hasMovedToInitialCenter = useRef(false);
 
-  const createMarkerIcon = useCallback((spot: Spot) => {
-    return getMarkerIcon(spot.is_highlighted, spot.categories);
+  const createMarkerIcon = useCallback((spot: Spot, isSelected: boolean) => {
+    return getSpotMarkerIcon(spot.categories, spot.is_highlighted, isSelected, spot.name);
   }, []);
 
-  // map 준비 시 부모에게 전달
+  // map 준비 시 마커 이미지 프리로드 + 부모에게 전달
   useEffect(() => {
-    if (isReady && map && onMapReady) {
-      onMapReady(map);
+    if (isReady && map) {
+      preloadMarkerImages();
+      onMapReady?.(map);
     }
   }, [isReady, map, onMapReady]);
 
-  // 마커 생성 및 업데이트
+  // 마커 동기화 — spots 데이터 변경 또는 선택 변경 시 마커 생성/제거/아이콘 업데이트
+  // selection이 deps에 포함되어 단일 effect에서 선택 상태까지 처리.
+  // 스팟 수십~수백 개 규모에서 전체 순회 setIcon() 비용은 < 1ms로 무시 가능.
   useEffect(() => {
     if (!isReady || !map) return;
 
     const currentIds = new Set(spots.map((s) => s.id));
     const existingMarkers = markersRef.current;
+    const selectedSpotId =
+      selection?.type === 'spot' ? selection.data.id : null;
 
     // 더 이상 없는 마커 제거
     existingMarkers.forEach((marker, id) => {
@@ -53,18 +58,20 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
 
     // 새로운 마커 추가 또는 기존 마커 업데이트
     spots.forEach((spot) => {
+      const isSelected = spot.id === selectedSpotId;
       const existing = existingMarkers.get(spot.id);
 
       if (existing) {
         existing.setPosition(new naver.maps.LatLng(spot.latitude, spot.longitude));
-        existing.setIcon(createMarkerIcon(spot));
+        existing.setIcon(createMarkerIcon(spot, isSelected));
+        existing.setZIndex(isSelected ? 200 : spot.is_highlighted ? 100 : 1);
         existing.setMap(map);
       } else {
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(spot.latitude, spot.longitude),
           map,
-          icon: createMarkerIcon(spot),
-          zIndex: spot.is_highlighted ? 100 : 1,
+          icon: createMarkerIcon(spot, isSelected),
+          zIndex: isSelected ? 200 : spot.is_highlighted ? 100 : 1,
         });
 
         naver.maps.Event.addListener(marker, 'click', () => {
@@ -74,7 +81,7 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
         existingMarkers.set(spot.id, marker);
       }
     });
-  }, [isReady, map, spots, createMarkerIcon, onMarkerClick]);
+  }, [isReady, map, spots, createMarkerIcon, onMarkerClick, selection]);
 
   // 선택된 마커/핀으로 지도 이동
   useEffect(() => {
@@ -111,14 +118,7 @@ export default function NaverMap({ spots, courses = [], onMarkerClick, onCourseP
     searchPinRef.current = new naver.maps.Marker({
       position,
       map,
-      icon: {
-        content: `<div style="display:flex;flex-direction:column;align-items:center;">
-          <div style="width:28px;height:28px;background:#E53E3E;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
-          <div style="width:6px;height:6px;background:rgba(0,0,0,0.2);border-radius:50%;margin-top:2px;"></div>
-        </div>`,
-        size: new naver.maps.Size(28, 38),
-        anchor: new naver.maps.Point(14, 34),
-      },
+      icon: getSearchPinIcon(targetLocation.name),
       zIndex: 200,
     });
 

@@ -14,7 +14,7 @@ import type { Spot, Course, DrawerSelection } from '@/types';
 export default function HomePage() {
   const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']);
   const [selection, setSelection] = useState<DrawerSelection | null>(null);
-  const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number; name?: string } | null>(null);
   const [initialCenter, setInitialCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [naverMap, setNaverMap] = useState<naver.maps.Map | null>(null);
   const [showCourses, setShowCourses] = useState(true);
@@ -82,8 +82,8 @@ export default function HomePage() {
     setTargetLocation({ lat: spot.latitude, lng: spot.longitude });
   }
 
-  function handleSearchLocationSelect(lat: number, lng: number) {
-    setTargetLocation({ lat, lng });
+  function handleSearchLocationSelect(lat: number, lng: number, name?: string) {
+    setTargetLocation({ lat, lng, name });
   }
 
   const handleMarkerClick = useCallback((spot: Spot) => {
