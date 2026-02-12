@@ -85,49 +85,26 @@ export default function HomePage() {
     setIsFollowing((prev) => !prev);
   }, [isFollowing, naverMap, myLocation, requestCompassPermission, retryLocation]);
 
-  // 팔로잉 ON인데 위치를 못 받으면 자동 롤백 (에러 즉시 or 8초 타임아웃)
+  // 팔로잉 ON인데 위치 에러가 발생하면 자동 롤백
+  // GPS 신호가 약한 경우 스피너가 유지되며, 사용자가 버튼으로 직접 취소 가능
   useEffect(() => {
-    if (!isFollowing || myLocation) return;
+    if (!isFollowing || myLocation || !locationError) return;
 
-    /** 팔로잉 해제 + 원인에 맞는 토스트 표시 */
-    function rollbackWithToast(reason: 'permission' | 'pc' | 'generic') {
-      setIsFollowing(false);
-      if (reason === 'permission') {
-        toast.error('위치 정보 접근을 허용해야 사용할 수 있어요.', {
-          description: '브라우저 설정에서 위치 권한을 확인해주세요.',
-        });
-      } else if (reason === 'pc') {
-        toast.error('PC에서는 위치 정보를 사용할 수 없어요.', {
-          description: '모바일 기기에서 이용해주세요.',
-        });
-      } else {
-        toast.error('위치 정보를 가져올 수 없어요.', {
-          description: '위치 권한과 GPS가 켜져 있는지 확인해주세요.',
-        });
-      }
+    setIsFollowing(false);
+
+    if (locationError === 'geolocation_unsupported' || !hasOrientationSensor) {
+      toast.error('PC에서는 위치 정보를 사용할 수 없어요.', {
+        description: '모바일 기기에서 이용해주세요.',
+      });
+    } else if (locationError === 'permission_denied') {
+      toast.error('위치 정보 접근을 허용해야 사용할 수 있어요.', {
+        description: '브라우저 설정에서 위치 권한을 확인해주세요.',
+      });
+    } else {
+      toast.error('위치 정보를 가져올 수 없어요.', {
+        description: '위치 권한과 GPS가 켜져 있는지 확인해주세요.',
+      });
     }
-
-    if (locationError) {
-      if (locationError === 'permission_denied') {
-        rollbackWithToast('permission');
-      } else if (locationError === 'geolocation_unsupported' || !hasOrientationSensor) {
-        rollbackWithToast('pc');
-      } else if (locationError === 'timeout') {
-        setIsFollowing(false);
-        toast.error('위치를 가져오는 데 시간이 오래 걸려요.', {
-          description: 'GPS 신호가 약할 수 있어요. 잠시 후 다시 시도해주세요.',
-        });
-      } else {
-        rollbackWithToast('generic');
-      }
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      rollbackWithToast(hasOrientationSensor ? 'generic' : 'pc');
-    }, 8000);
-
-    return () => clearTimeout(timer);
   }, [isFollowing, myLocation, locationError, hasOrientationSensor]);
 
   const filteredSpots = spots.filter((spot) => {
