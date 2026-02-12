@@ -56,12 +56,7 @@
 | **Course** | `course` | `text-course` | 코스 아이콘/텍스트 |
 | **External** | `naver` | `bg-naver` | 네이버 지도 버튼 |
 | | `naver-hover` | `hover:bg-naver-hover` | 네이버 버튼 hover |
-| **Marker** | `marker-default` | CSS only | 기본 마커 |
-| | `marker-highlight` | CSS only | 추천 마커 |
-| | `marker-course` | CSS only | 코스 마커 |
-| | `marker-runner` | CSS only | 러너스팟 마커 |
-| | `marker-shower` | CSS only | 샤워 마커 |
-| | `marker-locker` | CSS only | 짐보관 마커 |
+| **Marker** | — | PNG 기반 | `marker-config.ts`에서 관리 (CSS 토큰 없음) |
 
 ### Tier 3: 카테고리 (Placeholder)
 
@@ -125,17 +120,10 @@ shadcn/ui의 `text-muted-foreground`와 앱 토큰의 `text-text-secondary`는 �
 
 ---
 
-## 6. 마커 토큰
+## 6. 마커 아이콘
 
-마커 색상은 **CSS 변수**와 **JS hex 상수** 두 곳에서 관리됩니다:
-
-| 위치 | 형태 | 용도 |
-|------|------|------|
-| `globals.css` `--color-marker-*` | CSS var (oklch) | `.marker-category-*` 클래스에서 사용 |
-| `marker-config.ts` `CATEGORY_COLORS` | hex 문자열 | Naver Maps API에 전달하는 JS 값 |
-
-두 값은 동일한 색상을 가리켜야 합니다. 변경 시 **반드시 양쪽 모두 수정**하세요.
-`marker-config.ts`의 hex 상수에는 대응하는 CSS 토큰명이 주석으로 표기되어 있습니다.
+마커는 **PNG 이미지 기반** (`marker-config.ts`)으로 관리되며, CSS 토큰은 사용하지 않습니다.
+자세한 컨벤션은 `CLAUDE.md`의 "마커 아이콘 컨벤션" 섹션 참조.
 
 ---
 
@@ -145,5 +133,5 @@ shadcn/ui의 `text-muted-foreground`와 앱 토큰의 `text-text-secondary`는 �
 2. oklch 색공간 사용 (hex → oklch 변환)
 3. 적절한 Tier에 배치하고 주석으로 hex 값 표기
 4. 이 문서의 토큰 레퍼런스 테이블에 추가
-5. 마커 관련이면 `marker-config.ts`에도 hex 상수 추가
+5. 마커 관련이면 `marker-config.ts`의 `SPOT_IMAGES` / `CATEGORY_SIZES` 업데이트
 6. 카테고리 관련이면 `category-config.ts`에도 스타일 추가

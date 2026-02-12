@@ -1,13 +1,29 @@
 'use client';
 
 import { CATEGORIES } from '@/types';
-import { Check } from 'lucide-react';
+
+const CHIP_ICONS: Record<string, string> = {
+  러너스팟: '/icons/runner.png',
+  샤워: '/icons/shower.png',
+  짐보관: '/icons/locker.png',
+};
 
 const CHIP_ACTIVE_STYLES: Record<string, string> = {
   러너스팟: 'bg-cat-runner text-white border-cat-runner',
   샤워: 'bg-cat-shower text-white border-cat-shower',
   짐보관: 'bg-cat-locker text-text border-cat-locker',
 };
+
+const CHIP_INACTIVE =
+  'bg-surface/95 text-text-secondary border-border hover:border-border-strong';
+
+// 모듈 로드 시 즉시 프리로드 (깜빡임 방지)
+if (typeof window !== 'undefined') {
+  Object.values(CHIP_ICONS).forEach((src) => {
+    const img = new Image();
+    img.src = src;
+  });
+}
 
 interface FilterChipsProps {
   activeFilters: string[];
@@ -20,30 +36,41 @@ export default function FilterChips({ activeFilters, onToggle }: FilterChipsProp
       <div className="flex gap-2 justify-start pointer-events-auto">
         {CATEGORIES.map((category) => {
           const isActive = activeFilters.includes(category);
+          const iconSrc = CHIP_ICONS[category];
           return (
             <button
               key={category}
               onClick={() => onToggle(category)}
               className={`
-                px-4 py-1.5 rounded-xl
+                pl-2 pr-3 py-1 rounded-full
                 backdrop-blur-md
                 border
                 shadow-sm
                 transition-all duration-200
                 flex items-center gap-1.5
                 text-[clamp(13px,3.5vw,15px)] font-medium
-                min-h-[40px]
                 ${
                   isActive
                     ? CHIP_ACTIVE_STYLES[category] ?? 'bg-primary text-white border-primary'
-                    : 'bg-surface/95 text-text-secondary border-border hover:bg-surface hover:border-border-strong'
+                    : CHIP_INACTIVE
                 }
               `}
             >
-              <span>{category}</span>
-              {isActive && (
-                <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+              {/* 16x16 정적 UI 아이콘 — next/image 대신 <img> 사용:
+                  brightness-0 invert CSS filter 호환 + 최적화 실익 없음 */}
+              {iconSrc && (
+                <img
+                  src={iconSrc}
+                  alt=""
+                  width={16}
+                  height={16}
+                  className={`
+                    w-4 h-4 transition-[filter] duration-200
+                    ${isActive ? 'brightness-0 invert' : ''}
+                  `}
+                />
               )}
+              <span>{category}</span>
             </button>
           );
         })}

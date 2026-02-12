@@ -6,6 +6,13 @@ import '@/styles/globals.css';
 export const metadata: Metadata = {
   title: "Runner's Spot",
   description: '러너를 위한 짐보관, 샤워실, 탈의실 장소 찾기',
+  icons: {
+    icon: [
+      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/apple-icon.png',
+  },
 };
 
 export const viewport: Viewport = {
