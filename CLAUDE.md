@@ -105,23 +105,6 @@ supabase/migrations/        # DB 마이그레이션 SQL
 - JavaScript Maps API → **Client ID** 필요
 - Geocoding REST API (Admin 주소 검색) → **Client ID + Client Secret** 필요 (API Route에서 사용)
 
-### Naver Cloud Platform 콘솔 설정
-
-1. **콘솔 접속**: [https://console.ncloud.com](https://console.ncloud.com)
-2. **애플리케이션 등록**: Services > Application Services > Maps > Application
-3. **필수 설정**:
-   - **서비스 선택**: "Web Dynamic Map" + "Geocoding" 체크 (필수! 체크 안 하면 429/401 에러)
-   - **Web 서비스 URL**: 다음 URL들을 **모두** 등록
-     ```
-     http://localhost:3000
-     https://localhost:3000
-     https://*.vercel.app
-     https://running-map-sand.vercel.app
-     ```
-     ⚠️ Vercel은 배포마다 URL이 바뀔 수 있으므로 와일드카드(`*.vercel.app`) 추가 필수
-4. **인증 정보 확인**: Client ID와 Client Secret 복사
-5. **설정 반영 시간**: 저장 후 최대 5-10분 소요
-
 ### 환경변수 설정
 
 `.env.local`:
@@ -144,27 +127,6 @@ NAVER_MAP_CLIENT_SECRET=your_client_secret_here
 
 - **Naver Maps API 레퍼런스**: `docs/reference/naver-maps.md` (Map, Marker, Event, GroundOverlay 등 주요 API 정리)
   - **GroundOverlay**: 지도 위에 투명도가 있는 이미지를 오버레이하는 방법 (러닝 코스 하이라이트, 구역 표시 등에 활용)
-
-### 트러블슈팅
-
-**지도 "Authentication Failed" 에러 발생 시:**
-
-1. 콘솔에서 현재 배포 URL이 "Web 서비스 URL"에 등록되어 있는지 확인
-2. "Dynamic Map" 서비스가 활성화되어 있는지 확인
-3. Client ID가 정확한지 확인
-4. 스크립트 URL이 `https://oapi.map.naver.com`인지 확인 (`openapi` 아님!)
-5. 파라미터가 `ncpKeyId`인지 확인 (`ncpClientId` 아님!)
-6. 설정 변경 후 5-10분 대기
-7. 브라우저 캐시 삭제 후 재시도
-
-**Geocoding API 401 에러 발생 시:**
-
-1. NCP 콘솔에서 "Geocoding" 서비스가 활성화되어 있는지 확인 ("Web Dynamic Map"과 별도로 체크 필요)
-2. `.env.local`에 `NAVER_MAP_CLIENT_SECRET` 설정 확인
-3. Client Secret이 해당 애플리케이션의 것인지 확인 (다른 앱의 키 혼동 주의)
-4. 브라우저에서 `/api/geocode?query=강남` 직접 호출하여 `detail` 필드의 에러 메시지 확인
-5. 설정 변경 후 5-10분 대기 (NCP 콘솔 설정 반영 시간)
-6. Client Secret이 재발급되었거나 비활성화되지 않았는지 확인
 
 ## Supabase 클라이언트 패턴
 
@@ -378,77 +340,6 @@ npm run gen:types
   - `admins`: 관리자 권한 (auth.users FK 연결)
 
 **참고**: `.env.local`에 `SUPABASE_PROJECT_ID` 설정 필요
-
-## 구현 진행 상태
-
-### Phase 1: 기본 셋업
-
-- [x] 프로젝트 디렉토리 구조 생성
-- [x] 루트 설정 파일 (gitignore, gitattributes, prettierrc, tsconfig, postcss, next.config, package.json)
-- [x] 환경변수 템플릿 (.env.example)
-- [x] `npm install` (패키지 설치)
-- [x] TypeScript 타입 정의 (`src/types/index.ts`, `src/types/naver-maps.d.ts`)
-- [x] Tailwind CSS v4 글로벌 스타일 (`src/styles/globals.css`)
-- [x] Supabase 클라이언트 (`src/lib/supabase/client.ts`, `server.ts`)
-- [x] DB 마이그레이션 SQL (`supabase/migrations/001_create_spots.sql` - admins 테이블 포함, 트랜잭션 처리)
-- [x] 루트 레이아웃 + Naver Map 스크립트 로딩 (`src/app/layout.tsx`)
-- [x] Supabase 타입 생성 스크립트 (`npm run gen:types`)
-- [x] Supabase DB에 마이그레이션 적용 (SQL 실행)
-- [ ] Naver Map API 키 발급 및 .env.local 설정
-
-### Phase 2: 핵심 지도 기능
-
-- [x] NaverMap 컴포넌트 (`src/components/Map/NaverMap.tsx`)
-- [x] useNaverMap 훅 (`src/hooks/useNaverMap.ts`)
-- [x] useSpots 훅 (`src/hooks/useSpots.ts`)
-- [x] 마커 표시 (일반 + 하이라이트 + 카테고리별 색상 구분)
-- [x] 마커 설정 시스템 (`src/lib/marker-config.ts`)
-- [x] 마커 클릭 → Bottom Drawer (`src/components/BottomDrawer/` — 통합 snap point 기반)
-- [x] Bottom Drawer → 상세 페이지 전환 (`src/app/spot/[id]/page.tsx`)
-- [x] 지도 유형 전환 (일반/위성/혼합/지형) (`src/components/Map/MapControls.tsx`)
-- [x] 현재 위치 버튼 (브라우저 Geolocation API)
-
-### Phase 3: 검색 & 필터
-
-- [x] 헤더 + 검색창 (`src/components/Header.tsx`, `SearchBar.tsx`)
-- [x] 필터 칩 (카테고리 토글) (`src/components/FilterChips.tsx`)
-- [x] 통합 검색 (장소명 + 주소 + 카테고리) (`src/hooks/useSearch.ts`)
-
-### Phase 4: FAB 메뉴
-
-- [x] FAB 버튼 + dropup 메뉴 (`src/components/FABMenu.tsx`)
-- [x] 피드백 / 제휴문의 링크
-
-### Phase 5: Admin
-
-- [x] Admin 레이아웃 + Auth guard (`src/app/admin/layout.tsx`)
-- [x] Admin 로그인 페이지 (`src/app/admin/login/page.tsx`)
-- [x] Admin 장소 목록 + CRUD (`src/app/admin/page.tsx`)
-- [x] 장소 추가/수정 공통 폼 (`src/app/admin/components/SpotForm.tsx`)
-- [x] 하이라이트 토글 (목록에서 바로 토글)
-- [x] RLS 정책 SQL 작성 (`supabase/migrations/001_create_spots.sql`)
-- [x] Geocoding API Route (`src/app/api/geocode/route.ts`)
-- [x] 주소 검색 UI (SpotForm 자동완성 드롭다운 + 좌표 자동 입력)
-- [ ] Supabase Auth admin 유저 생성
-
-### Phase 5.5: UI 라이브러리 (shadcn/ui)
-
-- [x] shadcn/ui 통합 (components.json, utils.ts, globals.css)
-- [x] 컴포넌트 12개 설치 (button, input, label, textarea, badge, card, sheet, dialog, sonner, select, checkbox, alert-dialog, separator)
-- [x] Toaster 추가 (layout.tsx)
-- [x] 기존 컴포넌트 리팩터링 (BottomDrawer, Header, FilterChips, FABMenu, SpotCard, admin 페이지 등)
-- [x] lucide-react 아이콘 통합
-
-### Phase 5.6: 문서
-
-- [x] Naver Maps API 레퍼런스 (`docs/reference/naver-maps.md`)
-- [x] 변경 이력 (`docs/changelog/`)
-
-### Phase 6: 배포 및 마무리
-
-- [ ] Vercel 배포
-- [ ] Naver Map 도메인 설정
-- [ ] 테스트 및 버그 수정
 
 ## 개발 가이드
 

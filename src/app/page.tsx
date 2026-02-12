@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import NaverMap from '@/components/Map/NaverMap';
 import Header from '@/components/Header';
 import FilterChips from '@/components/FilterChips';
@@ -11,6 +12,7 @@ import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
 import type { Spot, Course, DrawerSelection } from '@/types';
+import { haversineDistance } from '@/lib/naver-map-utils';
 
 export default function HomePage() {
   const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']);
@@ -18,6 +20,13 @@ export default function HomePage() {
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number; name?: string } | null>(null);
   const [naverMap, setNaverMap] = useState<naver.maps.Map | null>(null);
   const [showCourses, setShowCourses] = useState(true);
+  const [selectionViewOverride, setSelectionViewOverride] = useState<{
+    swLat: number;
+    swLng: number;
+    neLat: number;
+    neLng: number;
+    padding?: number;
+  } | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
 
   // 검색 상태
@@ -27,7 +36,13 @@ export default function HomePage() {
 
   const { spots } = useSpots();
   const { courses } = useCourses();
-  const { position: myLocation, requestCompassPermission } = useMyLocation();
+  const {
+    position: myLocation,
+    error: locationError,
+    hasOrientationSensor,
+    requestCompassPermission,
+    retryLocation,
+  } = useMyLocation();
 
   // 팔로우 중이고 위치가 갱신되면 지도 이동
   const prevLocationRef = useRef(myLocation);
@@ -51,24 +66,94 @@ export default function HomePage() {
 
   const handleToggleFollow = useCallback(() => {
     if (!isFollowing) {
-      // OFF → ON: iOS 나침반 권한 요청 (사용자 제스처 필요)
+      // OFF → ON
+      if (!myLocation) {
+        // 위치가 아직 없으면 재시도 요청 후 팔로잉 시작 (스피너 표시)
+        retryLocation();
+      }
+
       requestCompassPermission();
       if (naverMap && myLocation) {
-        naverMap.panTo(new naver.maps.LatLng(myLocation.lat, myLocation.lng));
+        const targetZoom = Math.max(15, naverMap.getZoom());
+        naverMap.morph(
+          new naver.maps.LatLng(myLocation.lat, myLocation.lng),
+          targetZoom,
+          { duration: 500, easing: 'easeOutCubic' },
+        );
       }
     }
     setIsFollowing((prev) => !prev);
-  }, [isFollowing, naverMap, myLocation, requestCompassPermission]);
+  }, [isFollowing, naverMap, myLocation, requestCompassPermission, retryLocation]);
+
+  // 팔로잉 ON인데 위치 에러가 발생하면 자동 롤백
+  // GPS 신호가 약한 경우 스피너가 유지되며, 사용자가 버튼으로 직접 취소 가능
+  useEffect(() => {
+    if (!isFollowing || myLocation || !locationError) return;
+
+    setIsFollowing(false);
+
+    if (locationError === 'geolocation_unsupported' || !hasOrientationSensor) {
+      toast.error('PC에서는 위치 정보를 사용할 수 없어요.', {
+        description: '모바일 기기에서 이용해주세요.',
+      });
+    } else if (locationError === 'permission_denied') {
+      toast.error('위치 정보 접근을 허용해야 사용할 수 있어요.', {
+        description: '브라우저 설정에서 위치 권한을 확인해주세요.',
+      });
+    } else {
+      toast.error('위치 정보를 가져올 수 없어요.', {
+        description: '위치 권한과 GPS가 켜져 있는지 확인해주세요.',
+      });
+    }
+  }, [isFollowing, myLocation, locationError, hasOrientationSensor]);
 
   const filteredSpots = spots.filter((spot) => {
     if (activeFilters.length === 0) return true;
     return spot.categories.some((cat) => activeFilters.includes(cat));
   });
 
+  const handleSelectionViewApplied = useCallback(() => setSelectionViewOverride(null), []);
+
   const handleFilterToggle = (category: string) => {
+    const isTogglingOn = !activeFilters.includes(category);
+
     setActiveFilters((prev) =>
       prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
     );
+
+    // OFF→ON 토글 시: 가까운 마커 자동 선택 + 지도 범위 조정
+    if (!isTogglingOn || !naverMap || spots.length === 0) return;
+
+    const center = naverMap.getCenter() as naver.maps.LatLng;
+    const centerLat = center.lat();
+    const centerLng = center.lng();
+
+    // 해당 카테고리의 모든 스팟을 거리순 정렬
+    const categorySpots = spots
+      .filter((s) => s.categories.includes(category))
+      .map((s) => ({
+        ...s,
+        _distance: haversineDistance(centerLat, centerLng, s.latitude, s.longitude),
+      }))
+      .sort((a, b) => a._distance - b._distance);
+
+    if (categorySpots.length === 0) return;
+
+    const nearest = categorySpots.slice(0, 3);
+
+    // 기준점(지도 중심) + 가까운 3개 마커의 bounds 계산
+    const lats = [centerLat, ...nearest.map((s) => s.latitude)];
+    const lngs = [centerLng, ...nearest.map((s) => s.longitude)];
+
+    setSelectionViewOverride({
+      swLat: Math.min(...lats),
+      swLng: Math.min(...lngs),
+      neLat: Math.max(...lats),
+      neLng: Math.max(...lngs),
+      padding: 80,
+    });
+    const { _distance: _, ...nearestSpot } = categorySpots[0];
+    setSelection({ type: 'spot', data: nearestSpot });
   };
 
   // 검색 닫기 (exit 애니메이션 트리거)
@@ -138,6 +223,8 @@ export default function HomePage() {
           onMarkerClick={handleMarkerClick}
           onCoursePinClick={handleCoursePinClick}
           selection={selection}
+          selectionViewOverride={selectionViewOverride}
+          onSelectionViewApplied={handleSelectionViewApplied}
           targetLocation={targetLocation}
           myLocation={myLocation}
           onMapDrag={handleMapDrag}

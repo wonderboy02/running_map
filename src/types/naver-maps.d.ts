@@ -41,6 +41,11 @@ declare namespace naver.maps {
     logoControlOptions?: { position?: number };
   }
 
+  interface TransitionOptions {
+    duration?: number;
+    easing?: string;
+  }
+
   interface MarkerOptions {
     position: LatLng;
     map?: Map | null;
@@ -85,7 +90,13 @@ declare namespace naver.maps {
     getZoom(): number;
     setZoom(zoom: number): void;
     getBounds(): LatLngBounds;
-    panTo(coord: LatLng, options?: unknown): void;
+    panTo(coord: LatLng, transitionOptions?: TransitionOptions): void;
+    panToBounds(
+      bounds: LatLngBounds,
+      transitionOptions?: TransitionOptions,
+      margin?: { top?: number; right?: number; bottom?: number; left?: number },
+    ): void;
+    morph(coord: LatLng, zoom?: number, transitionOptions?: TransitionOptions): void;
     fitBounds(bounds: LatLngBounds, options?: { padding?: number }): void;
     destroy(): void;
     setOptions(options: Partial<MapOptions>): void;

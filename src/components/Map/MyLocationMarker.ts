@@ -96,9 +96,9 @@ export class MyLocationMarker {
   private buildIcon(heading: number | null): naver.maps.HtmlIcon {
     const rotation = heading != null ? heading : 0;
 
-    // SVG 삼각형 (40x52): 끝(뾰족)이 불투명, 밑변(점 근처)이 투명
+    // SVG 삼각형 (20x26): 끝(뾰족)이 불투명, 밑변(점 근처)이 투명
     const coneSvg = heading != null
-      ? `<div class="my-location-heading-cone"><svg width="40" height="52" viewBox="0 0 20 26" xmlns="http://www.w3.org/2000/svg">
+      ? `<div class="my-location-heading-cone"><svg width="20" height="26" viewBox="0 0 20 26" xmlns="http://www.w3.org/2000/svg">
           <defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#4285F4" stop-opacity="0.5"/>
             <stop offset="100%" stop-color="#4285F4" stop-opacity="0.05"/>
@@ -113,8 +113,8 @@ export class MyLocationMarker {
         <div class="my-location-dot"></div>
         <div class="my-location-pulse"></div>
       </div>`,
-      size: new naver.maps.Size(120, 120),
-      anchor: new naver.maps.Point(60, 60),
+      size: new naver.maps.Size(60, 60),
+      anchor: new naver.maps.Point(30, 30),
     };
   }
 }
