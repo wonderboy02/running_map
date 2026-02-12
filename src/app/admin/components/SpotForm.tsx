@@ -426,6 +426,11 @@ export default function SpotForm({ spot }: SpotFormProps) {
         <Label>
           사진 ({totalPhotos}/{MAX_PHOTOS})
         </Label>
+        {!form.categories.includes('러너스팟') && (
+          <p className="text-xs text-amber-600">
+            현재 카테고리에서는 사진이 사용자 화면에 표시되지 않습니다. (러너스팟만 사진 노출)
+          </p>
+        )}
         <div className="grid grid-cols-4 gap-2">
           {/* 기존 사진 */}
           {existingPhotos.map((url, i) => (

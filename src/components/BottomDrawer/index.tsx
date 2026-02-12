@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { Sheet, SheetRef } from 'react-modal-sheet';
 import { useSnapPoints } from './useSnapPoints';
 import DrawerSpotDetail from './DrawerSpotDetail';
@@ -51,22 +52,14 @@ export default function BottomDrawer({
     }
 
     const targetSnap = selection ? 2 : 1;
-    let cancelled = false;
 
-    // Double-rAF: DOM 커밋 → snap points 재계산 → React flush → snap 이동
-    // 1st frame: recalculate()가 새 콘텐츠 DOM을 측정하고 setSnapPoints() 호출
-    // 2nd frame: React가 snapPoints state를 반영한 뒤 snapTo()가 올바른 값으로 실행
-    requestAnimationFrame(() => {
-      if (cancelled) return;
-      recalculate();
-      requestAnimationFrame(() => {
-        if (cancelled) return;
-        sheetRef.current?.snapTo(targetSnap);
-      });
+    // rAF: 새 콘텐츠 DOM 커밋 대기 → flushSync로 snap points 동기 갱신 → 즉시 snapTo
+    const raf = requestAnimationFrame(() => {
+      flushSync(() => recalculate());
+      sheetRef.current?.snapTo(targetSnap);
     });
 
-    return () => { cancelled = true; };
-  // recalculate는 stable identity (useCallback + useRef deps)
+    return () => cancelAnimationFrame(raf);
   }, [selection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mounted) return null;
