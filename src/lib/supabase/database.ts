@@ -29,28 +29,7 @@ export type Database = {
         }
         Relationships: []
       }
-      feedback: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          is_read: boolean
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          is_read?: boolean
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          is_read?: boolean
-        }
-        Relationships: []
-      }
-      overlays: {
+      courses: {
         Row: {
           created_at: string | null
           description: string | null
@@ -107,6 +86,27 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+        }
+        Relationships: []
+      }
       spots: {
         Row: {
           address: string
@@ -114,6 +114,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           extra_data: Json | null
+          features: string[]
           id: string
           is_highlighted: boolean | null
           latitude: number
@@ -130,6 +131,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           extra_data?: Json | null
+          features?: string[]
           id?: string
           is_highlighted?: boolean | null
           latitude: number
@@ -146,6 +148,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           extra_data?: Json | null
+          features?: string[]
           id?: string
           is_highlighted?: boolean | null
           latitude?: number

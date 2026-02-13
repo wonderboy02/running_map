@@ -2,11 +2,11 @@
 
 import { useMemo, useEffect } from 'react';
 import { useGeocode } from '@/hooks/useGeocode';
-import type { Spot, Overlay } from '@/types';
+import type { Spot, Course } from '@/types';
 import type { GeocodeResult } from '@/hooks/useGeocode';
 
 interface UnifiedSearchResults {
-  overlayResults: Overlay[];
+  courseResults: Course[];
   spotResults: Spot[];
   externalResults: GeocodeResult[];
   isLoading: boolean;
@@ -15,16 +15,16 @@ interface UnifiedSearchResults {
 export function useUnifiedSearch(
   query: string,
   spots: Spot[],
-  overlays: Overlay[],
+  courses: Course[],
 ): UnifiedSearchResults {
   const { results: externalResults, loading: isLoading, search, clear } = useGeocode();
 
-  // 1. Local overlay 검색 (동기, 즉시)
-  const overlayResults = useMemo(() => {
+  // 1. Local course 검색 (동기, 즉시)
+  const courseResults = useMemo(() => {
     if (!query || query.trim().length < 1) return [];
     const q = query.toLowerCase().trim();
-    return overlays.filter((o) => o.name.toLowerCase().includes(q));
-  }, [query, overlays]);
+    return courses.filter((o) => o.name.toLowerCase().includes(q));
+  }, [query, courses]);
 
   // 2. Local spot 검색 (동기, 즉시)
   const spotResults = useMemo(() => {
@@ -47,5 +47,5 @@ export function useUnifiedSearch(
     }
   }, [query, search, clear]);
 
-  return { overlayResults, spotResults, externalResults, isLoading };
+  return { courseResults, spotResults, externalResults, isLoading };
 }

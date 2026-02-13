@@ -3,57 +3,57 @@
 import { Route, MapPin, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import type { Spot, Overlay } from '@/types';
+import type { Spot, Course } from '@/types';
 import type { GeocodeResult } from '@/hooks/useGeocode';
 
 interface SearchResultsListProps {
-  overlayResults: Overlay[];
+  courseResults: Course[];
   spotResults: Spot[];
   externalResults: GeocodeResult[];
   isLoading: boolean;
-  onOverlaySelect: (overlay: Overlay) => void;
+  onCourseSelect: (course: Course) => void;
   onSpotSelect: (spot: Spot) => void;
-  onLocationSelect: (lat: number, lng: number) => void;
+  onLocationSelect: (lat: number, lng: number, name?: string) => void;
 }
 
 export default function SearchResultsList({
-  overlayResults,
+  courseResults,
   spotResults,
   externalResults,
   isLoading,
-  onOverlaySelect,
+  onCourseSelect,
   onSpotSelect,
   onLocationSelect,
 }: SearchResultsListProps) {
-  const hasOverlays = overlayResults.length > 0;
+  const hasCourses = courseResults.length > 0;
   const hasSpots = spotResults.length > 0;
   const hasExternal = externalResults.length > 0;
-  const hasAnyResult = hasOverlays || hasSpots || hasExternal;
+  const hasAnyResult = hasCourses || hasSpots || hasExternal;
 
   return (
     <div className="py-1">
       {/* 1. 러닝 코스 결과 */}
-      {hasOverlays && (
+      {hasCourses && (
         <div className="px-4 py-2">
           <h3 className="text-text-secondary text-[clamp(11px,2.8vw,12px)] font-medium uppercase tracking-wider mb-1.5">
             러닝 코스
           </h3>
-          {overlayResults.map((overlay) => (
+          {courseResults.map((course) => (
             <button
-              key={overlay.id}
-              onClick={() => onOverlaySelect(overlay)}
+              key={course.id}
+              onClick={() => onCourseSelect(course)}
               className="flex items-center gap-2.5 w-full py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
             >
-              <Route className="w-4 h-4 flex-shrink-0 text-blue-600" />
+              <Route className="w-4 h-4 flex-shrink-0 text-primary" />
               <span className="text-text text-[clamp(13px,3.5vw,15px)] font-medium truncate">
-                {overlay.name}
+                {course.name}
               </span>
             </button>
           ))}
         </div>
       )}
 
-      {hasOverlays && (hasSpots || hasExternal) && <Separator />}
+      {hasCourses && (hasSpots || hasExternal) && <Separator />}
 
       {/* 2. 장소 결과 */}
       {hasSpots && (
@@ -101,12 +101,12 @@ export default function SearchResultsList({
           {externalResults.map((result, i) => (
             <button
               key={i}
-              onClick={() => onLocationSelect(result.latitude, result.longitude)}
+              onClick={() => onLocationSelect(result.latitude, result.longitude, result.placeName || result.roadAddress)}
               className="flex items-start gap-2.5 w-full py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
             >
               <MapPin
                 className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                  result.source === 'place' ? 'text-highlight-dark' : 'text-primary'
+                  result.source === 'place' ? 'text-highlight-foreground' : 'text-primary'
                 }`}
               />
               <div className="min-w-0 flex-1">

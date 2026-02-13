@@ -1,0 +1,1 @@
+ALTER TABLE spots ADD COLUMN features TEXT[] NOT NULL DEFAULT '{}';

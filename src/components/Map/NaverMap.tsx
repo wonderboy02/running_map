@@ -2,46 +2,69 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
-import { getMarkerIcon, getOverlayPinIcon } from '@/lib/marker-config';
-import type { Spot, Overlay, DrawerSelection } from '@/types';
+import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages } from '@/lib/marker-config';
+import {
+  MyLocationMarker,
+  type MyLocationState,
+} from '@/components/Map/MyLocationMarker';
+import type { MyLocationPosition } from '@/hooks/useMyLocation';
+import type { Spot, Course, DrawerSelection } from '@/types';
 
 interface NaverMapProps {
   spots: Spot[];
-  overlays?: Overlay[];
+  courses?: Course[];
+  showCourses?: boolean;
   onMarkerClick: (spot: Spot) => void;
-  onOverlayPinClick: (overlay: Overlay) => void;
+  onCoursePinClick: (course: Course) => void;
   selection: DrawerSelection | null;
-  targetLocation: { lat: number; lng: number } | null;
-  initialCenter: { lat: number; lng: number } | null;
+  selectionViewOverride?: {
+    swLat: number;
+    swLng: number;
+    neLat: number;
+    neLng: number;
+    padding?: number;
+  } | null;
+  onSelectionViewApplied?: () => void;
+  targetLocation: { lat: number; lng: number; name?: string } | null;
+  myLocation?: MyLocationPosition | null;
+  onMapDrag?: () => void;
   onMapReady?: (map: naver.maps.Map) => void;
 }
 
-export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverlayPinClick, selection, targetLocation, initialCenter, onMapReady }: NaverMapProps) {
+export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, selectionViewOverride, onSelectionViewApplied, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
-  const overlaysRef = useRef<Map<string, naver.maps.GroundOverlay>>(new Map());
-  const overlayPinsRef = useRef<Map<string, naver.maps.Marker>>(new Map());
+  const groundOverlaysRef = useRef<Map<string, naver.maps.GroundOverlay>>(new Map());
+  const overlayUrlsRef = useRef<Map<string, string>>(new Map());
+  const coursePinsRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
-  const hasMovedToInitialCenter = useRef(false);
+  const myLocationMarkerRef = useRef<MyLocationMarker | null>(null);
+  const maxZoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasMovedToInitialPos = useRef(false);
 
-  const createMarkerIcon = useCallback((spot: Spot) => {
-    return getMarkerIcon(spot.is_highlighted, spot.categories);
+  const createMarkerIcon = useCallback((spot: Spot, isSelected: boolean) => {
+    return getSpotMarkerIcon(spot.categories, isSelected, spot.name);
   }, []);
 
-  // map 준비 시 부모에게 전달
+  // map 준비 시 마커 이미지 프리로드 + 부모에게 전달
   useEffect(() => {
-    if (isReady && map && onMapReady) {
-      onMapReady(map);
+    if (isReady && map) {
+      preloadMarkerImages();
+      onMapReady?.(map);
     }
   }, [isReady, map, onMapReady]);
 
-  // 마커 생성 및 업데이트
+  // 마커 동기화 — spots 데이터 변경 또는 선택 변경 시 마커 생성/제거/아이콘 업데이트
+  // selection이 deps에 포함되어 단일 effect에서 선택 상태까지 처리.
+  // 스팟 수십~수백 개 규모에서 전체 순회 setIcon() 비용은 < 1ms로 무시 가능.
   useEffect(() => {
     if (!isReady || !map) return;
 
     const currentIds = new Set(spots.map((s) => s.id));
     const existingMarkers = markersRef.current;
+    const selectedSpotId =
+      selection?.type === 'spot' ? selection.data.id : null;
 
     // 더 이상 없는 마커 제거
     existingMarkers.forEach((marker, id) => {
@@ -53,18 +76,20 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
 
     // 새로운 마커 추가 또는 기존 마커 업데이트
     spots.forEach((spot) => {
+      const isSelected = spot.id === selectedSpotId;
       const existing = existingMarkers.get(spot.id);
 
       if (existing) {
         existing.setPosition(new naver.maps.LatLng(spot.latitude, spot.longitude));
-        existing.setIcon(createMarkerIcon(spot));
+        existing.setIcon(createMarkerIcon(spot, isSelected));
+        existing.setZIndex(isSelected ? 200 : 1);
         existing.setMap(map);
       } else {
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(spot.latitude, spot.longitude),
           map,
-          icon: createMarkerIcon(spot),
-          zIndex: spot.is_highlighted ? 100 : 1,
+          icon: createMarkerIcon(spot, isSelected),
+          zIndex: isSelected ? 200 : 1,
         });
 
         naver.maps.Event.addListener(marker, 'click', () => {
@@ -74,36 +99,129 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
         existingMarkers.set(spot.id, marker);
       }
     });
-  }, [isReady, map, spots, createMarkerIcon, onMarkerClick]);
+  }, [isReady, map, spots, createMarkerIcon, onMarkerClick, selection]);
 
-  // 선택된 마커/핀으로 지도 이동
+  // selectionViewOverride를 ref로 관리 — deps에서 제거하여 null 전환 시 effect 재실행 방지
+  // NOTE: selectionViewOverride는 반드시 selection과 함께 설정해야 함 (이 effect는 selection 변경 시만 실행)
+  const selectionViewOverrideRef = useRef(selectionViewOverride);
+  selectionViewOverrideRef.current = selectionViewOverride;
+
+  // 선택된 마커/핀으로 지도 이동 (또는 override된 bounds 적용)
   useEffect(() => {
     if (!map || !selection) return;
+
+    const override = selectionViewOverrideRef.current;
+
+    // 필터 토글 등에서 bounds override가 있으면 부드럽게 이동
+    if (override) {
+      const bounds = new naver.maps.LatLngBounds(
+        new naver.maps.LatLng(override.swLat, override.swLng),
+        new naver.maps.LatLng(override.neLat, override.neLng),
+      );
+      const padding = override.padding ?? 60;
+      // 과도한 줌인 방지 — panToBounds가 maxZoom을 존중하므로 일시적으로 제한
+      if (maxZoomTimerRef.current) clearTimeout(maxZoomTimerRef.current);
+      map.setOptions({ maxZoom: 15 });
+      map.panToBounds(
+        bounds,
+        { duration: 500, easing: 'easeOutCubic' },
+        { top: padding, right: padding, bottom: padding, left: padding },
+      );
+      maxZoomTimerRef.current = setTimeout(() => {
+        map.setOptions({ maxZoom: 18 });
+        maxZoomTimerRef.current = null;
+      }, 600);
+      onSelectionViewApplied?.();
+      return;
+    }
+
     if (selection.type === 'spot') {
       map.panTo(new naver.maps.LatLng(selection.data.latitude, selection.data.longitude));
-    } else if (selection.type === 'overlay' && selection.data.pin_lat && selection.data.pin_lng) {
-      map.panTo(new naver.maps.LatLng(selection.data.pin_lat, selection.data.pin_lng));
+    } else if (selection.type === 'course') {
+      // 코스 전체를 보여주는 fitBounds
+      const course = selection.data;
+      const bounds = new naver.maps.LatLngBounds(
+        new naver.maps.LatLng(course.se_lat, course.nw_lng),
+        new naver.maps.LatLng(course.nw_lat, course.se_lng),
+      );
+      map.fitBounds(bounds, { padding: 60 });
     }
-  }, [map, selection]);
 
-  // 초기 위치로 이동 (핀 없이, 한 번만)
+    return () => {
+      if (maxZoomTimerRef.current) {
+        clearTimeout(maxZoomTimerRef.current);
+        maxZoomTimerRef.current = null;
+        map.setOptions({ maxZoom: 18 });
+      }
+    };
+  }, [map, selection, onSelectionViewApplied]);
+
+  // 내 위치 파란 점 마커 표시/업데이트
   useEffect(() => {
-    if (!map || !initialCenter || hasMovedToInitialCenter.current) return;
+    if (!isReady || !map) return;
 
-    const position = new naver.maps.LatLng(initialCenter.lat, initialCenter.lng);
-    map.panTo(position);
-    hasMovedToInitialCenter.current = true;
-  }, [map, initialCenter]);
+    if (!myLocation) {
+      // 위치 없음 → 마커 제거
+      if (myLocationMarkerRef.current) {
+        myLocationMarkerRef.current.destroy();
+        myLocationMarkerRef.current = null;
+      }
+      return;
+    }
 
-  // 검색 결과 위치로 지도 이동 + 핀 표시
+    const state: MyLocationState = {
+      lat: myLocation.lat,
+      lng: myLocation.lng,
+      heading: myLocation.heading,
+      accuracy: myLocation.accuracy,
+    };
+
+    if (!myLocationMarkerRef.current) {
+      myLocationMarkerRef.current = new MyLocationMarker(map, state);
+
+      // 첫 위치 수신 시 한 번만 지도 이동
+      if (!hasMovedToInitialPos.current) {
+        map.panTo(new naver.maps.LatLng(state.lat, state.lng));
+        hasMovedToInitialPos.current = true;
+      }
+    } else {
+      myLocationMarkerRef.current.update(state);
+    }
+  }, [isReady, map, myLocation]);
+
+  // 지도 드래그 감지 → 부모에게 알림
   useEffect(() => {
-    if (!map || !targetLocation) return;
+    if (!isReady || !map || !onMapDrag) return;
 
-    // 기존 검색 핀 제거
+    const listener = naver.maps.Event.addListener(map, 'dragstart', () => {
+      onMapDrag();
+    });
+
+    return () => {
+      naver.maps.Event.removeListener(listener);
+    };
+  }, [isReady, map, onMapDrag]);
+
+  // MyLocationMarker 언마운트 시 cleanup
+  useEffect(() => {
+    return () => {
+      myLocationMarkerRef.current?.destroy();
+      myLocationMarkerRef.current = null;
+    };
+  }, []);
+
+  // 검색 핀 표시/제거 — 외부 검색 결과 전용
+  useEffect(() => {
+    if (!map) return;
+
+    // 기존 검색 핀 항상 제거
     if (searchPinRef.current) {
       searchPinRef.current.setMap(null);
       searchPinRef.current = null;
     }
+
+    // targetLocation이 없으면 핀 제거만 하고 종료
+    if (!targetLocation) return;
 
     const position = new naver.maps.LatLng(targetLocation.lat, targetLocation.lng);
 
@@ -111,69 +229,88 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
     searchPinRef.current = new naver.maps.Marker({
       position,
       map,
-      icon: {
-        content: `<div style="display:flex;flex-direction:column;align-items:center;">
-          <div style="width:28px;height:28px;background:#E53E3E;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
-          <div style="width:6px;height:6px;background:rgba(0,0,0,0.2);border-radius:50%;margin-top:2px;"></div>
-        </div>`,
-        size: new naver.maps.Size(28, 38),
-        anchor: new naver.maps.Point(14, 34),
-      },
+      icon: getSearchPinIcon(targetLocation.name),
       zIndex: 200,
     });
 
-    map.setZoom(15);
+    // 외부 검색 결과: 현재 줌 유지, 너무 멀면 최소 14
+    if (map.getZoom() < 14) map.setZoom(14);
     map.panTo(position);
   }, [map, targetLocation]);
 
-  // GroundOverlay 렌더링
+  // GroundOverlay 렌더링 — 인스턴스는 유지하고 showCourses로 가시성만 토글
+  // selection deps 포함: 코스 선택 시 highlight_image_url로 이미지 교체
   useEffect(() => {
     if (!isReady || !map) return;
 
-    const currentIds = new Set(overlays.map((o) => o.id));
-    const existingOverlays = overlaysRef.current;
+    const selectedCourseId =
+      selection?.type === 'course' ? selection.data.id : null;
 
-    // 더 이상 없는 오버레이 제거
+    const currentIds = new Set(courses.map((o) => o.id));
+    const existingOverlays = groundOverlaysRef.current;
+
+    // 더 이상 없는 GroundOverlay 제거
     existingOverlays.forEach((groundOverlay, id) => {
       if (!currentIds.has(id)) {
         groundOverlay.setMap(null);
         existingOverlays.delete(id);
+        overlayUrlsRef.current.delete(id);
       }
     });
 
-    // 새로운 오버레이 추가
-    overlays.forEach((overlay) => {
-      if (existingOverlays.has(overlay.id)) return;
+    // 새로운 코스 오버레이 추가 또는 기존 이미지 교체 + 가시성 토글
+    courses.forEach((course) => {
+      const existing = existingOverlays.get(course.id);
+      const isSelected = course.id === selectedCourseId;
 
-      // NW/SE → SW/NE 변환 (LatLngBounds 용)
-      const sw = new naver.maps.LatLng(overlay.se_lat, overlay.nw_lng);
-      const ne = new naver.maps.LatLng(overlay.nw_lat, overlay.se_lng);
-      const bounds = new naver.maps.LatLngBounds(sw, ne);
+      // 하이라이팅 이미지가 있고 선택된 경우 → 하이라이팅 URL 사용
+      const targetUrl = (isSelected && course.highlight_image_url)
+        ? course.highlight_image_url
+        : course.image_url;
 
       // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
-      const imageUrl = overlay.image_url.replace(
+      const imageUrl = targetUrl.replace(
         /https:\/\/[^/]+\/storage\/v1\/object\/public/,
         '/storage',
       );
 
-      const groundOverlay = new naver.maps.GroundOverlay(
-        imageUrl,
-        bounds,
-        { opacity: overlay.opacity, clickable: false },
-      );
+      if (existing) {
+        // URL이 실제로 변경된 경우에만 setUrl() 호출 — 불필요한 이미지 리로드/깜빡임 방지
+        const prevUrl = overlayUrlsRef.current.get(course.id);
+        if (prevUrl !== imageUrl) {
+          existing.setUrl(imageUrl);
+          overlayUrlsRef.current.set(course.id, imageUrl);
+        }
+        existing.setMap(showCourses ? map : null);
+      } else {
+        // NW/SE → SW/NE 변환 (LatLngBounds 용)
+        const sw = new naver.maps.LatLng(course.se_lat, course.nw_lng);
+        const ne = new naver.maps.LatLng(course.nw_lat, course.se_lng);
+        const bounds = new naver.maps.LatLngBounds(sw, ne);
 
-      groundOverlay.setMap(map);
-      existingOverlays.set(overlay.id, groundOverlay);
+        const groundOverlay = new naver.maps.GroundOverlay(
+          imageUrl,
+          bounds,
+          { opacity: course.opacity, clickable: false },
+        );
+
+        groundOverlay.setMap(showCourses ? map : null);
+        existingOverlays.set(course.id, groundOverlay);
+        overlayUrlsRef.current.set(course.id, imageUrl);
+      }
     });
-  }, [isReady, map, overlays]);
+  }, [isReady, map, courses, showCourses, selection]);
 
-  // 오버레이 핀 마커 렌더링
+  // 코스 핀 마커 렌더링 (선택 상태 + 가시성 반영)
+  // 스팟 마커와 별도 effect — 데이터 소스(courses)와 라이프사이클이 다르기 때문
   useEffect(() => {
     if (!isReady || !map) return;
 
-    const overlaysWithPin = overlays.filter((o) => o.pin_lat != null && o.pin_lng != null);
-    const currentIds = new Set(overlaysWithPin.map((o) => o.id));
-    const existingPins = overlayPinsRef.current;
+    const coursesWithPin = courses.filter((o) => o.pin_lat != null && o.pin_lng != null);
+    const currentIds = new Set(coursesWithPin.map((o) => o.id));
+    const existingPins = coursePinsRef.current;
+    const selectedCourseId =
+      selection?.type === 'course' ? selection.data.id : null;
 
     // 더 이상 없는 핀 제거
     existingPins.forEach((marker, id) => {
@@ -183,24 +320,31 @@ export default function NaverMap({ spots, overlays = [], onMarkerClick, onOverla
       }
     });
 
-    // 새로운 핀 추가
-    overlaysWithPin.forEach((overlay) => {
-      if (existingPins.has(overlay.id)) return;
+    // 새로운 핀 추가 또는 기존 핀 아이콘/가시성 업데이트
+    coursesWithPin.forEach((course) => {
+      const isSelected = course.id === selectedCourseId;
+      const existing = existingPins.get(course.id);
 
-      const marker = new naver.maps.Marker({
-        position: new naver.maps.LatLng(overlay.pin_lat!, overlay.pin_lng!),
-        map,
-        icon: getOverlayPinIcon(),
-        zIndex: 50,
-      });
+      if (existing) {
+        existing.setIcon(getCoursePinIcon(isSelected, course.name));
+        existing.setZIndex(isSelected ? 200 : 50);
+        existing.setMap(showCourses ? map : null);
+      } else {
+        const marker = new naver.maps.Marker({
+          position: new naver.maps.LatLng(course.pin_lat!, course.pin_lng!),
+          map: showCourses ? map : null,
+          icon: getCoursePinIcon(isSelected, course.name),
+          zIndex: isSelected ? 200 : 50,
+        });
 
-      naver.maps.Event.addListener(marker, 'click', () => {
-        onOverlayPinClick(overlay);
-      });
+        naver.maps.Event.addListener(marker, 'click', () => {
+          onCoursePinClick(course);
+        });
 
-      existingPins.set(overlay.id, marker);
+        existingPins.set(course.id, marker);
+      }
     });
-  }, [isReady, map, overlays, onOverlayPinClick]);
+  }, [isReady, map, courses, onCoursePinClick, selection, showCourses]);
 
   return (
     <div ref={containerRef} className="relative z-0 h-full w-full">

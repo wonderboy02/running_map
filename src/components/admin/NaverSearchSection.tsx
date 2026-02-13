@@ -314,7 +314,7 @@ export function NaverSearchSection() {
 
       {/* 일괄 검색 통계 */}
       {bulkStats && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="bg-info-muted border border-info-border rounded-lg p-3">
           <div className="flex items-center justify-between text-sm">
             <div className="flex gap-4">
               <span className="text-gray-700">

@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Search, Loader2, Plus, X, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
+import { MapPin, Search, Loader2, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
-import { CATEGORIES } from '@/types';
+import { CATEGORIES, FEATURES, WEEKDAYS, WEEKDAY_LABELS } from '@/types';
 import type { Spot, SpotInsert } from '@/types';
 import { useGeocode, type GeocodeResult } from '@/hooks/useGeocode';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ const EMPTY_FORM: SpotInsert = {
   latitude: 37.5665,
   longitude: 126.978,
   categories: [],
+  features: [],
   is_highlighted: false,
   operating_hours: null,
   description: null,
@@ -45,6 +46,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
           latitude: spot.latitude,
           longitude: spot.longitude,
           categories: spot.categories,
+          features: spot.features ?? [],
           is_highlighted: spot.is_highlighted,
           operating_hours: spot.operating_hours,
           description: spot.description,
@@ -96,6 +98,27 @@ export default function SpotForm({ spot }: SpotFormProps) {
         ? prev.categories.filter((c) => c !== cat)
         : [...prev.categories, cat],
     }));
+  }
+
+  function toggleFeature(feat: string) {
+    setForm((prev) => ({
+      ...prev,
+      features: prev.features.includes(feat)
+        ? prev.features.filter((f) => f !== feat)
+        : [...prev.features, feat],
+    }));
+  }
+
+  function updateOperatingHours(day: string, value: string) {
+    setForm((prev) => {
+      const hours = { ...(prev.operating_hours ?? {}) };
+      if (value) {
+        hours[day] = value;
+      } else {
+        delete hours[day];
+      }
+      return { ...prev, operating_hours: Object.keys(hours).length > 0 ? hours : null };
+    });
   }
 
   // 사진 핸들러
@@ -319,7 +342,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
                 onClick={() => handleSelectAddress(result)}
                 className="hover:bg-surface-dim flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm transition-colors"
               >
-                <MapPin className={`mt-0.5 h-4 w-4 flex-shrink-0 ${result.source === 'place' ? 'text-highlight-dark' : 'text-primary'}`} />
+                <MapPin className={`mt-0.5 h-4 w-4 flex-shrink-0 ${result.source === 'place' ? 'text-highlight-foreground' : 'text-primary'}`} />
                 <div className="min-w-0 flex-1">
                   {result.placeName ? (
                     <>
@@ -399,7 +422,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
                 key={cat}
                 variant={isActive ? 'default' : 'outline'}
                 className={`cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                  isActive ? 'bg-primary text-white hover:bg-primary-dark' : ''
+                  isActive ? 'bg-primary text-white hover:bg-primary-hover' : ''
                 }`}
                 onClick={() => toggleCategory(cat)}
               >
@@ -407,6 +430,25 @@ export default function SpotForm({ spot }: SpotFormProps) {
               </Badge>
             );
           })}
+        </div>
+      </div>
+
+      {/* 제공 시설 */}
+      <div className="space-y-1.5">
+        <Label>제공 시설</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {FEATURES.map((feat) => (
+            <div key={feat} className="flex items-center space-x-2">
+              <Checkbox
+                id={`feature-${feat}`}
+                checked={form.features.includes(feat)}
+                onCheckedChange={() => toggleFeature(feat)}
+              />
+              <Label htmlFor={`feature-${feat}`} className="text-sm font-normal cursor-pointer">
+                {feat}
+              </Label>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -545,7 +587,27 @@ export default function SpotForm({ spot }: SpotFormProps) {
         />
       </div>
 
-      {/* 하이라이트 */}
+      {/* 운영시간 */}
+      <div className="space-y-1.5">
+        <Label>운영시간</Label>
+        <div className="space-y-2">
+          {WEEKDAYS.map((day) => (
+            <div key={day} className="flex items-center gap-2">
+              <span className="w-6 text-sm text-muted-foreground">
+                {WEEKDAY_LABELS[day]}
+              </span>
+              <Input
+                type="text"
+                value={form.operating_hours?.[day] ?? ''}
+                onChange={(e) => updateOperatingHours(day, e.target.value)}
+                placeholder="09:00 - 21:00"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 인기 장소 */}
       <div className="flex items-center space-x-2">
         <Checkbox
           id="highlight"
@@ -553,7 +615,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
           onCheckedChange={(checked) => updateField('is_highlighted', !!checked)}
         />
         <Label htmlFor="highlight" className="cursor-pointer font-normal">
-          추천 장소로 하이라이트
+          인기 장소로 등록 (검색 화면에 노출)
         </Label>
       </div>
 

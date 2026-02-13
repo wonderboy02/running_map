@@ -63,7 +63,7 @@ export function SpotManagementTable() {
         query = query.contains('categories', [categoryFilter]);
       }
 
-      // 하이라이트 필터
+      // 인기 장소 필터
       if (highlightFilter === 'highlighted') {
         query = query.eq('is_highlighted', true);
       } else if (highlightFilter === 'normal') {
@@ -192,11 +192,11 @@ export function SpotManagementTable() {
 
         <Select value={highlightFilter} onValueChange={setHighlightFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="하이라이트" />
+            <SelectValue placeholder="인기 장소" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
-            <SelectItem value="highlighted">추천만</SelectItem>
+            <SelectItem value="highlighted">인기 장소만</SelectItem>
             <SelectItem value="normal">일반만</SelectItem>
           </SelectContent>
         </Select>
@@ -307,8 +307,8 @@ export function SpotManagementTable() {
                     </td>
                     <td className="py-3 text-center">
                       {spot.is_highlighted && (
-                        <Badge className="bg-highlight/10 text-highlight-dark">
-                          추천
+                        <Badge className="bg-highlight-muted text-highlight-foreground">
+                          인기
                         </Badge>
                       )}
                     </td>

@@ -4,18 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* 기존 커스텀 컬러 */
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
-  --color-highlight: #f59e0b;
-  --color-highlight-dark: #d97706;
-  --color-surface: #ffffff;
-  --color-surface-dim: #f5f5f5;
-  --color-text: #1a1a1a;
-  --color-text-secondary: #6b7280;
-  --color-border: #e5e7eb;
-
-  /* shadcn/ui 호환 CSS 변수 */
+  /* ================================================================
+   * Tier 1: shadcn/ui 코어 (수정 금지)
+   * ================================================================ */
   --radius: 0.625rem;
   --color-background: oklch(1 0 0);
   --color-foreground: oklch(0.145 0 0);
@@ -47,6 +38,85 @@
   --color-sidebar-accent-foreground: oklch(0.205 0 0);
   --color-sidebar-border: oklch(0.922 0 0);
   --color-sidebar-ring: oklch(0.558 0.225 264.436);
+
+  /* ================================================================
+   * Tier 2: 앱 시맨틱 토큰
+   * ================================================================ */
+
+  /* — Primary — */
+  --color-primary: #152558;
+  --color-primary-hover: #1e3070;
+
+  /* — Surface — */
+  --color-surface: oklch(1 0 0);                      /* #ffffff */
+  --color-surface-dim: oklch(0.968 0 0);              /* #f5f5f5 */
+
+  /* — Text — */
+  --color-text: oklch(0.178 0 0);                     /* #1a1a1a */
+  --color-text-secondary: oklch(0.554 0.013 257.364); /* #6b7280 */
+  --color-text-muted: oklch(0.707 0.015 256.788);     /* #9ca3af (gray-400) */
+
+  /* — Border — */
+  --color-border: oklch(0.923 0.003 264.542);         /* #e5e7eb (gray-200) */
+  --color-border-strong: oklch(0.87 0.006 264.531);   /* #d1d5db (gray-300) */
+
+  /* — Highlight (추천/강조) — */
+  --color-highlight: oklch(0.795 0.184 86.047);        /* #f59e0b */
+  --color-highlight-foreground: oklch(0.666 0.179 58.318); /* #d97706 */
+  --color-highlight-muted: oklch(0.795 0.184 86.047 / 0.1); /* amber-500/10 */
+  --color-highlight-border: oklch(0.913 0.076 95.879); /* #fde68a ≈ amber-200 */
+
+  /* — Success — */
+  --color-success: oklch(0.527 0.154 150.069);        /* #16a34a (green-600) */
+  --color-success-foreground: oklch(0.527 0.154 150.069);
+  --color-success-muted: oklch(0.962 0.044 156.743);  /* #dcfce7 (green-100) */
+
+  /* — Warning — */
+  --color-warning: oklch(0.681 0.162 75.834);         /* #ca8a04 (yellow-600) */
+  --color-warning-foreground: oklch(0.681 0.162 75.834);
+  --color-warning-muted: oklch(0.981 0.054 95.234);   /* #fef9c3 (yellow-100) */
+
+  /* — Info — */
+  --color-info-muted: oklch(0.962 0.018 254.128);     /* #eff6ff (blue-50) */
+  --color-info-border: oklch(0.882 0.059 254.128);    /* #bfdbfe (blue-200) */
+
+  /* — Course — */
+  --color-course: oklch(0.596 0.145 163.225);         /* #059669 (emerald-600) */
+  --color-course-foreground: oklch(0.985 0 0);
+
+  /* — External: Naver — */
+  --color-naver: oklch(0.726 0.213 155.766);          /* #03C75A */
+  --color-naver-hover: oklch(0.665 0.196 155.766);    /* #02b350 */
+
+  /* — Marker (hex, JS에서도 동일값 사용) — */
+  --color-marker-default: oklch(0.546 0.245 264.436); /* #2563eb */
+  --color-marker-highlight: oklch(0.795 0.184 86.047); /* #f59e0b */
+  --color-marker-course: oklch(0.696 0.17 162.48);    /* #10b981 */
+  --color-marker-runner: oklch(0.546 0.245 264.436);  /* #2563eb */
+  --color-marker-shower: oklch(0.554 0.023 257.417);  /* #64748b */
+  --color-marker-locker: oklch(0.554 0.013 257.364);  /* #6b7280 */
+
+  /* ================================================================
+   * Tier 3: 카테고리 토큰 (PLACEHOLDER — 카테고리 개편 시 수정)
+   * ================================================================ */
+
+  /* 러너스팟 — 메인 컬러(네이비 #152558) */
+  --color-cat-runner: #152558;
+  --color-cat-runner-foreground: #1e3070;
+  --color-cat-runner-muted: #e8ecf4;
+  --color-cat-runner-border: #c0c9e0;
+
+  /* 샤워 — 서브 컬러 1(오렌지 #F46A16) */
+  --color-cat-shower: #F46A16;
+  --color-cat-shower-foreground: #c45510;
+  --color-cat-shower-muted: #fef0e6;
+  --color-cat-shower-border: #fcc9a0;
+
+  /* 짐보관 — 서브 컬러 2(옐로 #FCC717) */
+  --color-cat-locker: #FCC717;
+  --color-cat-locker-foreground: #926e00;
+  --color-cat-locker-muted: #fef9e6;
+  --color-cat-locker-border: #fae08a;
 }
 
 /* 모바일 전용 레이아웃 */
@@ -67,96 +137,6 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 네이버 지도 마커 스타일 */
-.marker-default {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50% 50% 50% 0;
-  background-color: var(--color-primary);
-  transform: rotate(-45deg);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-
-.marker-default::after {
-  content: "";
-  display: block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: white;
-  transform: rotate(45deg);
-}
-
-.marker-highlight {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50% 50% 50% 0;
-  background-color: var(--color-highlight);
-  transform: rotate(-45deg);
-  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.5);
-  animation: marker-pulse 2s ease-in-out infinite;
-}
-
-.marker-highlight::after {
-  content: "";
-  display: block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background-color: white;
-  transform: rotate(45deg);
-}
-
-/* 카테고리별 마커 색상 */
-.marker-category-runner {
-  background-color: #2563eb;
-}
-
-.marker-category-shower {
-  background-color: #64748b;
-}
-
-.marker-category-locker {
-  background-color: #6b7280;
-}
-
-.marker-overlay-pin {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50% 50% 50% 0;
-  background-color: #10b981;
-  transform: rotate(-45deg);
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
-}
-
-.marker-overlay-pin::after {
-  content: "";
-  display: block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: white;
-  transform: rotate(45deg);
-}
-
-@keyframes marker-pulse {
-  0%,
-  100% {
-    box-shadow: 0 3px 10px rgba(245, 158, 11, 0.5);
-  }
-  50% {
-    box-shadow: 0 3px 20px rgba(245, 158, 11, 0.8);
-  }
-}
 
 /* Bottom Sheet 슬라이드업 애니메이션 */
 .animate-slide-up {
@@ -182,33 +162,81 @@ body {
   display: none;
 }
 
-/* 검색 오버레이 애니메이션 */
-.search-overlay-enter {
-  animation: search-overlay-in 250ms ease-out forwards;
+/* 지도 위 라벨 텍스트 아웃라인 (가독성 확보) */
+.text-shadow-outline {
+  text-shadow:
+    -0.5px -0.5px 0 #fff, 0.5px -0.5px 0 #fff,
+    -0.5px  0.5px 0 #fff, 0.5px  0.5px 0 #fff,
+     0     -0.5px 0 #fff, 0      0.5px 0 #fff,
+    -0.5px  0     0 #fff, 0.5px  0     0 #fff;
 }
 
-.search-overlay-exit {
-  animation: search-overlay-out 200ms ease-in forwards;
+/* 검색 콘텐츠 패널 — 부드러운 fade */
+.search-panel-enter {
+  animation: search-panel-in 200ms ease-out forwards;
 }
 
-@keyframes search-overlay-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
+.search-panel-exit {
+  animation: search-panel-out 150ms ease-in forwards;
+}
+
+@keyframes search-panel-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes search-panel-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* 내 위치 파란 점 마커 */
+.my-location-marker {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.my-location-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #4285f4;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 2;
+}
+
+.my-location-heading-cone {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  line-height: 0;
+}
+
+.my-location-pulse {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: rgba(66, 133, 244, 0.25);
+  animation: my-location-pulse-ring 2s ease-out infinite;
+  z-index: 0;
+}
+
+@keyframes my-location-pulse-ring {
+  0% {
+    transform: scale(1);
     opacity: 1;
-    transform: translateY(0);
   }
-}
-
-@keyframes search-overlay-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
+  100% {
+    transform: scale(3.5);
     opacity: 0;
-    transform: translateY(8px);
   }
 }

@@ -1,11 +1,12 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { Sheet, SheetRef } from 'react-modal-sheet';
 import { useSnapPoints } from './useSnapPoints';
 import DrawerSpotDetail from './DrawerSpotDetail';
 import DrawerSpotList from './DrawerSpotList';
-import DrawerOverlayDetail from './DrawerOverlayDetail';
+import DrawerCourseDetail from './DrawerCourseDetail';
 import type { Spot, DrawerSelection } from '@/types';
 
 interface BottomDrawerProps {
@@ -41,8 +42,7 @@ export default function BottomDrawer({
     return () => cancelAnimationFrame(raf);
   }, [mounted, recalculate]);
 
-  // selection 변경 시: 콘텐츠 전환 → snap point 재계산 예약
-  const pendingSnapRef = useRef<number | null>(null);
+  // selection 변경 시: 콘텐츠 전환 → snap point 재계산 + snap 이동
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -51,19 +51,16 @@ export default function BottomDrawer({
       return;
     }
 
-    // 새 콘텐츠 렌더 후 DOM 측정 → snapPoints state 업데이트 예약
-    pendingSnapRef.current = selection ? 2 : 1;
-    const raf = requestAnimationFrame(() => recalculate());
+    const targetSnap = selection ? 2 : 1;
+
+    // rAF: 새 콘텐츠 DOM 커밋 대기 → flushSync로 snap points 동기 갱신 → 즉시 snapTo
+    const raf = requestAnimationFrame(() => {
+      flushSync(() => recalculate());
+      sheetRef.current?.snapTo(targetSnap);
+    });
+
     return () => cancelAnimationFrame(raf);
   }, [selection]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // snapPoints가 실제로 업데이트된 후 snap 이동 실행
-  useEffect(() => {
-    if (pendingSnapRef.current === null) return;
-    const target = pendingSnapRef.current;
-    pendingSnapRef.current = null;
-    sheetRef.current?.snapTo(target);
-  }, [snapPoints]);
 
   if (!mounted) return null;
 
@@ -88,9 +85,9 @@ export default function BottomDrawer({
               contentRef={contentRef}
               onClose={onDeselect}
             />
-          ) : selection?.type === 'overlay' ? (
-            <DrawerOverlayDetail
-              overlay={selection.data}
+          ) : selection?.type === 'course' ? (
+            <DrawerCourseDetail
+              course={selection.data}
               titleRef={titleRef}
               contentRef={contentRef}
               onClose={onDeselect}

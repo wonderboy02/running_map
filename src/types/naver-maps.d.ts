@@ -41,6 +41,11 @@ declare namespace naver.maps {
     logoControlOptions?: { position?: number };
   }
 
+  interface TransitionOptions {
+    duration?: number;
+    easing?: string;
+  }
+
   interface MarkerOptions {
     position: LatLng;
     map?: Map | null;
@@ -85,7 +90,14 @@ declare namespace naver.maps {
     getZoom(): number;
     setZoom(zoom: number): void;
     getBounds(): LatLngBounds;
-    panTo(coord: LatLng, options?: unknown): void;
+    panTo(coord: LatLng, transitionOptions?: TransitionOptions): void;
+    panToBounds(
+      bounds: LatLngBounds,
+      transitionOptions?: TransitionOptions,
+      margin?: { top?: number; right?: number; bottom?: number; left?: number },
+    ): void;
+    morph(coord: LatLng, zoom?: number, transitionOptions?: TransitionOptions): void;
+    fitBounds(bounds: LatLngBounds, options?: { padding?: number }): void;
     destroy(): void;
     setOptions(options: Partial<MapOptions>): void;
     setMapTypeId(mapTypeId: string): void;
@@ -132,13 +144,19 @@ declare namespace naver.maps {
     getElement(): HTMLElement;
   }
 
+  interface MapEventListener {
+    eventName: string;
+    target: unknown;
+    listener: (...args: unknown[]) => void;
+  }
+
   class Event {
     static addListener(
       target: unknown,
       type: string,
       listener: (...args: unknown[]) => void
-    ): void;
-    static removeListener(listener: unknown): void;
+    ): MapEventListener;
+    static removeListener(listener: MapEventListener): void;
     static clearListeners(target: unknown, type: string): void;
     static trigger(target: unknown, type: string, ...args: unknown[]): void;
   }
@@ -165,6 +183,32 @@ declare namespace naver.maps {
     getBounds(): LatLngBounds;
     setClickable(clickable: boolean): void;
     getClickable(): boolean;
+  }
+
+  interface CircleOptions {
+    center: LatLng;
+    radius?: number;
+    map?: Map | null;
+    strokeColor?: string;
+    strokeOpacity?: number;
+    strokeWeight?: number;
+    fillColor?: string;
+    fillOpacity?: number;
+    clickable?: boolean;
+    zIndex?: number;
+    visible?: boolean;
+  }
+
+  class Circle {
+    constructor(options: CircleOptions);
+    setMap(map: Map | null): void;
+    getMap(): Map | null;
+    setCenter(center: LatLng): void;
+    getCenter(): LatLng;
+    setRadius(radius: number): void;
+    getRadius(): number;
+    setVisible(visible: boolean): void;
+    setOptions(options: Partial<CircleOptions>): void;
   }
 
   // Position constants
