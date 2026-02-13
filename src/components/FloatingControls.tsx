@@ -68,7 +68,7 @@ export default function FloatingControls({
             )}
           </button>
           <span className="text-shadow-outline mt-0.5 text-[10px] font-semibold text-text">
-            {isLocating ? '확인 중...' : isFollowing ? '네비게이션' : '내 위치'}
+            {isLocating ? '확인 중...' : isFollowing ? '길안내 ON' : '길안내 OFF'}
           </span>
         </div>
 

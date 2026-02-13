@@ -3,7 +3,6 @@
 import { RefObject, useState } from 'react';
 import { MapPin, Phone, Clock, Check, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
@@ -12,7 +11,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { openNaverMap } from '@/lib/naver-map-utils';
-import { getCategoryBadgeStyle } from '@/lib/category-config';
 import Image from 'next/image';
 import { WEEKDAYS, WEEKDAY_LABELS } from '@/types';
 import type { Spot, Weekday } from '@/types';
@@ -118,23 +116,8 @@ export default function DrawerSpotDetail({
         )}
       </div>
 
-      {/* === full snap 영역 — 카테고리 + 연락처 + 운영시간 + 버튼 === */}
+      {/* === full snap 영역 — 연락처 + 운영시간 + 버튼 === */}
       <div className="px-4 pb-6 space-y-4">
-        {/* Categories */}
-        <div className="flex flex-wrap gap-1.5">
-          {spot.categories.map((cat) => (
-            <Badge
-              key={cat}
-              variant="outline"
-              className={`${getCategoryBadgeStyle(cat)} text-[clamp(12px,3vw,14px)] px-2.5 py-1`}
-            >
-              {cat}
-            </Badge>
-          ))}
-        </div>
-
-        <Separator />
-
         {/* Phone */}
         {spot.phone && (
           <div className="flex items-center gap-3">

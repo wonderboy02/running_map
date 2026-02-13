@@ -20,13 +20,6 @@ export default function HomePage() {
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number; name?: string } | null>(null);
   const [naverMap, setNaverMap] = useState<naver.maps.Map | null>(null);
   const [showCourses, setShowCourses] = useState(true);
-  const [selectionViewOverride, setSelectionViewOverride] = useState<{
-    swLat: number;
-    swLng: number;
-    neLat: number;
-    neLng: number;
-    padding?: number;
-  } | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
 
   // 검색 상태
@@ -112,8 +105,6 @@ export default function HomePage() {
     return spot.categories.some((cat) => activeFilters.includes(cat));
   });
 
-  const handleSelectionViewApplied = useCallback(() => setSelectionViewOverride(null), []);
-
   const handleFilterToggle = (category: string) => {
     const isTogglingOn = !activeFilters.includes(category);
 
@@ -121,39 +112,22 @@ export default function HomePage() {
       prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
     );
 
-    // OFF→ON 토글 시: 가까운 마커 자동 선택 + 지도 범위 조정
+    // OFF→ON 토글 시: 현재 화면 중심에서 가장 가까운 마커를 선택 (줌 유지, panTo)
     if (!isTogglingOn || !naverMap || spots.length === 0) return;
 
     const center = naverMap.getCenter() as naver.maps.LatLng;
-    const centerLat = center.lat();
-    const centerLng = center.lng();
-
-    // 해당 카테고리의 모든 스팟을 거리순 정렬
-    const categorySpots = spots
+    // NOTE: 같은 원소의 haversineDistance가 비교마다 재계산됨.
+    // 스팟 수가 많아지면 Schwartzian transform(.map으로 거리 미리 계산 → .sort → 추출)으로 최적화 가능.
+    // 현재 수십~수백 개 규모에서는 무시 가능한 수준.
+    const nearest = spots
       .filter((s) => s.categories.includes(category))
-      .map((s) => ({
-        ...s,
-        _distance: haversineDistance(centerLat, centerLng, s.latitude, s.longitude),
-      }))
-      .sort((a, b) => a._distance - b._distance);
+      .sort(
+        (a, b) =>
+          haversineDistance(center.lat(), center.lng(), a.latitude, a.longitude) -
+          haversineDistance(center.lat(), center.lng(), b.latitude, b.longitude),
+      )[0];
 
-    if (categorySpots.length === 0) return;
-
-    const nearest = categorySpots.slice(0, 3);
-
-    // 기준점(지도 중심) + 가까운 3개 마커의 bounds 계산
-    const lats = [centerLat, ...nearest.map((s) => s.latitude)];
-    const lngs = [centerLng, ...nearest.map((s) => s.longitude)];
-
-    setSelectionViewOverride({
-      swLat: Math.min(...lats),
-      swLng: Math.min(...lngs),
-      neLat: Math.max(...lats),
-      neLng: Math.max(...lngs),
-      padding: 80,
-    });
-    const { _distance: _, ...nearestSpot } = categorySpots[0];
-    setSelection({ type: 'spot', data: nearestSpot });
+    if (nearest) setSelection({ type: 'spot', data: nearest });
   };
 
   // 검색 닫기 (exit 애니메이션 트리거)
@@ -223,8 +197,6 @@ export default function HomePage() {
           onMarkerClick={handleMarkerClick}
           onCoursePinClick={handleCoursePinClick}
           selection={selection}
-          selectionViewOverride={selectionViewOverride}
-          onSelectionViewApplied={handleSelectionViewApplied}
           targetLocation={targetLocation}
           myLocation={myLocation}
           onMapDrag={handleMapDrag}

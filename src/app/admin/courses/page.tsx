@@ -93,6 +93,66 @@ interface BulkItem {
   error?: string;
 }
 
+function ImageMeta({ url }: { url: string }) {
+  const [meta, setMeta] = useState<{
+    size: string;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!url) return;
+
+    let cancelled = false;
+
+    async function load() {
+      try {
+        // fetch → blob으로 파일 크기 + object URL로 해상도 측정
+        // (썸네일 <img>가 이미 캐시해둔 이미지를 재활용)
+        const res = await fetch(url);
+        const blob = await res.blob();
+        if (cancelled) return;
+
+        const sizeBytes = blob.size;
+        const objectUrl = URL.createObjectURL(blob);
+
+        const img = new window.Image();
+        img.src = objectUrl;
+        const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+          img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+          img.onerror = () => resolve({ w: 0, h: 0 });
+        });
+        URL.revokeObjectURL(objectUrl);
+        if (cancelled) return;
+
+        const sizeStr =
+          sizeBytes >= 1024 * 1024
+            ? `${(sizeBytes / (1024 * 1024)).toFixed(1)}MB`
+            : sizeBytes > 0
+              ? `${Math.round(sizeBytes / 1024)}KB`
+              : '';
+
+        setMeta({ size: sizeStr, width: dims.w, height: dims.h });
+      } catch {
+        /* ignore */
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [url]);
+
+  if (!meta) return null;
+
+  return (
+    <span className="text-text-muted">
+      {meta.width > 0 && `${meta.width}×${meta.height}px`}
+      {meta.width > 0 && meta.size && ' · '}
+      {meta.size}
+    </span>
+  );
+}
+
 function removeSpaces(s: string) {
   return s.replace(/\s/g, '');
 }
@@ -974,6 +1034,11 @@ export default function AdminCoursesPage() {
                   SE({course.se_lat.toFixed(4)}, {course.se_lng.toFixed(4)})
                   &nbsp;· 투명도 {Math.round(course.opacity * 100)}%
                 </p>
+                {course.image_url && (
+                  <p className="mt-0.5 text-xs">
+                    <ImageMeta url={course.image_url} />
+                  </p>
+                )}
               </div>
 
               {/* 액션 */}

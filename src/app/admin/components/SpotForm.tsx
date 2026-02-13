@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Search, Loader2, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -58,6 +58,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
   );
 
   const [saving, setSaving] = useState(false);
+  const [customFeatureInput, setCustomFeatureInput] = useState('');
   const [manualCoords, setManualCoords] = useState(false);
   const [addressQuery, setAddressQuery] = useState(spot?.address ?? '');
   const [showResults, setShowResults] = useState(false);
@@ -107,6 +108,21 @@ export default function SpotForm({ spot }: SpotFormProps) {
         ? prev.features.filter((f) => f !== feat)
         : [...prev.features, feat],
     }));
+  }
+
+  const customFeatures = useMemo(() => {
+    const predefined = new Set<string>(FEATURES);
+    return form.features.filter((f) => !predefined.has(f));
+  }, [form.features]);
+
+  function addCustomFeature() {
+    const value = customFeatureInput.trim();
+    if (!value || form.features.includes(value)) {
+      setCustomFeatureInput('');
+      return;
+    }
+    setForm((prev) => ({ ...prev, features: [...prev.features, value] }));
+    setCustomFeatureInput('');
   }
 
   function updateOperatingHours(day: string, value: string) {
@@ -449,6 +465,52 @@ export default function SpotForm({ spot }: SpotFormProps) {
               </Label>
             </div>
           ))}
+        </div>
+
+        {/* 커스텀 시설 */}
+        {customFeatures.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {customFeatures.map((feat) => (
+              <Badge
+                key={feat}
+                variant="outline"
+                className="gap-1 pl-2.5 pr-1.5 py-1 text-sm"
+              >
+                {feat}
+                <button
+                  type="button"
+                  onClick={() => toggleFeature(feat)}
+                  className="rounded-full p-0.5 hover:bg-muted"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2 pt-1">
+          <Input
+            type="text"
+            value={customFeatureInput}
+            onChange={(e) => setCustomFeatureInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomFeature();
+              }
+            }}
+            placeholder="직접 입력 (예: 수건, 음수대)"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addCustomFeature}
+            className="shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
