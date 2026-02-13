@@ -83,6 +83,29 @@ export const POST = withAuth(async (request: NextRequest) => {
       );
     }
 
+    // 하이라이팅 이미지 업로드 (선택)
+    let highlight_image_url: string | null = null;
+    const highlightFile = formData.get('highlight_image') as File | null;
+    if (highlightFile && highlightFile.size > 0) {
+      const hlError = validateImageFile(highlightFile);
+      if (hlError) {
+        return NextResponse.json(
+          { success: false, error: `하이라이팅 이미지: ${hlError}` },
+          { status: 400 },
+        );
+      }
+      highlight_image_url = await convertAndUpload(highlightFile, COURSE_UPLOAD).catch((err) => {
+        console.error('[Courses POST] Highlight upload error:', err);
+        return null;
+      });
+      if (!highlight_image_url) {
+        return NextResponse.json(
+          { success: false, error: '하이라이팅 이미지 업로드에 실패했습니다.' },
+          { status: 500 },
+        );
+      }
+    }
+
     const insertData: Record<string, unknown> = {
       name,
       image_url,
@@ -93,6 +116,7 @@ export const POST = withAuth(async (request: NextRequest) => {
       opacity: Math.min(1, Math.max(0, opacity)),
       is_active,
     };
+    if (highlight_image_url) insertData.highlight_image_url = highlight_image_url;
     if (description) insertData.description = description;
     if (difficulty_str) insertData.difficulty = parseInt(difficulty_str, 10);
     if (distance_km_str) insertData.distance_km = parseFloat(distance_km_str);
@@ -199,6 +223,20 @@ export const PATCH = withAuth(async (request: NextRequest) => {
 
     // 새 이미지가 있으면 WebP 변환 후 교체
     const imageFile = formData.get('image') as File | null;
+    const highlightFile = formData.get('highlight_image') as File | null;
+    const needsExisting = (imageFile && imageFile.size > 0) || (highlightFile && highlightFile.size > 0);
+
+    // 기존 이미지 URL을 한 번의 쿼리로 가져오기
+    let existingUrls: { image_url?: string; highlight_image_url?: string } | null = null;
+    if (needsExisting) {
+      const { data } = await supabaseServer
+        .from('courses')
+        .select('image_url, highlight_image_url')
+        .eq('id', id)
+        .single();
+      existingUrls = data;
+    }
+
     if (imageFile && imageFile.size > 0) {
       const fileError = validateImageFile(imageFile);
       if (fileError) {
@@ -206,16 +244,6 @@ export const PATCH = withAuth(async (request: NextRequest) => {
           { success: false, error: fileError },
           { status: 400 },
         );
-      }
-      // 기존 이미지 삭제
-      const { data: existing } = await supabaseServer
-        .from('courses')
-        .select('image_url')
-        .eq('id', id)
-        .single();
-
-      if (existing?.image_url) {
-        await removeFromStorage('courses', [existing.image_url]);
       }
 
       const image_url = await convertAndUpload(imageFile, COURSE_UPLOAD).catch((err) => {
@@ -230,7 +258,57 @@ export const PATCH = withAuth(async (request: NextRequest) => {
         );
       }
 
+      // 새 업로드 성공 후 기존 이미지 삭제 (실패해도 새 URL은 유지)
+      if (existingUrls?.image_url) {
+        await removeFromStorage('courses', [existingUrls.image_url]);
+      }
+
       updates.image_url = image_url;
+    }
+
+    // 하이라이팅 이미지 교체
+    if (highlightFile && highlightFile.size > 0) {
+      const hlError = validateImageFile(highlightFile);
+      if (hlError) {
+        return NextResponse.json(
+          { success: false, error: `하이라이팅 이미지: ${hlError}` },
+          { status: 400 },
+        );
+      }
+
+      const highlight_image_url = await convertAndUpload(highlightFile, COURSE_UPLOAD).catch((err) => {
+        console.error('[Courses PATCH] Highlight upload error:', err);
+        return null;
+      });
+
+      if (!highlight_image_url) {
+        return NextResponse.json(
+          { success: false, error: '하이라이팅 이미지 업로드에 실패했습니다.' },
+          { status: 500 },
+        );
+      }
+
+      if (existingUrls?.highlight_image_url) {
+        await removeFromStorage('courses', [existingUrls.highlight_image_url]);
+      }
+      updates.highlight_image_url = highlight_image_url;
+    }
+
+    // 하이라이팅 이미지 제거 (파일 업로드 없이 삭제 요청)
+    const removeHighlight = formData.get('remove_highlight_image');
+    if (removeHighlight === 'true' && !highlightFile) {
+      if (!existingUrls) {
+        const { data } = await supabaseServer
+          .from('courses')
+          .select('highlight_image_url')
+          .eq('id', id)
+          .single();
+        existingUrls = data;
+      }
+      if (existingUrls?.highlight_image_url) {
+        await removeFromStorage('courses', [existingUrls.highlight_image_url]);
+      }
+      updates.highlight_image_url = null;
     }
 
     const { data, error } = await supabaseServer
@@ -272,13 +350,18 @@ export const DELETE = withAuth(async (request: NextRequest) => {
     // 기존 이미지 URL 가져오기
     const { data: existing } = await supabaseServer
       .from('courses')
-      .select('image_url')
+      .select('image_url, highlight_image_url')
       .eq('id', id)
       .single();
 
     // Storage에서 이미지 삭제
-    if (existing?.image_url) {
-      await removeFromStorage('courses', [existing.image_url]);
+    const urlsToDelete = [
+      existing?.image_url,
+      existing?.highlight_image_url,
+    ].filter(Boolean) as string[];
+
+    if (urlsToDelete.length > 0) {
+      await removeFromStorage('courses', urlsToDelete);
     }
 
     // DB에서 삭제
