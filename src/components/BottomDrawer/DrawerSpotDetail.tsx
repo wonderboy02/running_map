@@ -1,10 +1,8 @@
 'use client';
 
 import { RefObject, useState } from 'react';
-import { MapPin, Phone, Clock, Check, ChevronRight, X } from 'lucide-react';
+import { MapPin, Phone, Clock, ChevronRight, X, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { openNaverMap } from '@/lib/naver-map-utils';
-import { getCategoryBadgeStyle } from '@/lib/category-config';
+import { isValidHttpUrl } from '@/lib/utils';
 import Image from 'next/image';
 import { WEEKDAYS, WEEKDAY_LABELS } from '@/types';
 import type { Spot, Weekday } from '@/types';
@@ -56,11 +54,11 @@ export default function DrawerSpotDetail({
         <X className="h-4 w-4" />
       </Button>
 
-      {/* === titleRef: snap 1 경계 — 이름 + 주소 + 시설 === */}
+      {/* === titleRef: snap title — 이름 + 주소 + 운영시간 + 시설 === */}
       <div ref={titleRef}>
         <div className="h-4" />
 
-        {/* Spot Name & Address */}
+        {/* 1. Spot Name & 2. Address */}
         <div className="px-4 pb-3 pr-12">
           <h2 className="text-[clamp(18px,5vw,22px)] font-bold text-text leading-tight tracking-tight mb-2">
             {spot.name}
@@ -71,24 +69,61 @@ export default function DrawerSpotDetail({
           </div>
         </div>
 
-        {/* Features */}
+        {/* 3. Operating Hours — today only + dialog trigger */}
+        {spot.operating_hours && (
+          <button
+            type="button"
+            onClick={() => setHoursOpen(true)}
+            className="flex items-center gap-3 w-full text-left px-4 pb-3"
+          >
+            <Clock className="w-4 h-4 text-text-muted flex-shrink-0" />
+            <span className="text-[clamp(13px,3.5vw,15px)] text-text flex-1">
+              {todayHours ? `${WEEKDAY_LABELS[todayKey]} ${todayHours}` : `${WEEKDAY_LABELS[todayKey]} 정보 없음`}
+            </span>
+            <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
+          </button>
+        )}
+
+        {/* 4. Features */}
         {hasFeatures && (
-          <div className="px-4 pb-4">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              {spot.features.map((feature) => (
-                <div key={feature} className="flex items-center gap-2 text-text-secondary">
-                  <Check className="w-3.5 h-3.5 text-naver flex-shrink-0" />
-                  <span className="text-[clamp(12px,3vw,14px)]">{feature}</span>
-                </div>
-              ))}
-            </div>
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none px-4 pb-4">
+            {spot.features.map((feature) => (
+              <span
+                key={feature}
+                className="flex-shrink-0 rounded-full bg-surface-dim px-2.5 py-1 text-[clamp(11px,2.8vw,13px)] text-text-secondary"
+              >
+                {feature}
+              </span>
+            ))}
           </div>
         )}
       </div>
 
-      {/* === contentRef: snap 2 경계 — 사진 + 설명 === */}
+      {/* === contentRef: snap content — 전화 + 설명 + 사진 === */}
       <div ref={contentRef} className="px-4 pb-4 space-y-4">
-        {/* Photo Gallery */}
+        {/* 5. Phone */}
+        {spot.phone && (
+          <div className="flex items-center gap-3">
+            <Phone className="w-4 h-4 text-text-muted flex-shrink-0" />
+            <a
+              href={`tel:${spot.phone}`}
+              className="text-primary text-[clamp(13px,3.5vw,15px)] underline"
+            >
+              {spot.phone}
+            </a>
+          </div>
+        )}
+
+        {/* 6. Description */}
+        {spot.description && (
+          <div className="p-3.5 bg-surface-dim rounded-xl">
+            <p className="text-[clamp(13px,3.5vw,15px)] text-text-secondary leading-relaxed">
+              {spot.description}
+            </p>
+          </div>
+        )}
+
+        {/* 7. Photo Gallery */}
         {hasPhotos && (
           <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4">
             {spot.photos.map((photo, i) => (
@@ -107,74 +142,34 @@ export default function DrawerSpotDetail({
             ))}
           </div>
         )}
-
-        {/* Description */}
-        {spot.description && (
-          <div className="p-3.5 bg-surface-dim rounded-xl">
-            <p className="text-[clamp(13px,3.5vw,15px)] text-text-secondary leading-relaxed">
-              {spot.description}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* === full snap 영역 — 카테고리 + 연락처 + 운영시간 + 버튼 === */}
-      <div className="px-4 pb-6 space-y-4">
-        {/* Categories */}
-        <div className="flex flex-wrap gap-1.5">
-          {spot.categories.map((cat) => (
-            <Badge
-              key={cat}
-              variant="outline"
-              className={`${getCategoryBadgeStyle(cat)} text-[clamp(12px,3vw,14px)] px-2.5 py-1`}
-            >
-              {cat}
-            </Badge>
-          ))}
-        </div>
-
-        <Separator />
-
-        {/* Phone */}
-        {spot.phone && (
-          <div className="flex items-center gap-3">
-            <Phone className="w-4 h-4 text-text-muted flex-shrink-0" />
-            <a
-              href={`tel:${spot.phone}`}
-              className="text-primary text-[clamp(13px,3.5vw,15px)] underline"
-            >
-              {spot.phone}
-            </a>
-          </div>
-        )}
-
-        {/* Operating Hours — today only + dialog trigger */}
-        {spot.operating_hours && (
-          <button
-            type="button"
-            onClick={() => setHoursOpen(true)}
-            className="flex items-center gap-3 w-full text-left"
+      {/* === full snap 영역 — 액션 버튼 === */}
+      <div className="px-4 pb-6">
+        {/* Action Button — custom URL or Naver Map */}
+        {spot.extra_data?.custom_url ? (
+          <Button
+            onClick={() => {
+              if (isValidHttpUrl(spot.extra_data?.custom_url)) {
+                window.open(spot.extra_data.custom_url, '_blank', 'noopener,noreferrer');
+              }
+            }}
+            className="w-full h-11 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-[clamp(13px,3.5vw,15px)] flex items-center justify-center gap-2 shadow-sm"
           >
-            <Clock className="w-4 h-4 text-text-muted flex-shrink-0" />
-            <span className="text-[clamp(13px,3.5vw,15px)] text-text flex-1">
-              {todayHours ? `${WEEKDAY_LABELS[todayKey]} ${todayHours}` : `${WEEKDAY_LABELS[todayKey]} 정보 없음`}
-            </span>
-            <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
-          </button>
+            <ExternalLink className="w-[18px] h-[18px]" />
+            새 창에서 자세히 보기
+          </Button>
+        ) : (
+          <Button
+            onClick={() => openNaverMap(spot)}
+            className="w-full h-11 bg-naver hover:bg-naver-hover text-white font-semibold rounded-xl text-[clamp(13px,3.5vw,15px)] flex items-center justify-center gap-2 shadow-sm"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+            </svg>
+            네이버 지도에서 보기
+          </Button>
         )}
-
-        {(spot.phone || spot.operating_hours) && <Separator />}
-
-        {/* Naver Map Button */}
-        <Button
-          onClick={() => openNaverMap(spot)}
-          className="w-full h-11 bg-naver hover:bg-naver-hover text-white font-semibold rounded-xl text-[clamp(13px,3.5vw,15px)] flex items-center justify-center gap-2 shadow-sm"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-          </svg>
-          네이버 지도에서 보기
-        </Button>
       </div>
 
       {/* Operating Hours Dialog */}

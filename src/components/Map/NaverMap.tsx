@@ -17,21 +17,13 @@ interface NaverMapProps {
   onMarkerClick: (spot: Spot) => void;
   onCoursePinClick: (course: Course) => void;
   selection: DrawerSelection | null;
-  selectionViewOverride?: {
-    swLat: number;
-    swLng: number;
-    neLat: number;
-    neLng: number;
-    padding?: number;
-  } | null;
-  onSelectionViewApplied?: () => void;
   targetLocation: { lat: number; lng: number; name?: string } | null;
   myLocation?: MyLocationPosition | null;
   onMapDrag?: () => void;
   onMapReady?: (map: naver.maps.Map) => void;
 }
 
-export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, selectionViewOverride, onSelectionViewApplied, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
+export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
@@ -40,7 +32,6 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   const coursePinsRef = useRef<Map<string, naver.maps.Marker>>(new Map());
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
   const myLocationMarkerRef = useRef<MyLocationMarker | null>(null);
-  const maxZoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasMovedToInitialPos = useRef(false);
 
   const createMarkerIcon = useCallback((spot: Spot, isSelected: boolean) => {
@@ -101,44 +92,13 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     });
   }, [isReady, map, spots, createMarkerIcon, onMarkerClick, selection]);
 
-  // selectionViewOverride를 ref로 관리 — deps에서 제거하여 null 전환 시 effect 재실행 방지
-  // NOTE: selectionViewOverride는 반드시 selection과 함께 설정해야 함 (이 effect는 selection 변경 시만 실행)
-  const selectionViewOverrideRef = useRef(selectionViewOverride);
-  selectionViewOverrideRef.current = selectionViewOverride;
-
-  // 선택된 마커/핀으로 지도 이동 (또는 override된 bounds 적용)
+  // 선택된 마커/핀으로 지도 이동 (줌 유지)
   useEffect(() => {
     if (!map || !selection) return;
-
-    const override = selectionViewOverrideRef.current;
-
-    // 필터 토글 등에서 bounds override가 있으면 부드럽게 이동
-    if (override) {
-      const bounds = new naver.maps.LatLngBounds(
-        new naver.maps.LatLng(override.swLat, override.swLng),
-        new naver.maps.LatLng(override.neLat, override.neLng),
-      );
-      const padding = override.padding ?? 60;
-      // 과도한 줌인 방지 — panToBounds가 maxZoom을 존중하므로 일시적으로 제한
-      if (maxZoomTimerRef.current) clearTimeout(maxZoomTimerRef.current);
-      map.setOptions({ maxZoom: 15 });
-      map.panToBounds(
-        bounds,
-        { duration: 500, easing: 'easeOutCubic' },
-        { top: padding, right: padding, bottom: padding, left: padding },
-      );
-      maxZoomTimerRef.current = setTimeout(() => {
-        map.setOptions({ maxZoom: 18 });
-        maxZoomTimerRef.current = null;
-      }, 600);
-      onSelectionViewApplied?.();
-      return;
-    }
 
     if (selection.type === 'spot') {
       map.panTo(new naver.maps.LatLng(selection.data.latitude, selection.data.longitude));
     } else if (selection.type === 'course') {
-      // 코스 전체를 보여주는 fitBounds
       const course = selection.data;
       const bounds = new naver.maps.LatLngBounds(
         new naver.maps.LatLng(course.se_lat, course.nw_lng),
@@ -146,15 +106,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       );
       map.fitBounds(bounds, { padding: 60 });
     }
-
-    return () => {
-      if (maxZoomTimerRef.current) {
-        clearTimeout(maxZoomTimerRef.current);
-        maxZoomTimerRef.current = null;
-        map.setOptions({ maxZoom: 18 });
-      }
-    };
-  }, [map, selection, onSelectionViewApplied]);
+  }, [map, selection]);
 
   // 내 위치 파란 점 마커 표시/업데이트
   useEffect(() => {
@@ -301,49 +253,61 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     });
   }, [isReady, map, courses, showCourses, selection]);
 
-  // 코스 핀 마커 렌더링 (선택 상태 + 가시성 반영)
+  // 코스 핀 마커 렌더링 (멀티 핀포인트, 선택 상태 + 가시성 반영)
   // 스팟 마커와 별도 effect — 데이터 소스(courses)와 라이프사이클이 다르기 때문
   useEffect(() => {
     if (!isReady || !map) return;
 
-    const coursesWithPin = courses.filter((o) => o.pin_lat != null && o.pin_lng != null);
-    const currentIds = new Set(coursesWithPin.map((o) => o.id));
     const existingPins = coursePinsRef.current;
     const selectedCourseId =
       selection?.type === 'course' ? selection.data.id : null;
 
+    // 유효한 키 수집 (courseId_index)
+    const expectedKeys = new Set<string>();
+    for (const course of courses) {
+      for (let i = 0; i < course.pinpoints.length; i++) {
+        expectedKeys.add(`${course.id}_${i}`);
+      }
+    }
+
     // 더 이상 없는 핀 제거
-    existingPins.forEach((marker, id) => {
-      if (!currentIds.has(id)) {
+    existingPins.forEach((marker, key) => {
+      if (!expectedKeys.has(key)) {
         marker.setMap(null);
-        existingPins.delete(id);
+        existingPins.delete(key);
       }
     });
 
     // 새로운 핀 추가 또는 기존 핀 아이콘/가시성 업데이트
-    coursesWithPin.forEach((course) => {
+    for (const course of courses) {
       const isSelected = course.id === selectedCourseId;
-      const existing = existingPins.get(course.id);
 
-      if (existing) {
-        existing.setIcon(getCoursePinIcon(isSelected, course.name));
-        existing.setZIndex(isSelected ? 200 : 50);
-        existing.setMap(showCourses ? map : null);
-      } else {
-        const marker = new naver.maps.Marker({
-          position: new naver.maps.LatLng(course.pin_lat!, course.pin_lng!),
-          map: showCourses ? map : null,
-          icon: getCoursePinIcon(isSelected, course.name),
-          zIndex: isSelected ? 200 : 50,
-        });
+      for (let i = 0; i < course.pinpoints.length; i++) {
+        const pin = course.pinpoints[i];
+        const key = `${course.id}_${i}`;
+        const existing = existingPins.get(key);
 
-        naver.maps.Event.addListener(marker, 'click', () => {
-          onCoursePinClick(course);
-        });
+        if (existing) {
+          existing.setPosition(new naver.maps.LatLng(pin.lat, pin.lng));
+          existing.setIcon(getCoursePinIcon(isSelected, course.name));
+          existing.setZIndex(isSelected ? 200 : 50);
+          existing.setMap(showCourses ? map : null);
+        } else {
+          const marker = new naver.maps.Marker({
+            position: new naver.maps.LatLng(pin.lat, pin.lng),
+            map: showCourses ? map : null,
+            icon: getCoursePinIcon(isSelected, course.name),
+            zIndex: isSelected ? 200 : 50,
+          });
 
-        existingPins.set(course.id, marker);
+          naver.maps.Event.addListener(marker, 'click', () => {
+            onCoursePinClick(course);
+          });
+
+          existingPins.set(key, marker);
+        }
       }
-    });
+    }
   }, [isReady, map, courses, onCoursePinClick, selection, showCourses]);
 
   return (

@@ -6,6 +6,7 @@ import {
   Search,
   Loader2,
   Plus,
+  Minus,
   Pencil,
   Trash2,
   Image as ImageIcon,
@@ -48,8 +49,7 @@ interface CourseForm {
   nw_lng: number;
   se_lat: number;
   se_lng: number;
-  pin_lat: number;
-  pin_lng: number;
+  pinpoints: Array<{ lat: number; lng: number }>;
   opacity: number;
   is_active: boolean;
   image: File | null;
@@ -65,8 +65,7 @@ const EMPTY_FORM: CourseForm = {
   nw_lng: 0,
   se_lat: 0,
   se_lng: 0,
-  pin_lat: 0,
-  pin_lng: 0,
+  pinpoints: [],
   opacity: 1.0,
   is_active: true,
   image: null,
@@ -91,6 +90,66 @@ interface BulkItem {
   seWarning: boolean;
   status: 'geocoding' | 'ready' | 'error';
   error?: string;
+}
+
+function ImageMeta({ url }: { url: string }) {
+  const [meta, setMeta] = useState<{
+    size: string;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!url) return;
+
+    let cancelled = false;
+
+    async function load() {
+      try {
+        // fetch → blob으로 파일 크기 + object URL로 해상도 측정
+        // (썸네일 <img>가 이미 캐시해둔 이미지를 재활용)
+        const res = await fetch(url);
+        const blob = await res.blob();
+        if (cancelled) return;
+
+        const sizeBytes = blob.size;
+        const objectUrl = URL.createObjectURL(blob);
+
+        const img = new window.Image();
+        img.src = objectUrl;
+        const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+          img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+          img.onerror = () => resolve({ w: 0, h: 0 });
+        });
+        URL.revokeObjectURL(objectUrl);
+        if (cancelled) return;
+
+        const sizeStr =
+          sizeBytes >= 1024 * 1024
+            ? `${(sizeBytes / (1024 * 1024)).toFixed(1)}MB`
+            : sizeBytes > 0
+              ? `${Math.round(sizeBytes / 1024)}KB`
+              : '';
+
+        setMeta({ size: sizeStr, width: dims.w, height: dims.h });
+      } catch {
+        /* ignore */
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [url]);
+
+  if (!meta) return null;
+
+  return (
+    <span className="text-text-muted">
+      {meta.width > 0 && `${meta.width}×${meta.height}px`}
+      {meta.width > 0 && meta.size && ' · '}
+      {meta.size}
+    </span>
+  );
 }
 
 function removeSpaces(s: string) {
@@ -745,8 +804,7 @@ export default function AdminCoursesPage() {
       nw_lng: course.nw_lng,
       se_lat: course.se_lat,
       se_lng: course.se_lng,
-      pin_lat: course.pin_lat || 0,
-      pin_lng: course.pin_lng || 0,
+      pinpoints: course.pinpoints ?? [],
       opacity: course.opacity,
       is_active: course.is_active,
       image: null,
@@ -811,8 +869,7 @@ export default function AdminCoursesPage() {
     if (form.description) formData.append('description', form.description);
     if (form.difficulty !== '') formData.append('difficulty', String(form.difficulty));
     if (form.distance_km !== '') formData.append('distance_km', String(form.distance_km));
-    if (form.pin_lat) formData.append('pin_lat', String(form.pin_lat));
-    if (form.pin_lng) formData.append('pin_lng', String(form.pin_lng));
+    formData.append('pinpoints', JSON.stringify(form.pinpoints));
     if (form.image) {
       formData.append('image', form.image);
     }
@@ -974,6 +1031,11 @@ export default function AdminCoursesPage() {
                   SE({course.se_lat.toFixed(4)}, {course.se_lng.toFixed(4)})
                   &nbsp;· 투명도 {Math.round(course.opacity * 100)}%
                 </p>
+                {course.image_url && (
+                  <p className="mt-0.5 text-xs">
+                    <ImageMeta url={course.image_url} />
+                  </p>
+                )}
               </div>
 
               {/* 액션 */}
@@ -1077,15 +1139,66 @@ export default function AdminCoursesPage() {
               </div>
             </div>
 
-            {/* 코스 대표 핀 좌표 */}
-            <CoordSearchInput
-              label="코스 대표 핀 좌표"
-              lat={form.pin_lat}
-              lng={form.pin_lng}
-              onCoordsChange={(lat, lng) =>
-                setForm((prev) => ({ ...prev, pin_lat: lat, pin_lng: lng }))
-              }
-            />
+            {/* 코스 핀포인트 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="font-medium">핀포인트</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      pinpoints: [...prev.pinpoints, { lat: 0, lng: 0 }],
+                    }))
+                  }
+                >
+                  <Plus className="mr-1 h-3 w-3" />
+                  추가
+                </Button>
+              </div>
+              {form.pinpoints.length === 0 && (
+                <p className="text-text-muted text-xs">
+                  핀포인트를 추가하면 지도에 코스 위치가 표시됩니다.
+                </p>
+              )}
+              {form.pinpoints.map((pin, idx) => (
+                <div key={idx} className="border-border rounded-md border p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-text-secondary text-xs font-medium">
+                      핀 {idx + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          pinpoints: prev.pinpoints.filter((_, i) => i !== idx),
+                        }))
+                      }
+                      className="text-text-muted hover:text-red-500 transition-colors"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <CoordSearchInput
+                    label=""
+                    lat={pin.lat}
+                    lng={pin.lng}
+                    onCoordsChange={(lat, lng) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        pinpoints: prev.pinpoints.map((p, i) =>
+                          i === idx ? { lat, lng } : p
+                        ),
+                      }))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
 
             {/* 이미지 업로드 */}
             <div className="space-y-1.5">

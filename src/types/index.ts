@@ -13,13 +13,18 @@ export interface Spot {
   description: string | null;
   phone: string | null;
   photos: string[];
-  extra_data: Record<string, unknown>;
+  extra_data: { custom_url?: string } & Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
 
 export type SpotInsert = Omit<Spot, "id" | "created_at" | "updated_at">;
 export type SpotUpdate = Partial<SpotInsert>;
+
+export interface CoursePinpoint {
+  lat: number;
+  lng: number;
+}
 
 export interface Course {
   id: string;
@@ -35,8 +40,7 @@ export interface Course {
   description: string | null;
   difficulty: number | null;
   distance_km: number | null;
-  pin_lat: number | null;
-  pin_lng: number | null;
+  pinpoints: CoursePinpoint[];
   created_at: string;
   updated_at: string;
 }
@@ -57,18 +61,11 @@ export type Category = (typeof CATEGORIES)[number];
 
 export const FEATURES = [
   "샤워실",
+  "물품보관함",
   "탈의실",
-  "짐보관",
-  "수건",
-  "세면도구",
-  "드라이기",
+  "러닝용품",
   "주차장",
-  "와이파이",
-  "음수대",
-  "화장실",
 ] as const;
-
-export type Feature = (typeof FEATURES)[number];
 
 export const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 export type Weekday = (typeof WEEKDAYS)[number];

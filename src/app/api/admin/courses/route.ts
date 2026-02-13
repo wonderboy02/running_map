@@ -46,8 +46,7 @@ export const POST = withAuth(async (request: NextRequest) => {
     const description = formData.get('description') as string | null;
     const difficulty_str = formData.get('difficulty') as string | null;
     const distance_km_str = formData.get('distance_km') as string | null;
-    const pin_lat_str = formData.get('pin_lat') as string | null;
-    const pin_lng_str = formData.get('pin_lng') as string | null;
+    const pinpointsStr = formData.get('pinpoints') as string | null;
 
     if (!name || !imageFile) {
       return NextResponse.json(
@@ -120,8 +119,16 @@ export const POST = withAuth(async (request: NextRequest) => {
     if (description) insertData.description = description;
     if (difficulty_str) insertData.difficulty = parseInt(difficulty_str, 10);
     if (distance_km_str) insertData.distance_km = parseFloat(distance_km_str);
-    if (pin_lat_str) insertData.pin_lat = parseFloat(pin_lat_str);
-    if (pin_lng_str) insertData.pin_lng = parseFloat(pin_lng_str);
+    if (pinpointsStr) {
+      try {
+        insertData.pinpoints = JSON.parse(pinpointsStr);
+      } catch {
+        return NextResponse.json(
+          { success: false, error: '핀포인트 데이터가 올바르지 않습니다.' },
+          { status: 400 },
+        );
+      }
+    }
 
     const { data, error } = await supabaseServer
       .from('courses')
@@ -215,11 +222,17 @@ export const PATCH = withAuth(async (request: NextRequest) => {
     const distance_km_str = formData.get('distance_km') as string | null;
     if (distance_km_str !== null) updates.distance_km = distance_km_str ? parseFloat(distance_km_str) : null;
 
-    const pin_lat_str = formData.get('pin_lat') as string | null;
-    if (pin_lat_str !== null) updates.pin_lat = pin_lat_str ? parseFloat(pin_lat_str) : null;
-
-    const pin_lng_str = formData.get('pin_lng') as string | null;
-    if (pin_lng_str !== null) updates.pin_lng = pin_lng_str ? parseFloat(pin_lng_str) : null;
+    const pinpointsStr = formData.get('pinpoints') as string | null;
+    if (pinpointsStr !== null) {
+      try {
+        updates.pinpoints = JSON.parse(pinpointsStr);
+      } catch {
+        return NextResponse.json(
+          { success: false, error: '핀포인트 데이터가 올바르지 않습니다.' },
+          { status: 400 },
+        );
+      }
+    }
 
     // 새 이미지가 있으면 WebP 변환 후 교체
     const imageFile = formData.get('image') as File | null;

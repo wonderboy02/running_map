@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Search, Loader2, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { isValidHttpUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface SpotFormProps {
@@ -58,6 +59,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
   );
 
   const [saving, setSaving] = useState(false);
+  const [customFeatureInput, setCustomFeatureInput] = useState('');
   const [manualCoords, setManualCoords] = useState(false);
   const [addressQuery, setAddressQuery] = useState(spot?.address ?? '');
   const [showResults, setShowResults] = useState(false);
@@ -107,6 +109,21 @@ export default function SpotForm({ spot }: SpotFormProps) {
         ? prev.features.filter((f) => f !== feat)
         : [...prev.features, feat],
     }));
+  }
+
+  const customFeatures = useMemo(() => {
+    const predefined = new Set<string>(FEATURES);
+    return form.features.filter((f) => !predefined.has(f));
+  }, [form.features]);
+
+  function addCustomFeature() {
+    const value = customFeatureInput.trim();
+    if (!value || form.features.includes(value)) {
+      setCustomFeatureInput('');
+      return;
+    }
+    setForm((prev) => ({ ...prev, features: [...prev.features, value] }));
+    setCustomFeatureInput('');
   }
 
   function updateOperatingHours(day: string, value: string) {
@@ -450,6 +467,52 @@ export default function SpotForm({ spot }: SpotFormProps) {
             </div>
           ))}
         </div>
+
+        {/* 커스텀 시설 */}
+        {customFeatures.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {customFeatures.map((feat) => (
+              <Badge
+                key={feat}
+                variant="outline"
+                className="gap-1 pl-2.5 pr-1.5 py-1 text-sm"
+              >
+                {feat}
+                <button
+                  type="button"
+                  onClick={() => toggleFeature(feat)}
+                  className="rounded-full p-0.5 hover:bg-muted"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2 pt-1">
+          <Input
+            type="text"
+            value={customFeatureInput}
+            onChange={(e) => setCustomFeatureInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomFeature();
+              }
+            }}
+            placeholder="직접 입력 (예: 수건, 음수대)"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addCustomFeature}
+            className="shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* 설명 */}
@@ -587,6 +650,26 @@ export default function SpotForm({ spot }: SpotFormProps) {
         />
       </div>
 
+      {/* 외부 링크 URL */}
+      <div className="space-y-1.5">
+        <Label>외부 링크 URL</Label>
+        <Input
+          type="url"
+          value={form.extra_data?.custom_url ?? ''}
+          onChange={(e) => {
+            const url = e.target.value || undefined;
+            setForm((prev) => ({
+              ...prev,
+              extra_data: { ...prev.extra_data, custom_url: url },
+            }));
+          }}
+          placeholder="https://example.com"
+        />
+        {form.extra_data?.custom_url && !isValidHttpUrl(form.extra_data.custom_url) && (
+          <p className="text-sm text-red-500">http:// 또는 https://로 시작하는 유효한 URL을 입력하세요.</p>
+        )}
+      </div>
+
       {/* 운영시간 */}
       <div className="space-y-1.5">
         <Label>운영시간</Label>
@@ -624,7 +707,11 @@ export default function SpotForm({ spot }: SpotFormProps) {
         <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>
           취소
         </Button>
-        <Button type="submit" disabled={saving} className="flex-1">
+        <Button
+          type="submit"
+          disabled={saving || (!!form.extra_data?.custom_url && !isValidHttpUrl(form.extra_data.custom_url))}
+          className="flex-1"
+        >
           {saving ? '저장 중...' : isEdit ? '수정' : '추가'}
         </Button>
       </div>
