@@ -62,16 +62,9 @@ export default function DrawerSpotDetail({
 
         {/* Spot Name & Address */}
         <div className="px-4 pb-3 pr-12">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h2 className="text-[clamp(18px,5vw,22px)] font-bold text-text leading-tight tracking-tight">
-              {spot.name}
-            </h2>
-            {spot.is_highlighted && (
-              <Badge className="bg-highlight-muted text-highlight-foreground border-highlight-border flex-shrink-0 text-[clamp(12px,3vw,13px)] px-2 py-0.5">
-                ⭐ 추천
-              </Badge>
-            )}
-          </div>
+          <h2 className="text-[clamp(18px,5vw,22px)] font-bold text-text leading-tight tracking-tight mb-2">
+            {spot.name}
+          </h2>
           <div className="flex items-start gap-2 text-text-secondary">
             <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <p className="text-[clamp(13px,3.5vw,15px)] leading-relaxed">{spot.address}</p>

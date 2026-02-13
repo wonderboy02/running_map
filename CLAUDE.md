@@ -561,7 +561,7 @@ public/markers/
 
 | 함수 | 용도 | 캡션 지원 |
 |------|------|----------|
-| `getSpotMarkerIcon(categories, isHighlighted, isSelected, name?)` | 스팟 마커 | O |
+| `getSpotMarkerIcon(categories, isSelected, name?)` | 스팟 마커 | O |
 | `getCoursePinIcon(isSelected?, name?)` | 코스 핀 | O |
 | `getSearchPinIcon(name?)` | 검색 결과 핀 | O |
 

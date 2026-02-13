@@ -43,7 +43,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   const hasMovedToInitialPos = useRef(false);
 
   const createMarkerIcon = useCallback((spot: Spot, isSelected: boolean) => {
-    return getSpotMarkerIcon(spot.categories, spot.is_highlighted, isSelected, spot.name);
+    return getSpotMarkerIcon(spot.categories, isSelected, spot.name);
   }, []);
 
   // map 준비 시 마커 이미지 프리로드 + 부모에게 전달
@@ -81,14 +81,14 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       if (existing) {
         existing.setPosition(new naver.maps.LatLng(spot.latitude, spot.longitude));
         existing.setIcon(createMarkerIcon(spot, isSelected));
-        existing.setZIndex(isSelected ? 200 : spot.is_highlighted ? 100 : 1);
+        existing.setZIndex(isSelected ? 200 : 1);
         existing.setMap(map);
       } else {
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(spot.latitude, spot.longitude),
           map,
           icon: createMarkerIcon(spot, isSelected),
-          zIndex: isSelected ? 200 : spot.is_highlighted ? 100 : 1,
+          zIndex: isSelected ? 200 : 1,
         });
 
         naver.maps.Event.addListener(marker, 'click', () => {

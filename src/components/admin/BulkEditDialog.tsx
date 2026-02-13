@@ -143,7 +143,7 @@ export function BulkEditDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* 하이라이트 설정 */}
+          {/* 인기 장소 설정 */}
           <div className="flex items-start space-x-3">
             <Checkbox
               id="update-highlight"
@@ -152,7 +152,7 @@ export function BulkEditDialog({
             />
             <div className="flex-1 space-y-2">
               <Label htmlFor="update-highlight" className="font-medium">
-                하이라이트 설정
+                인기 장소 설정 (검색 화면에 노출)
               </Label>
               {updateHighlight && (
                 <div className="flex gap-2">
@@ -161,14 +161,14 @@ export function BulkEditDialog({
                     variant={highlightValue ? 'default' : 'outline'}
                     onClick={() => setHighlightValue(true)}
                   >
-                    추천 설정
+                    인기 등록
                   </Button>
                   <Button
                     size="sm"
                     variant={!highlightValue ? 'default' : 'outline'}
                     onClick={() => setHighlightValue(false)}
                   >
-                    추천 해제
+                    인기 해제
                   </Button>
                 </div>
               )}

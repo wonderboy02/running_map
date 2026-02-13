@@ -1,8 +1,7 @@
 'use client';
 
 import { RefObject } from 'react';
-import { MapPin, Star, Mail } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { MapPin, Mail } from 'lucide-react';
 import Image from 'next/image';
 import type { Spot } from '@/types';
 
@@ -19,14 +18,8 @@ function SpotListItem({ spot, onClick }: { spot: Spot; onClick: () => void }) {
       onClick={onClick}
       className="w-full py-3 hover:bg-surface-dim transition-colors text-left"
     >
-      <div className="flex items-start justify-between gap-3 mb-1.5">
+      <div className="mb-1.5">
         <h3 className="font-semibold text-text">{spot.name}</h3>
-        {spot.is_highlighted && (
-          <Badge className="bg-highlight-muted text-highlight-foreground border-highlight-border flex-shrink-0">
-            <Star className="w-3 h-3 mr-1" fill="currentColor" />
-            추천
-          </Badge>
-        )}
       </div>
       <div className="flex items-start gap-2 mb-1.5">
         <MapPin className="w-4 h-4 text-text-muted mt-0.5 flex-shrink-0" />

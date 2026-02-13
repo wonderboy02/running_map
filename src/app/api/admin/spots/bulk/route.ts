@@ -140,7 +140,7 @@ export const PATCH = withAuth(async (request: NextRequest) => {
 
     const updates: any = {};
 
-    // 하이라이트 설정/해제
+    // 인기 장소 설정/해제
     if (body.updates.is_highlighted !== undefined) {
       updates.is_highlighted = body.updates.is_highlighted;
     }

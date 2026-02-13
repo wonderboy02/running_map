@@ -151,13 +151,11 @@ export function preloadMarkerImages(): void {
 /**
  * 스팟 마커 아이콘 반환
  * @param categories - 스팟의 카테고리 배열 (CATEGORIES 우선순위: 러너스팟 > 샤워 > 짐보관)
- * @param isHighlighted - 하이라이트 여부 (현재는 selected와 동일 취급)
  * @param isSelected - 현재 선택된 마커인지
  * @param name - 스팟 이름 (캡션으로 표시)
  */
 export function getSpotMarkerIcon(
   categories: string[],
-  isHighlighted: boolean,
   isSelected: boolean,
   name?: string,
 ): naver.maps.HtmlIcon {

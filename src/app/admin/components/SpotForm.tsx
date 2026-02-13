@@ -607,7 +607,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
         </div>
       </div>
 
-      {/* 하이라이트 */}
+      {/* 인기 장소 */}
       <div className="flex items-center space-x-2">
         <Checkbox
           id="highlight"
@@ -615,7 +615,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
           onCheckedChange={(checked) => updateField('is_highlighted', !!checked)}
         />
         <Label htmlFor="highlight" className="cursor-pointer font-normal">
-          추천 장소로 하이라이트
+          인기 장소로 등록 (검색 화면에 노출)
         </Label>
       </div>
 
