@@ -77,6 +77,7 @@ const EMPTY_FORM: CourseForm = {
 
 interface BulkItem {
   file: File;
+  highlightFile: File | null;
   name: string;
   nwPlace: string;
   sePlace: string;
@@ -100,15 +101,23 @@ function parseCourseFilename(filename: string): {
   name: string;
   nwPlace: string;
   sePlace: string;
+  isHighlight: boolean;
 } | null {
   const nameWithoutExt = filename.replace(/\.[^.]+$/, '');
   const parts = nameWithoutExt.split('_');
   if (parts.length < 3) return null;
+
+  // _h 접미사 → 하이라이팅 이미지
+  const isHighlight = parts[parts.length - 1] === 'h';
+  const coreParts = isHighlight ? parts.slice(0, -1) : parts;
+
+  if (coreParts.length < 3) return null;
+
   // 마지막 두 파트가 SE, NW 장소, 나머지는 이름
-  const sePlace = parts[parts.length - 1];
-  const nwPlace = parts[parts.length - 2];
-  const name = parts.slice(0, -2).join('_');
-  return { name, nwPlace, sePlace };
+  const sePlace = coreParts[coreParts.length - 1];
+  const nwPlace = coreParts[coreParts.length - 2];
+  const name = coreParts.slice(0, -2).join('_');
+  return { name, nwPlace, sePlace, isHighlight };
 }
 
 async function geocodePlace(
@@ -156,13 +165,17 @@ function BulkUploadDialog({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newItems: BulkItem[] = [];
+    // 1단계: 기본 이미지 먼저 파싱
+    const baseItems = new Map<string, BulkItem>();
+    const highlightFiles: { key: string; file: File; filename: string }[] = [];
+    const errorItems: BulkItem[] = [];
 
     for (const file of Array.from(files)) {
       const parsed = parseCourseFilename(file.name);
       if (!parsed) {
-        newItems.push({
+        errorItems.push({
           file,
+          highlightFile: null,
           name: file.name,
           nwPlace: '',
           sePlace: '',
@@ -175,28 +188,62 @@ function BulkUploadDialog({
           nwWarning: false,
           seWarning: false,
           status: 'error',
-          error: '파일명 형식 오류 ({이름}_{NW장소}_{SE장소}.확장자)',
+          error: '파일명 형식 오류 ({이름}_{NW}_{SE}.확장자)',
         });
         continue;
       }
 
-      newItems.push({
-        file,
-        name: parsed.name,
-        nwPlace: parsed.nwPlace,
-        sePlace: parsed.sePlace,
-        nwLat: 0,
-        nwLng: 0,
-        seLat: 0,
-        seLng: 0,
-        nwResultName: '',
-        seResultName: '',
-        nwWarning: false,
-        seWarning: false,
-        status: 'geocoding',
-      });
+      const key = `${parsed.name}_${parsed.nwPlace}_${parsed.sePlace}`;
+
+      if (parsed.isHighlight) {
+        highlightFiles.push({ key, file, filename: file.name });
+      } else {
+        baseItems.set(key, {
+          file,
+          highlightFile: null,
+          name: parsed.name,
+          nwPlace: parsed.nwPlace,
+          sePlace: parsed.sePlace,
+          nwLat: 0,
+          nwLng: 0,
+          seLat: 0,
+          seLng: 0,
+          nwResultName: '',
+          seResultName: '',
+          nwWarning: false,
+          seWarning: false,
+          status: 'geocoding',
+        });
+      }
     }
 
+    // 2단계: 하이라이트 파일을 기본 파일에 매칭
+    for (const hl of highlightFiles) {
+      const base = baseItems.get(hl.key);
+      if (base) {
+        base.highlightFile = hl.file;
+      } else {
+        errorItems.push({
+          file: hl.file,
+          highlightFile: null,
+          name: hl.filename,
+          nwPlace: '',
+          sePlace: '',
+          nwLat: 0,
+          nwLng: 0,
+          seLat: 0,
+          seLng: 0,
+          nwResultName: '',
+          seResultName: '',
+          nwWarning: false,
+          seWarning: false,
+          status: 'error',
+          error: '매칭되는 기본 이미지 없음 (_h 제거한 파일 필요)',
+        });
+      }
+    }
+
+    const newItems = [...baseItems.values(), ...errorItems];
     setItems(newItems);
 
     // Geocode 비동기 처리
@@ -264,6 +311,9 @@ function BulkUploadDialog({
     const formData = new FormData();
     const metadata = readyItems.map((item, i) => {
       formData.append(`image_${i}`, item.file);
+      if (item.highlightFile) {
+        formData.append(`highlight_image_${i}`, item.highlightFile);
+      }
       return {
         name: item.name,
         nw_lat: item.nwLat,
@@ -271,6 +321,7 @@ function BulkUploadDialog({
         se_lat: item.seLat,
         se_lng: item.seLng,
         opacity: 1.0,
+        has_highlight: !!item.highlightFile,
       };
     });
     formData.append('metadata', JSON.stringify(metadata));
@@ -327,14 +378,26 @@ function BulkUploadDialog({
         <div className="space-y-4">
           {/* 안내 */}
           <div className="bg-surface-dim rounded-md p-3 text-sm">
-            <p className="font-medium">파일명 형식</p>
+            <p className="font-medium">파일명 규칙</p>
             <p className="text-text-secondary mt-1">
               <code className="bg-background rounded px-1 py-0.5 text-xs">
-                {'{이름}_{왼쪽위 장소}_{오른쪽아래 장소}.확장자'}
+                {'{이름}_{NW장소}_{SE장소}.확장자'}
               </code>
             </p>
-            <p className="text-text-secondary mt-1 text-xs">
-              예: 여의도코스_여의도공원_63빌딩.png
+            <p className="text-text-secondary mt-1">
+              <code className="bg-background rounded px-1 py-0.5 text-xs">
+                {'{이름}_{NW장소}_{SE장소}_h.확장자'}
+              </code>
+              <span className="text-text-muted ml-1">(하이라이팅)</span>
+            </p>
+            <p className="text-text-secondary mt-2 text-xs">
+              예: 여의도코스_여의도공원_63빌딩.png (기본)
+            </p>
+            <p className="text-text-secondary pl-6 text-xs">
+              여의도코스_여의도공원_63빌딩_h.png (하이라이팅)
+            </p>
+            <p className="text-text-muted mt-1.5 text-xs">
+              _h 파일은 동일 이름의 기본 파일과 자동 매칭됩니다. 기본 파일 없이 _h만 업로드할 수 없습니다.
             </p>
           </div>
 
@@ -364,6 +427,7 @@ function BulkUploadDialog({
                       <th className="pb-1.5 pr-2">이름</th>
                       <th className="pb-1.5 pr-2">NW 장소</th>
                       <th className="pb-1.5 pr-2">SE 장소</th>
+                      <th className="pb-1.5 pr-2" title="하이라이팅 이미지">HL</th>
                       <th className="pb-1.5">상태</th>
                     </tr>
                   </thead>
@@ -413,6 +477,15 @@ function BulkUploadDialog({
                             <span className="text-text-secondary">
                               {item.sePlace}
                             </span>
+                          )}
+                        </td>
+                        <td className="py-1.5 pr-2 text-center">
+                          {item.highlightFile ? (
+                            <span title={item.highlightFile.name}>
+                              <ImageIcon className="inline h-3.5 w-3.5 text-amber-500" />
+                            </span>
+                          ) : (
+                            <span className="text-text-muted">—</span>
                           )}
                         </td>
                         <td className="py-1.5">

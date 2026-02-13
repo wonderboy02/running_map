@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
 import { supabaseServer } from '@/lib/supabase/server';
-import { validateImageFile, convertAndUpload } from '@/lib/image-upload';
+import {
+  validateImageFile,
+  convertAndUpload,
+  removeFromStorage,
+} from '@/lib/image-upload';
 
 const COURSE_UPLOAD = { bucket: 'courses' } as const;
 
@@ -12,6 +16,7 @@ interface BulkCourseMeta {
   se_lat: number;
   se_lng: number;
   opacity: number;
+  has_highlight?: boolean;
 }
 
 export const POST = withAuth(async (request: NextRequest) => {
@@ -82,6 +87,21 @@ export const POST = withAuth(async (request: NextRequest) => {
       try {
         const image_url = await convertAndUpload(imageFile, COURSE_UPLOAD);
 
+        // 하이라이팅 이미지 처리
+        let highlight_image_url: string | null = null;
+        if (meta.has_highlight) {
+          const highlightFile = formData.get(`highlight_image_${i}`) as File | null;
+          if (highlightFile && highlightFile.size > 0) {
+            const hlError = validateImageFile(highlightFile);
+            if (hlError) {
+              await removeFromStorage('courses', [image_url]);
+              errors.push({ index: i, name: meta.name, error: `하이라이팅: ${hlError}` });
+              continue;
+            }
+            highlight_image_url = await convertAndUpload(highlightFile, COURSE_UPLOAD);
+          }
+        }
+
         const { data, error } = await supabaseServer
           .from('courses')
           .insert({
@@ -93,13 +113,15 @@ export const POST = withAuth(async (request: NextRequest) => {
             se_lng: meta.se_lng,
             opacity: Math.min(1, Math.max(0, meta.opacity)),
             is_active: true,
+            ...(highlight_image_url && { highlight_image_url }),
           })
           .select()
           .single();
 
         if (error) {
           console.error(`[Courses Bulk] DB error for "${meta.name}":`, error);
-          errors.push({ index: i, name: meta.name, error: 'DB 저장 실패' });
+          // NOTE: image_url, highlight_image_url가 Storage에 남을 수 있음 (고아 정리 필요)
+          errors.push({ index: i, name: meta.name, error: 'DB 저장 실패 (이미지는 업로드됨 — 수동 정리 필요)' });
         } else {
           results.push(data);
         }
@@ -108,7 +130,8 @@ export const POST = withAuth(async (request: NextRequest) => {
           `[Courses Bulk] Processing error for "${meta.name}":`,
           err,
         );
-        errors.push({ index: i, name: meta.name, error: '이미지 처리 실패' });
+        // NOTE: 기본 이미지가 이미 업로드된 상태에서 하이라이트 처리 실패 시 고아 발생 가능
+        errors.push({ index: i, name: meta.name, error: '이미지 처리 실패 (일부 업로드됨 — 수동 정리 필요)' });
       }
     }
 
