@@ -10,6 +10,7 @@ interface SpotInsertData {
   longitude: number;
   phone?: string;
   categories?: string[];
+  features?: string[];
   extra_data?: {
     naver_category?: string;
     naver_link?: string;
@@ -73,6 +74,7 @@ export const POST = withAuth(async (request: NextRequest) => {
         latitude: check.spot.latitude,
         longitude: check.spot.longitude,
         categories: check.spot.categories || [], // 요청에서 받은 카테고리 사용
+        features: check.spot.features || [],
         is_highlighted: false,
         phone: check.spot.phone || null,
         description: null,

@@ -114,6 +114,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           extra_data: Json | null
+          features: string[]
           id: string
           is_highlighted: boolean | null
           latitude: number
@@ -130,6 +131,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           extra_data?: Json | null
+          features?: string[]
           id?: string
           is_highlighted?: boolean | null
           latitude: number
@@ -146,6 +148,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           extra_data?: Json | null
+          features?: string[]
           id?: string
           is_highlighted?: boolean | null
           latitude?: number

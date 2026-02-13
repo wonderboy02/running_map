@@ -8,7 +8,6 @@
 - **UI 라이브러리**: shadcn/ui (new-york 스타일) + lucide-react 아이콘
 - **지도**: Naver Map JavaScript API v3
 - **배포**: Vercel
-- **상세 기획**: `IMPLEMENTATION.md` 참조
 - **변경 이력**: `docs/changelog/` 참조
 
 ## 디렉토리 구조
@@ -17,7 +16,6 @@
 src/
 ├── app/                    # Next.js App Router 페이지
 │   ├── api/geocode/        # Geocoding API Route (서버 사이드)
-│   ├── spot/[id]/          # 장소 상세 페이지
 │   └── admin/              # Admin 영역
 │       ├── login/          # 로그인
 │       ├── spots/new/      # 장소 추가

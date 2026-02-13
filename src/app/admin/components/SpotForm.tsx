@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Search, Loader2, Plus, X, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
+import { MapPin, Search, Loader2, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
-import { CATEGORIES } from '@/types';
+import { CATEGORIES, FEATURES, WEEKDAYS, WEEKDAY_LABELS } from '@/types';
 import type { Spot, SpotInsert } from '@/types';
 import { useGeocode, type GeocodeResult } from '@/hooks/useGeocode';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ const EMPTY_FORM: SpotInsert = {
   latitude: 37.5665,
   longitude: 126.978,
   categories: [],
+  features: [],
   is_highlighted: false,
   operating_hours: null,
   description: null,
@@ -45,6 +46,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
           latitude: spot.latitude,
           longitude: spot.longitude,
           categories: spot.categories,
+          features: spot.features ?? [],
           is_highlighted: spot.is_highlighted,
           operating_hours: spot.operating_hours,
           description: spot.description,
@@ -96,6 +98,27 @@ export default function SpotForm({ spot }: SpotFormProps) {
         ? prev.categories.filter((c) => c !== cat)
         : [...prev.categories, cat],
     }));
+  }
+
+  function toggleFeature(feat: string) {
+    setForm((prev) => ({
+      ...prev,
+      features: prev.features.includes(feat)
+        ? prev.features.filter((f) => f !== feat)
+        : [...prev.features, feat],
+    }));
+  }
+
+  function updateOperatingHours(day: string, value: string) {
+    setForm((prev) => {
+      const hours = { ...(prev.operating_hours ?? {}) };
+      if (value) {
+        hours[day] = value;
+      } else {
+        delete hours[day];
+      }
+      return { ...prev, operating_hours: Object.keys(hours).length > 0 ? hours : null };
+    });
   }
 
   // 사진 핸들러
@@ -410,6 +433,25 @@ export default function SpotForm({ spot }: SpotFormProps) {
         </div>
       </div>
 
+      {/* 제공 시설 */}
+      <div className="space-y-1.5">
+        <Label>제공 시설</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {FEATURES.map((feat) => (
+            <div key={feat} className="flex items-center space-x-2">
+              <Checkbox
+                id={`feature-${feat}`}
+                checked={form.features.includes(feat)}
+                onCheckedChange={() => toggleFeature(feat)}
+              />
+              <Label htmlFor={`feature-${feat}`} className="text-sm font-normal cursor-pointer">
+                {feat}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* 설명 */}
       <div className="space-y-1.5">
         <Label>설명</Label>
@@ -426,11 +468,6 @@ export default function SpotForm({ spot }: SpotFormProps) {
         <Label>
           사진 ({totalPhotos}/{MAX_PHOTOS})
         </Label>
-        {!form.categories.includes('러너스팟') && (
-          <p className="text-xs text-amber-600">
-            현재 카테고리에서는 사진이 사용자 화면에 표시되지 않습니다. (러너스팟만 사진 노출)
-          </p>
-        )}
         <div className="grid grid-cols-4 gap-2">
           {/* 기존 사진 */}
           {existingPhotos.map((url, i) => (
@@ -548,6 +585,26 @@ export default function SpotForm({ spot }: SpotFormProps) {
           onChange={(e) => updateField('phone', e.target.value || null)}
           placeholder="02-1234-5678"
         />
+      </div>
+
+      {/* 운영시간 */}
+      <div className="space-y-1.5">
+        <Label>운영시간</Label>
+        <div className="space-y-2">
+          {WEEKDAYS.map((day) => (
+            <div key={day} className="flex items-center gap-2">
+              <span className="w-6 text-sm text-muted-foreground">
+                {WEEKDAY_LABELS[day]}
+              </span>
+              <Input
+                type="text"
+                value={form.operating_hours?.[day] ?? ''}
+                onChange={(e) => updateOperatingHours(day, e.target.value)}
+                placeholder="09:00 - 21:00"
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* 하이라이트 */}
