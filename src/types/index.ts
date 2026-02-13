@@ -21,6 +21,11 @@ export interface Spot {
 export type SpotInsert = Omit<Spot, "id" | "created_at" | "updated_at">;
 export type SpotUpdate = Partial<SpotInsert>;
 
+export interface CoursePinpoint {
+  lat: number;
+  lng: number;
+}
+
 export interface Course {
   id: string;
   name: string;
@@ -35,8 +40,7 @@ export interface Course {
   description: string | null;
   difficulty: number | null;
   distance_km: number | null;
-  pin_lat: number | null;
-  pin_lng: number | null;
+  pinpoints: CoursePinpoint[];
   created_at: string;
   updated_at: string;
 }
