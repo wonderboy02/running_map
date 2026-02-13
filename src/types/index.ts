@@ -13,7 +13,7 @@ export interface Spot {
   description: string | null;
   phone: string | null;
   photos: string[];
-  extra_data: Record<string, unknown>;
+  extra_data: { custom_url?: string } & Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }

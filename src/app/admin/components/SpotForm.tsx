@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { isValidHttpUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface SpotFormProps {
@@ -649,6 +650,26 @@ export default function SpotForm({ spot }: SpotFormProps) {
         />
       </div>
 
+      {/* 외부 링크 URL */}
+      <div className="space-y-1.5">
+        <Label>외부 링크 URL</Label>
+        <Input
+          type="url"
+          value={form.extra_data?.custom_url ?? ''}
+          onChange={(e) => {
+            const url = e.target.value || undefined;
+            setForm((prev) => ({
+              ...prev,
+              extra_data: { ...prev.extra_data, custom_url: url },
+            }));
+          }}
+          placeholder="https://example.com"
+        />
+        {form.extra_data?.custom_url && !isValidHttpUrl(form.extra_data.custom_url) && (
+          <p className="text-sm text-red-500">http:// 또는 https://로 시작하는 유효한 URL을 입력하세요.</p>
+        )}
+      </div>
+
       {/* 운영시간 */}
       <div className="space-y-1.5">
         <Label>운영시간</Label>
@@ -686,7 +707,11 @@ export default function SpotForm({ spot }: SpotFormProps) {
         <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>
           취소
         </Button>
-        <Button type="submit" disabled={saving} className="flex-1">
+        <Button
+          type="submit"
+          disabled={saving || (!!form.extra_data?.custom_url && !isValidHttpUrl(form.extra_data.custom_url))}
+          className="flex-1"
+        >
           {saving ? '저장 중...' : isEdit ? '수정' : '추가'}
         </Button>
       </div>
