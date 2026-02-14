@@ -63,18 +63,24 @@ const COURSE_IMAGES = {
 // BASE_SIZES와 다른 카테고리만 등록
 const CATEGORY_SIZES: Partial<Record<Category, { default: MarkerSize; selected: MarkerSize }>> = {
   러너스팟: {
-    default:  { width: 24, height: 24, anchorX: 12, anchorY: 12 },  // 기본의 120%
-    selected: { width: 30, height: 43, anchorX: 15, anchorY: 43 },  // 기본의 120%
+    default:  { width: 30, height: 30, anchorX: 15, anchorY: 15 },  // 기본의 150%
+    selected: { width: 38, height: 54, anchorX: 19, anchorY: 54 },  // 기본의 150%
   },
 };
+
+/** 코스 마커 사이즈 (러너스팟과 동일, 기본의 120%) */
+const COURSE_SIZES = {
+  default:  { width: 24, height: 24, anchorX: 12, anchorY: 12 },
+  selected: { width: 30, height: 43, anchorX: 15, anchorY: 43 },
+} satisfies Record<string, MarkerSize>;
 
 // ─── 캡션 설정 ──────────────────────────────────────
 const CAPTION_MAX_CHARS = 14;
 const CAPTION_FONT_SIZE = 10;
 const CAPTION_LINE_HEIGHT = 13;
 const CAPTION_MAX_LINES = 2;
-const CAPTION_HEIGHT = CAPTION_LINE_HEIGHT * CAPTION_MAX_LINES; // 26px (2줄)
-const CAPTION_CONTAINER_WIDTH = 70;
+export const CAPTION_HEIGHT = CAPTION_LINE_HEIGHT * CAPTION_MAX_LINES; // 26px (2줄)
+export const CAPTION_CONTAINER_WIDTH = 70;
 
 function truncateName(name: string): string {
   return name.length > CAPTION_MAX_CHARS
@@ -170,7 +176,7 @@ export function getSpotMarkerIcon(
 /** 코스 핀 아이콘 (PNG 기반 + 캡션) */
 export function getCoursePinIcon(isSelected = false, name?: string): naver.maps.HtmlIcon {
   const state = isSelected ? 'selected' : 'default';
-  const size = BASE_SIZES[state];
+  const size = COURSE_SIZES[state];
 
   return buildPngIcon(COURSE_IMAGES[state], size, name);
 }
