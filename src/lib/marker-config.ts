@@ -79,8 +79,8 @@ const CAPTION_MAX_CHARS = 14;
 const CAPTION_FONT_SIZE = 10;
 const CAPTION_LINE_HEIGHT = 13;
 const CAPTION_MAX_LINES = 2;
-const CAPTION_HEIGHT = CAPTION_LINE_HEIGHT * CAPTION_MAX_LINES; // 26px (2줄)
-const CAPTION_CONTAINER_WIDTH = 70;
+export const CAPTION_HEIGHT = CAPTION_LINE_HEIGHT * CAPTION_MAX_LINES; // 26px (2줄)
+export const CAPTION_CONTAINER_WIDTH = 70;
 
 function truncateName(name: string): string {
   return name.length > CAPTION_MAX_CHARS

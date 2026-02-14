@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
-import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages } from '@/lib/marker-config';
+import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages, CAPTION_HEIGHT } from '@/lib/marker-config';
+import { computeVisibleCaptions, type MarkerPixelInfo } from '@/lib/caption-collision';
 import {
   MyLocationMarker,
   type MyLocationState,
@@ -23,6 +24,9 @@ interface NaverMapProps {
   onMapReady?: (map: naver.maps.Map) => void;
 }
 
+/** 캡션 충돌 감지 수직 임계값 (아이콘 높이 + 캡션 높이 고려) */
+const CAPTION_COLLISION_THRESHOLD_Y = CAPTION_HEIGHT + 14;
+
 export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
@@ -33,10 +37,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   const searchPinRef = useRef<naver.maps.Marker | null>(null);
   const myLocationMarkerRef = useRef<MyLocationMarker | null>(null);
   const hasMovedToInitialPos = useRef(false);
-
-  const createMarkerIcon = useCallback((spot: Spot, isSelected: boolean) => {
-    return getSpotMarkerIcon(spot.categories, isSelected, spot.name);
-  }, []);
+  const captionVisibleIdsRef = useRef<Set<string>>(new Set());
 
   // map 준비 시 마커 이미지 프리로드 + 부모에게 전달
   useEffect(() => {
@@ -45,6 +46,82 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       onMapReady?.(map);
     }
   }, [isReady, map, onMapReady]);
+
+  // 캡션 충돌 감지: 모든 마커의 픽셀 좌표를 비교하여 겹치는 캡션을 숨긴다
+  const recalcCaptions = useCallback(() => {
+    if (!map) return;
+
+    const projection = map.getProjection();
+    const selectedSpotId = selection?.type === 'spot' ? selection.data.id : null;
+    const selectedCourseId = selection?.type === 'course' ? selection.data.id : null;
+
+    const allMarkerInfos: MarkerPixelInfo[] = [];
+
+    // 스팟 마커 수집
+    markersRef.current.forEach((marker, id) => {
+      if (!marker.getMap()) return;
+      const pos = marker.getPosition();
+      const offset = projection.fromCoordToOffset(pos);
+      allMarkerInfos.push({ id, px: offset.x, py: offset.y, isSelected: id === selectedSpotId });
+    });
+
+    // 코스 핀 마커 수집
+    coursePinsRef.current.forEach((marker, key) => {
+      if (!marker.getMap()) return;
+      const pos = marker.getPosition();
+      const offset = projection.fromCoordToOffset(pos);
+      const courseId = key.split('_')[0];
+      allMarkerInfos.push({ id: key, px: offset.x, py: offset.y, isSelected: courseId === selectedCourseId });
+    });
+
+    const newVisible = computeVisibleCaptions(allMarkerInfos, 80, CAPTION_COLLISION_THRESHOLD_Y);
+    const prevVisible = captionVisibleIdsRef.current;
+
+    // 변경된 스팟 마커만 아이콘 업데이트
+    markersRef.current.forEach((marker, id) => {
+      const wasVisible = prevVisible.has(id);
+      const nowVisible = newVisible.has(id);
+      if (wasVisible !== nowVisible) {
+        const spot = spots.find((s) => s.id === id);
+        if (spot) {
+          const isSelected = id === selectedSpotId;
+          marker.setIcon(getSpotMarkerIcon(spot.categories, isSelected, nowVisible ? spot.name : undefined));
+        }
+      }
+    });
+
+    // 변경된 코스 핀만 아이콘 업데이트
+    coursePinsRef.current.forEach((marker, key) => {
+      const wasVisible = prevVisible.has(key);
+      const nowVisible = newVisible.has(key);
+      if (wasVisible !== nowVisible) {
+        const courseId = key.split('_')[0];
+        const course = courses.find((c) => c.id === courseId);
+        if (course) {
+          const isSelected = courseId === selectedCourseId;
+          marker.setIcon(getCoursePinIcon(isSelected, nowVisible ? course.name : undefined));
+        }
+      }
+    });
+
+    captionVisibleIdsRef.current = newVisible;
+  }, [map, spots, courses, selection]);
+
+  // idle 이벤트로 캡션 충돌 재계산 (줌/팬 완료 시)
+  useEffect(() => {
+    if (!isReady || !map) return;
+
+    const listener = naver.maps.Event.addListener(map, 'idle', () => {
+      recalcCaptions();
+    });
+
+    // 초기 계산
+    recalcCaptions();
+
+    return () => {
+      naver.maps.Event.removeListener(listener);
+    };
+  }, [isReady, map, recalcCaptions]);
 
   // 마커 동기화 — spots 데이터 변경 또는 선택 변경 시 마커 생성/제거/아이콘 업데이트
   // selection이 deps에 포함되어 단일 effect에서 선택 상태까지 처리.
@@ -68,18 +145,20 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     // 새로운 마커 추가 또는 기존 마커 업데이트
     spots.forEach((spot) => {
       const isSelected = spot.id === selectedSpotId;
+      const showCaption = isSelected || captionVisibleIdsRef.current.has(spot.id);
+      const icon = getSpotMarkerIcon(spot.categories, isSelected, showCaption ? spot.name : undefined);
       const existing = existingMarkers.get(spot.id);
 
       if (existing) {
         existing.setPosition(new naver.maps.LatLng(spot.latitude, spot.longitude));
-        existing.setIcon(createMarkerIcon(spot, isSelected));
+        existing.setIcon(icon);
         existing.setZIndex(isSelected ? 200 : 1);
         existing.setMap(map);
       } else {
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(spot.latitude, spot.longitude),
           map,
-          icon: createMarkerIcon(spot, isSelected),
+          icon,
           zIndex: isSelected ? 200 : 1,
         });
 
@@ -90,7 +169,10 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         existingMarkers.set(spot.id, marker);
       }
     });
-  }, [isReady, map, spots, createMarkerIcon, onMarkerClick, selection]);
+
+    // 마커 동기화 후 캡션 충돌 재계산
+    recalcCaptions();
+  }, [isReady, map, spots, onMarkerClick, selection, recalcCaptions]);
 
   // 선택된 마커/핀으로 지도 이동 (줌 유지)
   useEffect(() => {
@@ -251,6 +333,16 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         overlayUrlsRef.current.set(course.id, imageUrl);
       }
     });
+
+    // 선택된 오버레이를 최상위로 — GroundOverlay는 zIndex를 지원하지 않으므로
+    // setMap(null) → setMap(map) 재추가하여 가장 나중에 그려지게 함
+    if (showCourses && selectedCourseId) {
+      const selectedOverlay = existingOverlays.get(selectedCourseId);
+      if (selectedOverlay) {
+        selectedOverlay.setMap(null);
+        selectedOverlay.setMap(map);
+      }
+    }
   }, [isReady, map, courses, showCourses, selection]);
 
   // 코스 핀 마커 렌더링 (멀티 핀포인트, 선택 상태 + 가시성 반영)
@@ -285,18 +377,20 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       for (let i = 0; i < course.pinpoints.length; i++) {
         const pin = course.pinpoints[i];
         const key = `${course.id}_${i}`;
+        const showCaption = isSelected || captionVisibleIdsRef.current.has(key);
+        const icon = getCoursePinIcon(isSelected, showCaption ? course.name : undefined);
         const existing = existingPins.get(key);
 
         if (existing) {
           existing.setPosition(new naver.maps.LatLng(pin.lat, pin.lng));
-          existing.setIcon(getCoursePinIcon(isSelected, course.name));
+          existing.setIcon(icon);
           existing.setZIndex(isSelected ? 200 : 50);
           existing.setMap(showCourses ? map : null);
         } else {
           const marker = new naver.maps.Marker({
             position: new naver.maps.LatLng(pin.lat, pin.lng),
             map: showCourses ? map : null,
-            icon: getCoursePinIcon(isSelected, course.name),
+            icon,
             zIndex: isSelected ? 200 : 50,
           });
 
@@ -308,7 +402,10 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         }
       }
     }
-  }, [isReady, map, courses, onCoursePinClick, selection, showCourses]);
+
+    // 핀 동기화 후 캡션 충돌 재계산
+    recalcCaptions();
+  }, [isReady, map, courses, onCoursePinClick, selection, showCourses, recalcCaptions]);
 
   return (
     <div ref={containerRef} className="relative z-0 h-full w-full">

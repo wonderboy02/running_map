@@ -98,6 +98,7 @@ declare namespace naver.maps {
     ): void;
     morph(coord: LatLng, zoom?: number, transitionOptions?: TransitionOptions): void;
     fitBounds(bounds: LatLngBounds, options?: { padding?: number }): void;
+    getProjection(): MapSystemProjection;
     destroy(): void;
     setOptions(options: Partial<MapOptions>): void;
     setMapTypeId(mapTypeId: string): void;
@@ -132,6 +133,15 @@ declare namespace naver.maps {
 
   class Point {
     constructor(x: number, y: number);
+    x: number;
+    y: number;
+  }
+
+  interface MapSystemProjection {
+    fromCoordToOffset(coord: LatLng): Point;
+    fromOffsetToCoord(offset: Point): LatLng;
+    fromCoordToPoint(coord: LatLng): Point;
+    fromPointToCoord(point: Point): LatLng;
   }
 
   class Size {
