@@ -39,6 +39,8 @@ declare namespace naver.maps {
     mapDataControl?: boolean;
     logoControl?: boolean;
     logoControlOptions?: { position?: number };
+    gl?: boolean;
+    customStyleId?: string;
   }
 
   interface TransitionOptions {
@@ -53,6 +55,7 @@ declare namespace naver.maps {
     zIndex?: number;
     title?: string;
     clickable?: boolean;
+    draggable?: boolean;
     visible?: boolean;
     animation?: number;
   }
@@ -157,14 +160,14 @@ declare namespace naver.maps {
   interface MapEventListener {
     eventName: string;
     target: unknown;
-    listener: (...args: unknown[]) => void;
+    listener: (...args: any[]) => void;
   }
 
   class Event {
     static addListener(
       target: unknown,
       type: string,
-      listener: (...args: unknown[]) => void
+      listener: (...args: any[]) => void,
     ): MapEventListener;
     static removeListener(listener: MapEventListener): void;
     static clearListeners(target: unknown, type: string): void;
