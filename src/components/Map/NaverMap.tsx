@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
 import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages, CAPTION_HEIGHT } from '@/lib/marker-config';
 import { computeVisibleCaptions, type MarkerPixelInfo } from '@/lib/caption-collision';
@@ -28,6 +28,9 @@ interface NaverMapProps {
 /** 캡션 충돌 감지 수직 임계값 (아이콘 높이 + 캡션 높이 고려) */
 const CAPTION_COLLISION_THRESHOLD_Y = CAPTION_HEIGHT + 14;
 
+/** 코스 핀 마커가 보이기 시작하는 최소 줌 레벨 */
+const COURSE_PIN_MIN_ZOOM = 14;
+
 export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
@@ -39,6 +42,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   const myLocationMarkerRef = useRef<MyLocationMarker | null>(null);
   const hasMovedToInitialPos = useRef(false);
   const captionVisibleIdsRef = useRef<Set<string>>(new Set());
+  const [zoom, setZoom] = useState(13);
 
   // map 준비 시 마커 이미지 프리로드 + 부모에게 전달
   useEffect(() => {
@@ -114,6 +118,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
 
     const listener = naver.maps.Event.addListener(map, 'idle', () => {
       recalcCaptions();
+      setZoom(map.getZoom());
     });
 
     // 초기 계산
@@ -183,11 +188,16 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       map.panTo(new naver.maps.LatLng(selection.data.latitude, selection.data.longitude));
     } else if (selection.type === 'course') {
       const course = selection.data;
+      // bounds를 20% 확장하여 코스 주변 여유 공간 확보
+      const latSpan = course.nw_lat - course.se_lat;
+      const lngSpan = course.se_lng - course.nw_lng;
+      const latPad = latSpan * 0.15;
+      const lngPad = lngSpan * 0.15;
       const bounds = new naver.maps.LatLngBounds(
-        new naver.maps.LatLng(course.se_lat, course.nw_lng),
-        new naver.maps.LatLng(course.nw_lat, course.se_lng),
+        new naver.maps.LatLng(course.se_lat - latPad, course.nw_lng - lngPad),
+        new naver.maps.LatLng(course.nw_lat + latPad, course.se_lng + lngPad),
       );
-      map.fitBounds(bounds, { padding: 60 });
+      map.fitBounds(bounds);
     }
   }, [map, selection]);
 
@@ -369,8 +379,10 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     });
 
     // 새로운 핀 추가 또는 기존 핀 아이콘/가시성 업데이트
+    // 줌 레벨이 낮으면 코스 핀 숨김 (선택된 코스는 항상 표시)
     for (const course of courses) {
       const isSelected = course.id === selectedCourseId;
+      const pinVisible = showCourses && (zoom >= COURSE_PIN_MIN_ZOOM || isSelected);
 
       for (let i = 0; i < course.pinpoints.length; i++) {
         const pin = course.pinpoints[i];
@@ -383,11 +395,11 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
           existing.setPosition(new naver.maps.LatLng(pin.lat, pin.lng));
           existing.setIcon(icon);
           existing.setZIndex(isSelected ? 200 : 50);
-          existing.setMap(showCourses ? map : null);
+          existing.setMap(pinVisible ? map : null);
         } else {
           const marker = new naver.maps.Marker({
             position: new naver.maps.LatLng(pin.lat, pin.lng),
-            map: showCourses ? map : null,
+            map: pinVisible ? map : null,
             icon,
             zIndex: isSelected ? 200 : 50,
           });
@@ -403,7 +415,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
 
     // 핀 동기화 후 캡션 충돌 재계산
     recalcCaptions();
-  }, [isReady, map, courses, onCoursePinClick, selection, showCourses, recalcCaptions]);
+  }, [isReady, map, courses, onCoursePinClick, selection, showCourses, zoom, recalcCaptions]);
 
   return (
     <div ref={containerRef} className="relative z-0 h-full w-full">
