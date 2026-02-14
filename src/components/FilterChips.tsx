@@ -11,7 +11,7 @@ const CHIP_ICONS: Record<string, string> = {
 const CHIP_ACTIVE_STYLES: Record<string, string> = {
   러너스팟: 'bg-cat-runner text-white border-cat-runner',
   샤워: 'bg-cat-shower text-white border-cat-shower',
-  짐보관: 'bg-cat-locker text-text border-cat-locker',
+  짐보관: 'bg-cat-locker text-white border-cat-locker',
 };
 
 const CHIP_INACTIVE =
