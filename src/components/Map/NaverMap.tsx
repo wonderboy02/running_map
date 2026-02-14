@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
 import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages, CAPTION_HEIGHT } from '@/lib/marker-config';
 import { computeVisibleCaptions, type MarkerPixelInfo } from '@/lib/caption-collision';
+import { rewriteStorageUrl } from '@/lib/utils';
 import {
   MyLocationMarker,
   type MyLocationState,
@@ -303,10 +304,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         : course.image_url;
 
       // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
-      const imageUrl = targetUrl.replace(
-        /https:\/\/[^/]+\/storage\/v1\/object\/public/,
-        '/storage',
-      );
+      const imageUrl = rewriteStorageUrl(targetUrl);
 
       if (existing) {
         // URL이 실제로 변경된 경우에만 setUrl() 호출 — 불필요한 이미지 리로드/깜빡임 방지

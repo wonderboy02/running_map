@@ -38,6 +38,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useGeocode, type GeocodeResult } from '@/hooks/useGeocode';
+import PinpointPicker from '@/app/admin/components/PinpointPicker';
+import { rewriteStorageUrl } from '@/lib/utils';
 import type { Course } from '@/types';
 
 interface CourseForm {
@@ -763,6 +765,27 @@ export default function AdminCoursesPage() {
   const [highlightPreview, setHighlightPreview] = useState<string | null>(null);
   const [removeHighlight, setRemoveHighlight] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // 피커용 오버레이 이미지 URL (objectURL 생성/revoke를 useEffect로 관리)
+  const [pickerOverlayUrl, setPickerOverlayUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+
+    if (form.image) {
+      objectUrl = URL.createObjectURL(form.image);
+      setPickerOverlayUrl(objectUrl);
+    } else if (editingCourse?.image_url) {
+      setPickerOverlayUrl(rewriteStorageUrl(editingCourse.image_url));
+    } else {
+      setPickerOverlayUrl(null);
+    }
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [form.image, editingCourse?.image_url]);
 
   async function fetchCourses() {
     setLoading(true);
@@ -1071,7 +1094,8 @@ export default function AdminCoursesPage() {
       )}
 
       {/* 추가/수정 Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* pickerOpen일 때 Dialog를 닫아서 Radix의 inert/focus-trap이 PinpointPicker를 방해하지 않도록 */}
+      <Dialog open={dialogOpen && !pickerOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -1143,21 +1167,33 @@ export default function AdminCoursesPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="font-medium">핀포인트</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      pinpoints: [...prev.pinpoints, { lat: 0, lng: 0 }],
-                    }))
-                  }
-                >
-                  <Plus className="mr-1 h-3 w-3" />
-                  추가
-                </Button>
+                <div className="flex gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setPickerOpen(true)}
+                  >
+                    <MapPin className="mr-1 h-3 w-3" />
+                    지도에서 선택
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        pinpoints: [...prev.pinpoints, { lat: 0, lng: 0 }],
+                      }))
+                    }
+                  >
+                    <Plus className="mr-1 h-3 w-3" />
+                    추가
+                  </Button>
+                </div>
               </div>
               {form.pinpoints.length === 0 && (
                 <p className="text-text-muted text-xs">
@@ -1348,6 +1384,28 @@ export default function AdminCoursesPage() {
         onOpenChange={setBulkDialogOpen}
         onUploaded={fetchCourses}
       />
+
+      {/* 핀포인트 피커 — 조건부 렌더링으로 닫힐 때 map 인스턴스 파괴 */}
+      {pickerOpen && (
+        <PinpointPicker
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          existingPinpoints={form.pinpoints}
+          onConfirm={(pinpoints) => setForm((prev) => ({ ...prev, pinpoints }))}
+          overlayImageUrl={pickerOverlayUrl}
+          bounds={
+            form.nw_lat && form.se_lat
+              ? {
+                  nw_lat: form.nw_lat,
+                  nw_lng: form.nw_lng,
+                  se_lat: form.se_lat,
+                  se_lng: form.se_lng,
+                }
+              : null
+          }
+          opacity={form.opacity}
+        />
+      )}
 
       {/* Supabase Storage 안내 */}
       {courses.length === 0 && !loading && (

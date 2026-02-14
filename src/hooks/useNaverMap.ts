@@ -42,6 +42,8 @@ export function useNaverMap(
         tileTransition,
         scaleControl,
         mapDataControl: false,
+        gl: true,
+        customStyleId: process.env.NEXT_PUBLIC_NAVER_MAP_STYLE_ID,
       };
 
       if (options.mapTypeId && naver.maps.MapTypeId) {
