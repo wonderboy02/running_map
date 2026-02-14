@@ -42,10 +42,8 @@ export function useNaverMap(
         tileTransition,
         scaleControl,
         mapDataControl: false,
-        ...(process.env.NEXT_PUBLIC_NAVER_MAP_STYLE_ID && {
-          gl: true,
-          customStyleId: process.env.NEXT_PUBLIC_NAVER_MAP_STYLE_ID,
-        }),
+        gl: true,
+        customStyleId: process.env.NEXT_PUBLIC_NAVER_MAP_STYLE_ID,
       };
 
       if (options.mapTypeId && naver.maps.MapTypeId) {
@@ -79,7 +77,6 @@ export function useNaverMap(
         mapRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- 맵은 마운트 시 한 번만 초기화 (options는 초기값으로만 사용)
   }, []);
 
   return { map: mapRef.current, isReady };

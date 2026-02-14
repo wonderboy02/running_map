@@ -1094,7 +1094,8 @@ export default function AdminCoursesPage() {
       )}
 
       {/* 추가/수정 Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* pickerOpen일 때 Dialog를 닫아서 Radix의 inert/focus-trap이 PinpointPicker를 방해하지 않도록 */}
+      <Dialog open={dialogOpen && !pickerOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>

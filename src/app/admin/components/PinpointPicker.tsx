@@ -1,15 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MapPin, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { useNaverMap } from '@/hooks/useNaverMap';
 import { getCoursePinIcon } from '@/lib/marker-config';
 
@@ -38,11 +32,12 @@ export default function PinpointPicker({
   opacity,
 }: PinpointPickerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const { map, isReady } = useNaverMap(mapContainerRef);
   const markersRef = useRef<naver.maps.Marker[]>([]);
   const overlayRef = useRef<naver.maps.GroundOverlay | null>(null);
   const clickListenerRef = useRef<naver.maps.MapEventListener | null>(null);
   const draggedRef = useRef(false);
+
+  const { map, isReady } = useNaverMap(mapContainerRef);
 
   const [localPins, setLocalPins] = useState<Array<{ lat: number; lng: number }>>([]);
 
@@ -58,14 +53,12 @@ export default function PinpointPicker({
   useEffect(() => {
     if (!isReady || !map) return;
 
-    // 기존 오버레이 제거
     if (overlayRef.current) {
       overlayRef.current.setMap(null);
       overlayRef.current = null;
     }
 
     if (overlayImageUrl && bounds) {
-      // NW/SE → SW/NE 변환 (LatLngBounds 용)
       const sw = new naver.maps.LatLng(bounds.se_lat, bounds.nw_lng);
       const ne = new naver.maps.LatLng(bounds.nw_lat, bounds.se_lng);
       const overlayBounds = new naver.maps.LatLngBounds(sw, ne);
@@ -92,7 +85,6 @@ export default function PinpointPicker({
   useEffect(() => {
     if (!isReady || !map) return;
 
-    // 기존 리스너 제거
     if (clickListenerRef.current) {
       naver.maps.Event.removeListener(clickListenerRef.current);
     }
@@ -131,7 +123,6 @@ export default function PinpointPicker({
 
     clearMarkers();
 
-    // 새 마커 생성
     localPins.forEach((pin, idx) => {
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(pin.lat, pin.lng),
@@ -141,12 +132,10 @@ export default function PinpointPicker({
         draggable: true,
       });
 
-      // 드래그 guard: dragstart → 플래그 ON, click에서 무시
       naver.maps.Event.addListener(marker, 'dragstart', () => {
         draggedRef.current = true;
       });
 
-      // 드래그 종료 → 새 위치로 업데이트
       naver.maps.Event.addListener(marker, 'dragend', () => {
         const pos = marker.getPosition();
         setLocalPins((prev) =>
@@ -154,7 +143,6 @@ export default function PinpointPicker({
         );
       });
 
-      // 클릭(드래그 없이) → 삭제
       naver.maps.Event.addListener(marker, 'click', () => {
         if (draggedRef.current) {
           draggedRef.current = false;
@@ -172,6 +160,16 @@ export default function PinpointPicker({
     return () => clearMarkers();
   }, [syncMarkers, clearMarkers]);
 
+  // ESC 키로 닫기
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onOpenChange]);
+
   const handleConfirm = () => {
     onConfirm(localPins);
     onOpenChange(false);
@@ -181,41 +179,54 @@ export default function PinpointPicker({
     onOpenChange(false);
   };
 
+  // 배경(backdrop) 클릭 시 닫기
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) onOpenChange(false);
+  };
+
   const hasOverlay = !!overlayImageUrl && !!bounds;
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="flex h-[85dvh] max-w-[min(600px,calc(100%-1rem))] flex-col gap-0 p-0"
-        showCloseButton={false}
-      >
-        <DialogHeader className="shrink-0 border-b px-4 py-3">
-          <DialogTitle className="flex items-center justify-between text-base">
-            <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4" />
-              핀포인트 선택
-            </span>
-            <span className="text-text-secondary text-sm font-normal">
-              {localPins.length}개 선택
-            </span>
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            지도를 클릭하여 핀포인트를 추가하고, 핀을 클릭하여 삭제합니다.
-          </DialogDescription>
-        </DialogHeader>
+  if (!open) return null;
 
+  // createPortal 사용 (Radix Dialog 대신)
+  // → 부모 Dialog가 pickerOpen일 때 닫히므로 inert/focus-trap 충돌 없음
+  // → transform 없는 flexbox 센터링으로 Naver Maps 타일 정상 렌더링
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      role="dialog"
+      aria-modal="true"
+      aria-label="핀포인트 선택"
+      onClick={handleBackdropClick}
+    >
+      <div className="bg-background w-full max-w-[min(600px,calc(100%-1rem))] overflow-hidden rounded-lg border shadow-lg">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <span className="flex items-center gap-1.5 text-base font-semibold">
+            <MapPin className="h-4 w-4" />
+            핀포인트 선택
+          </span>
+          <span className="text-text-secondary text-sm font-normal">
+            {localPins.length}개 선택
+          </span>
+        </div>
+
+        {/* 오버레이 미설정 안내 */}
         {!hasOverlay && (
-          <div className="bg-highlight-muted text-highlight-foreground flex shrink-0 items-center gap-2 px-4 py-2 text-xs">
+          <div className="bg-highlight-muted text-highlight-foreground flex items-center gap-2 px-4 py-2 text-xs">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
             오버레이 이미지 또는 좌표가 설정되지 않았습니다. 핀은 자유롭게 배치할 수 있습니다.
           </div>
         )}
 
-        <div ref={mapContainerRef} className="min-h-0 flex-1" />
+        {/* 지도 — 고정 px 높이 필수: Naver Maps SDK가 초기화 시 컨테이너의 offsetHeight를
+            읽어 타일을 배치하므로, flex/% 높이는 0px로 계산되어 지도가 렌더링되지 않음 */}
+        <div ref={mapContainerRef} style={{ width: '100%', height: '500px' }} />
 
-        <div className="shrink-0 border-t">
+        {/* 하단 액션 */}
+        <div className="border-t">
           <p className="text-text-muted px-4 py-1.5 text-center text-[11px]">
-            지도 클릭: 핀 추가 · 핀 클릭: 삭제
+            지도 클릭: 핀 추가 · 핀 클릭: 삭제 · 핀 드래그: 이동
           </p>
           <div className="flex gap-2 px-4 pb-3">
             <Button
@@ -231,7 +242,8 @@ export default function PinpointPicker({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>,
+    document.body,
   );
 }
