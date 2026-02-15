@@ -15,6 +15,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.563.0",
+    "mixpanel-browser": "^2.74.0",
     "next": "^16.1.6",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
+    "@types/mixpanel-browser": "^2.60.0",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",

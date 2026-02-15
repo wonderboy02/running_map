@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Toaster } from '@/components/ui/sonner';
+import AnalyticsProvider from '@/components/AnalyticsProvider';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
@@ -30,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="bg-surface text-text">
+        <AnalyticsProvider />
         {children}
         <Toaster position="top-center" richColors />
         <Script

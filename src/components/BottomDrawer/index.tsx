@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { Sheet, SheetRef } from 'react-modal-sheet';
 import { useSnapPoints } from './useSnapPoints';
@@ -8,6 +8,7 @@ import DrawerSpotDetail from './DrawerSpotDetail';
 import DrawerSpotList from './DrawerSpotList';
 import DrawerCourseDetail from './DrawerCourseDetail';
 import type { Spot, DrawerSelection } from '@/types';
+import { track } from '@/lib/analytics';
 
 /**
  * Snap point 인덱스 상수
@@ -45,6 +46,30 @@ export default function BottomDrawer({
 
   const { snapPoints, recalculate } = useSnapPoints({ titleRef, contentRef });
   const [currentSnap, setCurrentSnap] = useState<number>(SNAP.TITLE);
+  const currentSnapRef = useRef<number>(SNAP.TITLE);
+  const isProgrammaticSnapRef = useRef(false);
+
+  const handleSnap = useCallback(
+    (snapIndex: number) => {
+      if (isProgrammaticSnapRef.current) {
+        isProgrammaticSnapRef.current = false;
+      } else if (currentSnapRef.current !== snapIndex) {
+        track('drawer_snap', {
+          from_snap: currentSnapRef.current,
+          to_snap: snapIndex,
+          content_type:
+            selection?.type === 'spot'
+              ? 'spot_detail'
+              : selection?.type === 'course'
+                ? 'course_detail'
+                : 'list',
+        });
+      }
+      currentSnapRef.current = snapIndex;
+      setCurrentSnap(snapIndex);
+    },
+    [selection],
+  );
 
   // Hydration 문제 방지: 클라이언트에서만 렌더링
   const [mounted, setMounted] = useState(false);
@@ -83,6 +108,7 @@ export default function BottomDrawer({
     // rAF: 새 콘텐츠 DOM 커밋 대기 → flushSync로 snap points 동기 갱신 → 즉시 snapTo
     const raf = requestAnimationFrame(() => {
       flushSync(() => recalculate());
+      isProgrammaticSnapRef.current = true;
       sheetRef.current?.snapTo(targetSnap);
     });
 
@@ -95,11 +121,14 @@ export default function BottomDrawer({
     <Sheet
       ref={sheetRef}
       isOpen={true}
-      onClose={() => sheetRef.current?.snapTo(SNAP.PEEK)}
+      onClose={() => {
+        isProgrammaticSnapRef.current = true;
+        sheetRef.current?.snapTo(SNAP.PEEK);
+      }}
       snapPoints={snapPoints}
       initialSnap={SNAP.TITLE}
       disableDismiss={true}
-      onSnap={setCurrentSnap}
+      onSnap={handleSnap}
       style={{ zIndex: 30 }}
     >
       <Sheet.Container style={{ maxHeight: '75vh' }}>
@@ -134,7 +163,14 @@ export default function BottomDrawer({
       {/* NOTE: onTap을 조건부로 전달해야 함. 라이브러리가 onTap 존재 시 항상 pointer-events:auto로 덮어쓰기 때문 */}
       <Sheet.Backdrop
         style={{ backgroundColor: 'transparent' }}
-        {...(currentSnap >= SNAP.FULL ? { onTap: () => sheetRef.current?.snapTo(SNAP.PEEK) } : {})}
+        {...(currentSnap >= SNAP.FULL
+          ? {
+              onTap: () => {
+                isProgrammaticSnapRef.current = true;
+                sheetRef.current?.snapTo(SNAP.PEEK);
+              },
+            }
+          : {})}
       />
     </Sheet>
   );

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Loader2, LocateFixed, Navigation, Send } from 'lucide-react';
 import FeedbackDialog from '@/components/FeedbackDialog';
+import { track } from '@/lib/analytics';
 
 interface FloatingControlsProps {
   showCourses: boolean;
@@ -27,7 +28,10 @@ export default function FloatingControls({
       {/* 오른쪽 상단: 코스 토글 */}
       <div className="fixed right-3 top-[104px] z-[25] flex flex-col items-center">
         <button
-          onClick={() => onToggleCourses(!showCourses)}
+          onClick={() => {
+            track('course_toggle', { show_courses: !showCourses });
+            onToggleCourses(!showCourses);
+          }}
           className="h-10 w-10 rounded-full shadow-md transition-transform active:scale-95"
           aria-label="코스 토글"
         >

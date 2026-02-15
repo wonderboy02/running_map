@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useGeocode } from '@/hooks/useGeocode';
 import type { Spot, Course } from '@/types';
 import type { GeocodeResult } from '@/hooks/useGeocode';
+import { track } from '@/lib/analytics';
 
 interface UnifiedSearchResults {
   courseResults: Course[];
@@ -82,6 +83,21 @@ export function useUnifiedSearch(
       clear();
     }
   }, [query, search, clear]);
+
+  // 4. search_query 이벤트: 외부 검색 로딩 완료(true→false) 시 전송
+  const wasLoadingRef = useRef(false);
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading && query.trim().length >= 2) {
+      track('search_query', {
+        query: query.trim(),
+        query_length: query.trim().length,
+        result_count_spots: spotResults.length,
+        result_count_courses: courseResults.length,
+        result_count_external: externalResults.length,
+      });
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading, query, spotResults.length, courseResults.length, externalResults.length]);
 
   return { courseResults, spotResults, externalResults, isLoading };
 }
