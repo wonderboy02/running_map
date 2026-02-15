@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { track } from '@/lib/analytics';
 
 const MAX_LENGTH = 1000;
 
@@ -46,6 +47,7 @@ export default function FeedbackDialog({ open, onOpenChange }: FeedbackDialogPro
         return;
       }
 
+      track('feedback_submit', { content_length: trimmed.length });
       toast.success('소중한 의견 감사합니다!');
       setContent('');
       onOpenChange(false);
