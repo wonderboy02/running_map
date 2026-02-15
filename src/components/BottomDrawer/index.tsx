@@ -46,7 +46,7 @@ export default function BottomDrawer({
 
   const { snapPoints, recalculate } = useSnapPoints({ titleRef, contentRef });
   const [currentSnap, setCurrentSnap] = useState<number>(SNAP.TITLE);
-  const currentSnapRef = useRef(SNAP.TITLE);
+  const currentSnapRef = useRef<number>(SNAP.TITLE);
   const isProgrammaticSnapRef = useRef(false);
 
   const handleSnap = useCallback(
