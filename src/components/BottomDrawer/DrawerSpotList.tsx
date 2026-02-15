@@ -108,7 +108,7 @@ export default function DrawerSpotList({
 
   return (
     <>
-      {/* === titleRef: snap 1 경계 === */}
+      {/* === titleRef: SNAP.TITLE 경계 === */}
       <div ref={titleRef} className="px-4 pb-4">
         <div className="flex items-center gap-3">
           {/* 러너스팟 선택 마커 아이콘 (16px UI 아이콘 — next/image 대신 <img> 사용: 고정 크기 + 최적화 실익 없음) */}
@@ -126,7 +126,7 @@ export default function DrawerSpotList({
         </div>
       </div>
 
-      {/* === contentRef: snap 2 경계 (처음 2개 미리보기) === */}
+      {/* === contentRef: SNAP.CONTENT 경계 (처음 2개 미리보기) === */}
       <div ref={contentRef} className="px-4">
         <div className="divide-y divide-border">
           {runnerSpots.slice(0, 2).map((spot) => (

@@ -31,7 +31,7 @@ export default function DrawerCourseDetail({
         <X className="h-4 w-4" />
       </Button>
 
-      {/* === titleRef: snap 1 경계 === */}
+      {/* === titleRef: SNAP.TITLE 경계 === */}
       <div ref={titleRef} className="px-4 pt-3 pb-4 pr-12">
         <h2 className="text-[clamp(18px,5vw,22px)] font-bold text-text leading-tight tracking-tight mb-2">
           {course.name}
@@ -56,7 +56,7 @@ export default function DrawerCourseDetail({
         </div>
       </div>
 
-      {/* === contentRef: snap 2 경계 === */}
+      {/* === contentRef: SNAP.CONTENT 경계 === */}
       <div ref={contentRef} className="px-4 pb-4 space-y-4">
         {course.description && (
           <div className="p-3.5 bg-surface-dim rounded-xl">
