@@ -53,12 +53,13 @@ export function initAnalytics() {
       scroll: true,
       submit: true,
     },
-  });
-
-  mixpanel.register({
-    app_version: process.env.NEXT_PUBLIC_APP_VERSION ?? 'unknown',
-    platform: 'web',
-    is_test: isTest,
+    loaded: (mp) => {
+      mp.register({
+        app_version: process.env.NEXT_PUBLIC_APP_VERSION ?? 'unknown',
+        platform: 'web',
+        is_test: isTest,
+      });
+    },
   });
 
   initialized = true;
