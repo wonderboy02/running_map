@@ -19,8 +19,8 @@ src/
 ```
 AnalyticsProvider (layout.tsx)
   └─ useEffect → initAnalytics()
-       ├─ mixpanel.init() — autocapture, 페이지뷰 자동 추적
-       └─ mixpanel.register() — super properties (app_version, platform, is_test)
+       └─ mixpanel.init() — autocapture, 페이지뷰 자동 추적
+            └─ loaded 콜백 → mixpanel.register() — super properties (app_version, platform, is_test)
 
 각 컴포넌트
   └─ track('event_name', { ...properties })
@@ -43,12 +43,20 @@ AnalyticsProvider (layout.tsx)
 
 ### 수동 추적 이벤트
 
+#### 선택 (통합)
+
+| 이벤트명 | 트리거 시점 | 프로퍼티 | 적용 파일 |
+|---------|-----------|---------|----------|
+| `spot_select` | 스팟 선택 (모든 진입점) | `spot_id`, `spot_name`, `categories`, `source`, `query?` | `page.tsx` |
+| `course_select` | 코스 선택 (모든 진입점) | `course_id`, `course_name`, `source`, `query?` | `page.tsx` |
+
+- `source`: `'map'` (마커 클릭), `'search'` (검색 결과), `'drawer_list'` (드로어 목록)
+- `query`: `source === 'search'`일 때만 포함 — 검색어 → 선택 전환 분석용
+
 #### 지도 인터랙션
 
 | 이벤트명 | 트리거 시점 | 프로퍼티 | 적용 파일 |
 |---------|-----------|---------|----------|
-| `spot_click` | 스팟 마커 클릭 | `spot_id`, `spot_name`, `categories` | `page.tsx` |
-| `course_click` | 코스 핀 클릭 | `course_id`, `course_name` | `page.tsx` |
 | `course_toggle` | 코스 오버레이 on/off | `show_courses` | `FloatingControls.tsx` |
 | `filter_toggle` | 필터 칩 토글 | `category`, `is_active`, `active_filters` | `page.tsx` |
 | `my_location_click` | 내 위치 버튼 클릭 | `has_location` | `page.tsx` |
@@ -59,7 +67,7 @@ AnalyticsProvider (layout.tsx)
 |---------|-----------|---------|----------|
 | `search_open` | 검색 오버레이 열기 | — | `SearchOverlay.tsx` |
 | `search_query` | 외부 검색 로딩 완료 시 | `query`, `query_length`, `result_count_spots`, `result_count_courses`, `result_count_external` | `useUnifiedSearch.ts` |
-| `search_result_click` | 검색 결과 클릭 | `result_type`, `result_id`, `result_name`, `query` | `SearchResultsList.tsx` |
+| `search_external_click` | 외부 장소 검색 결과 클릭 | `result_name`, `query` | `SearchResultsList.tsx` |
 | `search_close` | 검색 오버레이 닫기 | `had_results`, `dwell_time_ms` | `SearchOverlay.tsx` |
 
 #### 바텀 드로어
@@ -149,7 +157,7 @@ Mixpanel 초기화. `AnalyticsProvider`의 `useEffect`에서 자동 호출된다
 import { track } from '@/lib/analytics';
 
 // 프로퍼티가 있는 이벤트
-track('spot_click', { spot_id: '...', spot_name: '...', categories: [...] });
+track('spot_select', { spot_id: '...', spot_name: '...', categories: [...], source: 'map' });
 
 // 프로퍼티가 없는 이벤트 — 빈 객체 필수
 track('search_open', {});
@@ -212,11 +220,12 @@ track('new_event', { property1: 'value', property2: 42 });
 | 인사이트 | 데이터 소스 | Mixpanel 기능 |
 |---------|-----------|-------------|
 | DAU / WAU / MAU | 자동 세션 | Insights |
-| 인기 스팟 TOP 10 | `spot_click` → `spot_name` | Insights > Breakdown |
+| 인기 스팟 TOP 10 | `spot_select` → `spot_name` | Insights > Breakdown |
+| 스팟 진입 경로 비교 | `spot_select` → `source` | Insights > Breakdown |
 | 코스 이용률 | `course_toggle` → `show_courses` | Insights > Breakdown |
 | 인기 검색어 | `search_query` → `query` | Insights > Breakdown |
 | 관심 있는 검색 | `search_close` → `dwell_time_ms >= 1000 AND had_results = true` | Insights > Filter |
-| 검색 전환율 | `search_open` → `search_result_click` | Funnels |
-| 스팟 탐색 → 액션 전환 | `spot_click` → `drawer_action_click` | Funnels |
+| 검색 → 선택 전환율 | `search_open` → `spot_select(source=search)` | Funnels |
+| 스팟 탐색 → 액션 전환 | `spot_select` → `drawer_action_click` | Funnels |
 | 필터 사용 패턴 | `filter_toggle` → `category` | Insights > Breakdown |
 | 유입 경로 | 자동 UTM 수집 | Insights > Breakdown by `utm_source` |

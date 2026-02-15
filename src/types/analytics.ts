@@ -2,10 +2,25 @@
  * 수동 추적 이벤트의 이름 → 프로퍼티 매핑.
  * track() 호출 시 타입 체크를 강제하여 오타/누락을 방지한다.
  */
+export type SelectionSource = 'map' | 'search' | 'drawer_list';
+
 export type AnalyticsEventMap = {
+  // 선택 (통합)
+  spot_select: {
+    spot_id: string;
+    spot_name: string;
+    categories: string[];
+    source: SelectionSource;
+    query?: string;
+  };
+  course_select: {
+    course_id: string;
+    course_name: string;
+    source: SelectionSource;
+    query?: string;
+  };
+
   // 지도 인터랙션
-  spot_click: { spot_id: string; spot_name: string; categories: string[] };
-  course_click: { course_id: string; course_name: string };
   course_toggle: { show_courses: boolean };
   filter_toggle: { category: string; is_active: boolean; active_filters: string[] };
   my_location_click: { has_location: boolean };
@@ -19,9 +34,7 @@ export type AnalyticsEventMap = {
     result_count_courses: number;
     result_count_external: number;
   };
-  search_result_click: {
-    result_type: 'spot' | 'course' | 'external';
-    result_id: string;
+  search_external_click: {
     result_name: string;
     query: string;
   };
