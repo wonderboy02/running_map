@@ -35,11 +35,11 @@ AnalyticsProvider (layout.tsx)
 
 | 항목 | 설명 |
 |------|------|
-| 페이지뷰 | `track_pageview: 'url-with-path'`로 SPA 라우트 변경 자동 추적 |
+| 페이지뷰 | `autocapture.pageview: 'url-with-path'`로 SPA 라우트 변경 자동 추적 |
 | 세션 | DAU/WAU/MAU, 세션 길이 — Mixpanel 대시보드 자동 계산 |
 | UTM 파라미터 | `utm_source`, `utm_medium`, `utm_campaign` 자동 수집 |
 | 디바이스 정보 | `$os`, `$browser`, `$screen_width`, `$device` 자동 수집 |
-| Autocapture | 클릭, 폼 제출, 스크롤 등 자동 수집 |
+| Autocapture | 클릭, 폼 제출, 스크롤 자동 수집 (`input: false` — 수동 `search_query`로 대체) |
 
 ### 수동 추적 이벤트
 
@@ -215,6 +215,7 @@ track('new_event', { property1: 'value', property2: 42 });
 | 인기 스팟 TOP 10 | `spot_click` → `spot_name` | Insights > Breakdown |
 | 코스 이용률 | `course_toggle` → `show_courses` | Insights > Breakdown |
 | 인기 검색어 | `search_query` → `query` | Insights > Breakdown |
+| 관심 있는 검색 | `search_close` → `dwell_time_ms >= 1000 AND had_results = true` | Insights > Filter |
 | 검색 전환율 | `search_open` → `search_result_click` | Funnels |
 | 스팟 탐색 → 액션 전환 | `spot_click` → `drawer_action_click` | Funnels |
 | 필터 사용 패턴 | `filter_toggle` → `category` | Insights > Breakdown |
