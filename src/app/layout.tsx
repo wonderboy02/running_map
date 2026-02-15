@@ -7,6 +7,13 @@ import '@/styles/globals.css';
 export const metadata: Metadata = {
   title: "Runner's Spot",
   description: '러너를 위한 짐보관, 샤워실, 탈의실 장소 찾기',
+  openGraph: {
+    title: "Runner's Spot",
+    description: '러너를 위한 짐보관, 샤워실, 탈의실 장소 찾기',
+    type: 'website',
+    locale: 'ko_KR',
+    siteName: "Runner's Spot",
+  },
   icons: {
     icon: [
       { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
