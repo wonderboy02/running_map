@@ -14,6 +14,7 @@ export interface Spot {
   phone: string | null;
   photos: string[];
   extra_data: { custom_url?: string } & Record<string, unknown>;
+  search_tags: string[];
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +42,7 @@ export interface Course {
   difficulty: number | null;
   distance_km: number | null;
   pinpoints: CoursePinpoint[];
+  search_tags: string[];
   created_at: string;
   updated_at: string;
 }

@@ -46,6 +46,7 @@ export type Database = {
           pinpoints: Json
           se_lat: number
           se_lng: number
+          search_tags: string[]
           updated_at: string | null
         }
         Insert: {
@@ -64,6 +65,7 @@ export type Database = {
           pinpoints?: Json
           se_lat: number
           se_lng: number
+          search_tags?: string[]
           updated_at?: string | null
         }
         Update: {
@@ -82,6 +84,7 @@ export type Database = {
           pinpoints?: Json
           se_lat?: number
           se_lng?: number
+          search_tags?: string[]
           updated_at?: string | null
         }
         Relationships: []
@@ -123,6 +126,7 @@ export type Database = {
           operating_hours: Json | null
           phone: string | null
           photos: string[] | null
+          search_tags: string[]
           updated_at: string | null
         }
         Insert: {
@@ -140,6 +144,7 @@ export type Database = {
           operating_hours?: Json | null
           phone?: string | null
           photos?: string[] | null
+          search_tags?: string[]
           updated_at?: string | null
         }
         Update: {
@@ -157,6 +162,7 @@ export type Database = {
           operating_hours?: Json | null
           phone?: string | null
           photos?: string[] | null
+          search_tags?: string[]
           updated_at?: string | null
         }
         Relationships: []

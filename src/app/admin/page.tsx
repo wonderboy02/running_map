@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Star, Pencil, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,6 +8,13 @@ import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,12 +26,35 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { CATEGORIES } from '@/types';
 import type { Spot } from '@/types';
+
+type SortKey = 'created_at' | 'updated_at' | 'name';
+type HighlightFilter = 'all' | 'highlighted' | 'normal';
+
+function formatRelativeDate(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return '방금 전';
+  if (minutes < 60) return `${minutes}분 전`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}일 전`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}개월 전`;
+  return `${Math.floor(months / 12)}년 전`;
+}
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 필터/정렬 상태
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [highlightFilter, setHighlightFilter] = useState<HighlightFilter>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('created_at');
 
   async function fetchSpots() {
     const { data } = await supabase
@@ -39,6 +69,32 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchSpots();
   }, []);
+
+  // 필터 + 정렬 적용
+  const filteredSpots = useMemo(() => {
+    let result = spots;
+
+    // 카테고리 필터
+    if (categoryFilter !== 'all') {
+      result = result.filter((s) => s.categories.includes(categoryFilter));
+    }
+
+    // 인기 필터
+    if (highlightFilter === 'highlighted') {
+      result = result.filter((s) => s.is_highlighted);
+    } else if (highlightFilter === 'normal') {
+      result = result.filter((s) => !s.is_highlighted);
+    }
+
+    // 정렬
+    result = [...result].sort((a, b) => {
+      if (sortKey === 'name') return a.name.localeCompare(b.name, 'ko');
+      // created_at, updated_at: 최신순 (내림차순)
+      return new Date(b[sortKey]).getTime() - new Date(a[sortKey]).getTime();
+    });
+
+    return result;
+  }, [spots, categoryFilter, highlightFilter, sortKey]);
 
   async function handleDelete(id: string) {
     try {
@@ -80,7 +136,7 @@ export default function AdminDashboard() {
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold">
           장소 목록{' '}
-          <span className="text-text-secondary text-sm font-normal">({spots.length})</span>
+          <span className="text-text-secondary text-sm font-normal">({filteredSpots.length})</span>
         </h2>
         <Button size="sm" onClick={() => router.push('/admin/spots/new')}>
           <Plus className="mr-1 h-4 w-4" />
@@ -88,13 +144,52 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
+      {/* 필터/정렬 바 */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 카테고리</SelectItem>
+            {CATEGORIES.map((cat) => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={highlightFilter} onValueChange={(v) => setHighlightFilter(v as HighlightFilter)}>
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체</SelectItem>
+            <SelectItem value="highlighted">인기만</SelectItem>
+            <SelectItem value="normal">일반만</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="created_at">생성일순</SelectItem>
+            <SelectItem value="updated_at">수정일순</SelectItem>
+            <SelectItem value="name">이름순</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {loading ? (
         <p className="text-text-secondary text-sm">불러오는 중...</p>
-      ) : spots.length === 0 ? (
-        <p className="text-text-secondary py-8 text-center text-sm">등록된 장소가 없습니다.</p>
+      ) : filteredSpots.length === 0 ? (
+        <p className="text-text-secondary py-8 text-center text-sm">
+          {spots.length === 0 ? '등록된 장소가 없습니다.' : '조건에 맞는 장소가 없습니다.'}
+        </p>
       ) : (
         <div className="space-y-3">
-          {spots.map((spot) => (
+          {filteredSpots.map((spot) => (
             <Card key={spot.id}>
               <CardContent className="p-3">
                 <div className="mb-1 flex items-start justify-between">
@@ -109,6 +204,9 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-text-secondary text-xs">{spot.address}</p>
                   </div>
+                  <span className="text-text-muted text-xs whitespace-nowrap ml-2">
+                    수정 {formatRelativeDate(spot.updated_at)}
+                  </span>
                 </div>
 
                 <div className="mb-2 flex flex-wrap gap-1">

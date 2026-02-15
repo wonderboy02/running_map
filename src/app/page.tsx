@@ -100,10 +100,9 @@ export default function HomePage() {
     }
   }, [isFollowing, myLocation, locationError, hasOrientationSensor]);
 
-  const filteredSpots = spots.filter((spot) => {
-    if (activeFilters.length === 0) return true;
-    return spot.categories.some((cat) => activeFilters.includes(cat));
-  });
+  const filteredSpots = activeFilters.length === 0
+    ? []
+    : spots.filter((spot) => spot.categories.some((cat) => activeFilters.includes(cat)));
 
   const handleFilterToggle = (category: string) => {
     const isTogglingOn = !activeFilters.includes(category);
