@@ -152,6 +152,12 @@ export default function HomePage() {
   }, []);
 
   function handleSearchCourseSelect(course: Course) {
+    track('course_select', {
+      course_id: course.id,
+      course_name: course.name,
+      source: 'search',
+      query: searchQuery,
+    });
     setTargetLocation(null);
     setSelection({ type: 'course', data: course });
     // 코스 토글이 꺼져 있으면 켜기
@@ -159,6 +165,13 @@ export default function HomePage() {
   }
 
   function handleSearchSpotSelect(spot: Spot) {
+    track('spot_select', {
+      spot_id: spot.id,
+      spot_name: spot.name,
+      categories: spot.categories,
+      source: 'search',
+      query: searchQuery,
+    });
     setTargetLocation(null);
     setSelection({ type: 'spot', data: spot });
     // 해당 스팟의 카테고리가 필터에 없으면 추가 (마커가 보이도록)
@@ -173,20 +186,30 @@ export default function HomePage() {
     setTargetLocation({ lat, lng, name });
   }
 
-  const handleMarkerClick = useCallback((spot: Spot) => {
-    track('spot_click', {
+  const handleSpotSelect = useCallback((spot: Spot, source: 'map' | 'drawer_list') => {
+    track('spot_select', {
       spot_id: spot.id,
       spot_name: spot.name,
       categories: spot.categories,
+      source,
     });
     setTargetLocation(null);
     setSelection({ type: 'spot', data: spot });
   }, []);
 
+  const handleMarkerClick = useCallback((spot: Spot) => {
+    handleSpotSelect(spot, 'map');
+  }, [handleSpotSelect]);
+
+  const handleDrawerSpotClick = useCallback((spot: Spot) => {
+    handleSpotSelect(spot, 'drawer_list');
+  }, [handleSpotSelect]);
+
   const handleCoursePinClick = useCallback((course: Course) => {
-    track('course_click', {
+    track('course_select', {
       course_id: course.id,
       course_name: course.name,
+      source: 'map',
     });
     setTargetLocation(null);
     setSelection({ type: 'course', data: course });
@@ -233,7 +256,7 @@ export default function HomePage() {
       <BottomDrawer
         spots={filteredSpots}
         selection={selection}
-        onSpotClick={handleMarkerClick}
+        onSpotClick={handleDrawerSpotClick}
         onDeselect={handleDeselect}
       />
 

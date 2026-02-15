@@ -44,15 +44,7 @@ export default function SearchResultsList({
           {courseResults.map((course) => (
             <button
               key={course.id}
-              onClick={() => {
-                track('search_result_click', {
-                  result_type: 'course',
-                  result_id: course.id,
-                  result_name: course.name,
-                  query,
-                });
-                onCourseSelect(course);
-              }}
+              onClick={() => onCourseSelect(course)}
               className="flex items-center gap-2.5 w-full py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
             >
               <Route className="w-4 h-4 flex-shrink-0 text-primary" />
@@ -75,15 +67,7 @@ export default function SearchResultsList({
           {spotResults.map((spot) => (
             <button
               key={spot.id}
-              onClick={() => {
-                track('search_result_click', {
-                  result_type: 'spot',
-                  result_id: spot.id,
-                  result_name: spot.name,
-                  query,
-                });
-                onSpotSelect(spot);
-              }}
+              onClick={() => onSpotSelect(spot)}
               className="flex items-start gap-2.5 w-full py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
             >
               <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
@@ -121,9 +105,7 @@ export default function SearchResultsList({
             <button
               key={i}
               onClick={() => {
-                track('search_result_click', {
-                  result_type: 'external',
-                  result_id: `${result.latitude},${result.longitude}`,
+                track('search_external_click', {
                   result_name: result.placeName || result.roadAddress,
                   query,
                 });
