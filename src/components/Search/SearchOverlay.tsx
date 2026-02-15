@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import RecommendedTerms from './RecommendedTerms';
 import SearchResultsList from './SearchResultsList';
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
 import type { Spot, Course } from '@/types';
+import { track } from '@/lib/analytics';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -36,8 +37,26 @@ export default function SearchOverlay({
   const { courseResults, spotResults, externalResults, isLoading } =
     useUnifiedSearch(query, spots, courses);
 
+  // search_open: 오버레이가 열릴 때 한 번만 추적 + 타임스탬프 저장
+  const prevIsOpenRef = useRef(false);
+  const openedAtRef = useRef(0);
+  useEffect(() => {
+    if (isOpen && !prevIsOpenRef.current) {
+      openedAtRef.current = Date.now();
+      track('search_open', {});
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  const hasResultsRef = useRef(false);
+  hasResultsRef.current = courseResults.length > 0 || spotResults.length > 0 || externalResults.length > 0;
+
   const handleAnimationEnd = useCallback(() => {
     if (isClosing) {
+      track('search_close', {
+        had_results: hasResultsRef.current,
+        dwell_time_ms: openedAtRef.current > 0 ? Date.now() - openedAtRef.current : 0,
+      });
       onCloseComplete();
     }
   }, [isClosing, onCloseComplete]);
@@ -97,6 +116,7 @@ export default function SearchOverlay({
             spotResults={spotResults}
             externalResults={externalResults}
             isLoading={isLoading}
+            query={query}
             onCourseSelect={handleCourseSelect}
             onSpotSelect={handleSpotSelect}
             onLocationSelect={handleLocationSelect}

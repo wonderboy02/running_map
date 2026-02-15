@@ -7,6 +7,7 @@
 - **Tech Stack**: Next.js 15 (App Router) + Supabase + Tailwind CSS v4 + TypeScript
 - **UI 라이브러리**: shadcn/ui (new-york 스타일) + lucide-react 아이콘
 - **지도**: Naver Map JavaScript API v3
+- **애널리틱스**: Mixpanel (autocapture + 수동 이벤트)
 - **배포**: Vercel
 - **변경 이력**: `docs/changelog/` 참조
 
@@ -28,15 +29,18 @@ src/
 │   │   ├── useSnapPoints.ts # DOM 측정 → snap point 계산 훅
 │   │   ├── DrawerSpotDetail.tsx # 스팟 상세 콘텐츠
 │   │   └── DrawerSpotList.tsx   # 스팟 목록 콘텐츠
+│   ├── AnalyticsProvider.tsx # Mixpanel 초기화 Provider
 │   └── ui/                 # shadcn/ui 컴포넌트 (button, input, badge 등)
 ├── lib/                    # 유틸리티
 │   ├── supabase/           # Supabase 클라이언트 (client, server, middleware)
 │   ├── auth/               # withAuth HOF (Admin API 인증)
+│   ├── analytics.ts        # Mixpanel track() + 초기화
+│   ├── env.ts              # isProduction (Vercel 환경 판별)
 │   ├── image-upload.ts     # 이미지 검증 + WebP 변환 + Storage 업로드/삭제
 │   ├── utils.ts            # cn() 유틸리티 (shadcn/ui)
 │   └── marker-config.ts    # 마커 아이콘 설정 (PNG 기반, 카테고리별 default/selected)
 ├── hooks/                  # 커스텀 훅 (useSpots, useSearch, useNaverMap, useGeocode)
-├── types/                  # TypeScript 타입 정의
+├── types/                  # TypeScript 타입 정의 (index.ts, analytics.ts)
 └── styles/                 # 글로벌 스타일 (globals.css)
 
 public/markers/             # 커스텀 마커 이미지
@@ -384,6 +388,8 @@ docs/
 
 | 파일 | 내용 |
 |------|------|
+| `src/lib/analytics.ts` | Mixpanel `initAnalytics()`, `track()`, `resetAnalytics()` |
+| `src/lib/env.ts` | `isProduction` (Vercel 환경 판별) |
 | `src/lib/image-upload.ts` | 이미지 검증(`validateImageFile`), WebP 변환+업로드(`convertAndUpload`), Storage 삭제(`removeFromStorage`) |
 | `src/lib/utils.ts` | `cn()` (Tailwind 클래스 병합) |
 | `src/lib/marker-config.ts` | 마커 아이콘 (PNG 기반, `getSpotMarkerIcon()`, `getCoursePinIcon(isSelected?, name?)`, `getSearchPinIcon()`) |
@@ -620,3 +626,23 @@ useEffect — 마커 동기화
   - Naver Maps SDK `GroundOverlay` 등 SDK가 직접 fetch하는 이미지는 `next/image` 경유 불가 → 업로드 시점에 최적화 필수
 - **`fill` + `sizes` 패턴 사용** — 반응형 레이아웃에서 이미지 크기를 효율적으로 지정
   - 전체 폭: `sizes="100vw"`, 고정 폭: `sizes="288px"` 등
+
+## Analytics (Mixpanel)
+
+- **상세 문서**: `docs/reference/analytics.md` (이벤트 카탈로그, API, 새 이벤트 추가 가이드)
+- **타입 정의**: `src/types/analytics.ts` (`AnalyticsEventMap`)
+- **분석 모듈**: `src/lib/analytics.ts` (`track()`, `initAnalytics()`)
+- **환경 판별**: `src/lib/env.ts` (`isProduction`)
+- **초기화**: `src/components/AnalyticsProvider.tsx` → `layout.tsx`에 마운트
+
+### 이벤트 추가 시
+
+1. `src/types/analytics.ts`의 `AnalyticsEventMap`에 타입 추가
+2. 컴포넌트에서 `track('event_name', { ...props })` 호출
+3. `docs/reference/analytics.md` 이벤트 카탈로그 업데이트
+
+### ❌ 하지 말 것
+
+- `mixpanel.track()`을 직접 호출하지 않음 → `track()` 래퍼 사용
+- 서버 컴포넌트/API Route에서 `track()` import하지 않음 → 클라이언트 전용
+- `AnalyticsEventMap`에 없는 이벤트를 보내지 않음 → 타입 정의 먼저

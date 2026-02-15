@@ -14,6 +14,7 @@ import { isValidHttpUrl } from '@/lib/utils';
 import Image from 'next/image';
 import { WEEKDAYS, WEEKDAY_LABELS } from '@/types';
 import type { Spot, Weekday } from '@/types';
+import { track } from '@/lib/analytics';
 
 interface DrawerSpotDetailProps {
   spot: Spot;
@@ -107,6 +108,7 @@ export default function DrawerSpotDetail({
             <Phone className="w-4 h-4 text-text-muted flex-shrink-0" />
             <a
               href={`tel:${spot.phone}`}
+              onClick={() => track('drawer_action_click', { action_type: 'phone_call', spot_id: spot.id })}
               className="text-primary text-[clamp(13px,3.5vw,15px)] underline"
             >
               {spot.phone}
@@ -150,6 +152,7 @@ export default function DrawerSpotDetail({
         {spot.extra_data?.custom_url ? (
           <Button
             onClick={() => {
+              track('drawer_action_click', { action_type: 'custom_url', spot_id: spot.id });
               if (isValidHttpUrl(spot.extra_data?.custom_url)) {
                 window.open(spot.extra_data.custom_url, '_blank', 'noopener,noreferrer');
               }
@@ -161,7 +164,10 @@ export default function DrawerSpotDetail({
           </Button>
         ) : (
           <Button
-            onClick={() => openNaverMap(spot)}
+            onClick={() => {
+              track('drawer_action_click', { action_type: 'naver_map', spot_id: spot.id });
+              openNaverMap(spot);
+            }}
             className="w-full h-11 bg-naver hover:bg-naver-hover text-white font-semibold rounded-xl text-[clamp(13px,3.5vw,15px)] flex items-center justify-center gap-2 shadow-sm"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">

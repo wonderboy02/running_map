@@ -13,6 +13,7 @@ import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
 import type { Spot, Course, DrawerSelection } from '@/types';
 import { haversineDistance } from '@/lib/naver-map-utils';
+import { track } from '@/lib/analytics';
 
 export default function HomePage() {
   const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']);
@@ -58,6 +59,8 @@ export default function HomePage() {
   }, []);
 
   const handleToggleFollow = useCallback(() => {
+    track('my_location_click', { has_location: myLocation !== null });
+
     if (!isFollowing) {
       // OFF → ON
       if (!myLocation) {
@@ -107,10 +110,17 @@ export default function HomePage() {
 
   const handleFilterToggle = (category: string) => {
     const isTogglingOn = !activeFilters.includes(category);
+    const newFilters = isTogglingOn
+      ? [...activeFilters, category]
+      : activeFilters.filter((c) => c !== category);
 
-    setActiveFilters((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
-    );
+    track('filter_toggle', {
+      category,
+      is_active: isTogglingOn,
+      active_filters: newFilters,
+    });
+
+    setActiveFilters(newFilters);
 
     // OFF→ON 토글 시: 현재 화면 중심에서 가장 가까운 마커를 선택 (줌 유지, panTo)
     if (!isTogglingOn || !naverMap || spots.length === 0) return;
@@ -165,11 +175,20 @@ export default function HomePage() {
   }
 
   const handleMarkerClick = useCallback((spot: Spot) => {
+    track('spot_click', {
+      spot_id: spot.id,
+      spot_name: spot.name,
+      categories: spot.categories,
+    });
     setTargetLocation(null);
     setSelection({ type: 'spot', data: spot });
   }, []);
 
   const handleCoursePinClick = useCallback((course: Course) => {
+    track('course_click', {
+      course_id: course.id,
+      course_name: course.name,
+    });
     setTargetLocation(null);
     setSelection({ type: 'course', data: course });
   }, []);

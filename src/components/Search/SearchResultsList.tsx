@@ -5,12 +5,14 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import type { Spot, Course } from '@/types';
 import type { GeocodeResult } from '@/hooks/useGeocode';
+import { track } from '@/lib/analytics';
 
 interface SearchResultsListProps {
   courseResults: Course[];
   spotResults: Spot[];
   externalResults: GeocodeResult[];
   isLoading: boolean;
+  query: string;
   onCourseSelect: (course: Course) => void;
   onSpotSelect: (spot: Spot) => void;
   onLocationSelect: (lat: number, lng: number, name?: string) => void;
@@ -21,6 +23,7 @@ export default function SearchResultsList({
   spotResults,
   externalResults,
   isLoading,
+  query,
   onCourseSelect,
   onSpotSelect,
   onLocationSelect,
@@ -41,7 +44,15 @@ export default function SearchResultsList({
           {courseResults.map((course) => (
             <button
               key={course.id}
-              onClick={() => onCourseSelect(course)}
+              onClick={() => {
+                track('search_result_click', {
+                  result_type: 'course',
+                  result_id: course.id,
+                  result_name: course.name,
+                  query,
+                });
+                onCourseSelect(course);
+              }}
               className="flex items-center gap-2.5 w-full py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
             >
               <Route className="w-4 h-4 flex-shrink-0 text-primary" />
@@ -64,7 +75,15 @@ export default function SearchResultsList({
           {spotResults.map((spot) => (
             <button
               key={spot.id}
-              onClick={() => onSpotSelect(spot)}
+              onClick={() => {
+                track('search_result_click', {
+                  result_type: 'spot',
+                  result_id: spot.id,
+                  result_name: spot.name,
+                  query,
+                });
+                onSpotSelect(spot);
+              }}
               className="flex items-start gap-2.5 w-full py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
             >
               <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
@@ -101,7 +120,15 @@ export default function SearchResultsList({
           {externalResults.map((result, i) => (
             <button
               key={i}
-              onClick={() => onLocationSelect(result.latitude, result.longitude, result.placeName || result.roadAddress)}
+              onClick={() => {
+                track('search_result_click', {
+                  result_type: 'external',
+                  result_id: `${result.latitude},${result.longitude}`,
+                  result_name: result.placeName || result.roadAddress,
+                  query,
+                });
+                onLocationSelect(result.latitude, result.longitude, result.placeName || result.roadAddress);
+              }}
               className="flex items-start gap-2.5 w-full py-2.5 text-left rounded-lg active:bg-surface-dim transition-colors px-1"
             >
               <MapPin
