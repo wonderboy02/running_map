@@ -117,7 +117,7 @@ export default function DrawerSpotDetail({
         {/* 6. Description */}
         {spot.description && (
           <div className="p-3.5 bg-surface-dim rounded-xl">
-            <p className="text-[clamp(13px,3.5vw,15px)] text-text-secondary leading-relaxed">
+            <p className="text-[clamp(13px,3.5vw,15px)] text-text-secondary leading-relaxed whitespace-pre-line">
               {spot.description}
             </p>
           </div>

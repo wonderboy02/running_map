@@ -35,12 +35,21 @@ export default function BottomDrawer({
     setMounted(true);
   }, []);
 
-  // 마운트 후 초기 snap point 측정
+  // 마운트 후 초기 snap point 측정 (double-rAF로 Sheet 내부 레이아웃 완료 보장)
   useEffect(() => {
     if (!mounted) return;
-    const raf = requestAnimationFrame(() => recalculate());
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => recalculate());
+    });
     return () => cancelAnimationFrame(raf);
   }, [mounted, recalculate]);
+
+  // spots 데이터 변경 시 snap point 재계산 (비동기 로드 후 DOM 높이 변경 반영)
+  useEffect(() => {
+    if (!mounted || selection) return;
+    const raf = requestAnimationFrame(() => recalculate());
+    return () => cancelAnimationFrame(raf);
+  }, [mounted, spots.length, selection, recalculate]);
 
   // selection 변경 시: 콘텐츠 전환 → snap point 재계산 + snap 이동
   const isFirstRender = useRef(true);

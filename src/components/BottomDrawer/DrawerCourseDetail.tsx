@@ -60,7 +60,7 @@ export default function DrawerCourseDetail({
       <div ref={contentRef} className="px-4 pb-4 space-y-4">
         {course.description && (
           <div className="p-3.5 bg-surface-dim rounded-xl">
-            <p className="text-[clamp(13px,3.5vw,15px)] text-text-secondary leading-relaxed">
+            <p className="text-[clamp(13px,3.5vw,15px)] text-text-secondary leading-relaxed whitespace-pre-line">
               {course.description}
             </p>
           </div>
