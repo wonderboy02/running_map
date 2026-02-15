@@ -412,35 +412,41 @@ BottomDrawer (index.tsx)     ← Sheet 인스턴스 (항상 isOpen={true})
 - Sheet는 **절대 언마운트되지 않음** → 전환 애니메이션이 부드러움
 - `disableDismiss={true}` → 사용자가 완전히 닫을 수 없음 (최소 title snap 유지)
 
-### Snap Point 체계 (4단계)
+### Snap Point 체계 (5단계)
+
+`index.tsx`의 `SNAP` 상수로 인덱스를 관리합니다:
 
 ```
-snapPoints = [0, peekPx, titlePx, contentPx, maxHeight]
-              │    │       │         │          └─ index 4: full (75vh, 스크롤 가능)
-              │    │       │         └─ index 3: content (주요 콘텐츠)
-              │    │       └─ index 2: title (사진+이름+주소 / 요약바)
-              │    └─ index 1: peek (drag handle bar만)
+snapPoints = [0, peekPx, titlePx, previewPx, contentPx, maxHeight]
+              │    │       │         │           │          └─ SNAP.FULL (5): 75vh, 스크롤 가능
+              │    │       │         │           └─ SNAP.CONTENT (4): 주요 콘텐츠
+              │    │       │         └─ SNAP.PREVIEW (3): title + content 25% (초기 상태)
+              │    │       └─ SNAP.TITLE (2): 사진+이름+주소 / 요약바
+              │    └─ SNAP.PEEK (1): drag handle bar만
               └─ index 0: (내부용, disableDismiss로 도달 불가)
 ```
 
-| 단계 | Index | 보이는 것 | 진입 시점 |
-|------|-------|----------|----------|
-| **Peek** | 1 | drag handle bar만 | 기본 상태, X 버튼 (스팟 해제) |
-| **Title** | 2 | + 사진 + 스팟명 + 주소 (detail) / 요약바 (list) | 핀 클릭 |
-| **Content** | 3 | + 카테고리 + 설명 + 버튼 | 위로 드래그 |
-| **Full** | 4 | 75vh 전체, 스크롤 가능 | 위로 더 드래그 |
+| 단계 | SNAP 상수 | Index | 보이는 것 | 진입 시점 |
+|------|----------|-------|----------|----------|
+| **Peek** | `SNAP.PEEK` | 1 | drag handle bar만 | X 버튼 (스팟 해제) |
+| **Title** | `SNAP.TITLE` | 2 | + 사진 + 스팟명 + 주소 (detail) / 요약바 (list) | 핀 클릭 |
+| **Preview** | `SNAP.PREVIEW` | 3 | + contentRef의 ~25% (첫 아이템 절반) | 초기 데이터 로드 (리스트) |
+| **Content** | `SNAP.CONTENT` | 4 | + 카테고리 + 설명 + 버튼 | 위로 드래그 |
+| **Full** | `SNAP.FULL` | 5 | 75vh 전체, 스크롤 가능 | 위로 더 드래그 |
 
 - `useSnapPoints` 훅이 `titleRef`, `contentRef`의 DOM 높이를 측정하여 픽셀 값 계산
 - `peekPx` = `HEADER_HEIGHT` (40px, drag handle만)
+- `previewPx` = `titleSnap + contentHeight * PREVIEW_CONTENT_RATIO` (0.25)
+- 각 snap은 이전 snap의 clamped 값 기준으로 최소 간격(20px) 보장
 - 윈도우 리사이즈 시 자동 재계산
-- 측정 불가 시 fallback: `[0, 40, 0.15, 0.45, 0.75]`
+- 측정 불가 시 fallback: `[0, 40, 0.15, 0.3, 0.45, 1]`
 
 ### 새 Drawer 콘텐츠 추가 시 규칙
 
 1. **`titleRef` / `contentRef` 필수**: 모든 콘텐츠 컴포넌트는 props로 `titleRef`와 `contentRef`를 받아 snap 경계를 지정
-2. **titleRef**: snap 1에서 보이는 영역 (drag handle + 이 div까지)
-3. **contentRef**: snap 2에서 추가로 보이는 영역 (titleRef 아래)
-4. **나머지 콘텐츠**: snap 3(full)에서만 노출
+2. **titleRef**: `SNAP.TITLE`에서 보이는 영역 (drag handle + 이 div까지)
+3. **contentRef**: `SNAP.CONTENT`에서 추가로 보이는 영역 (titleRef 아래, `SNAP.PREVIEW`에서 25% 노출)
+4. **나머지 콘텐츠**: `SNAP.FULL`에서만 노출
 
 ```tsx
 interface DrawerNewContentProps {
@@ -452,21 +458,21 @@ interface DrawerNewContentProps {
 export default function DrawerNewContent({ titleRef, contentRef, ... }: DrawerNewContentProps) {
   return (
     <>
-      <div ref={titleRef}>  {/* snap 1 경계 */}
+      <div ref={titleRef}>  {/* SNAP.TITLE 경계 */}
         {/* 제목, 요약 등 최소 정보 */}
       </div>
-      <div ref={contentRef}>  {/* snap 2 경계 */}
+      <div ref={contentRef}>  {/* SNAP.CONTENT 경계 */}
         {/* 주요 콘텐츠 */}
       </div>
-      {/* snap 3에서만 보이는 추가 콘텐츠 */}
+      {/* SNAP.FULL에서만 보이는 추가 콘텐츠 */}
     </>
   );
 }
 ```
 
 5. **index.tsx 수정**: 새 콘텐츠 모드 추가 시 조건부 렌더링과 snap 전환 로직 추가
-6. **스크롤**: full snap(index 4)에서만 활성화 — `disableScroll={({ currentSnap }) => currentSnap !== 4}`
-7. **snap 전환**: 핀 클릭 → `snapTo(2)` (title), 해제 → `snapTo(1)` (peek)
+6. **스크롤**: `SNAP.FULL`(index 5)에서만 활성화 — `disableScroll={({ currentSnap }) => currentSnap !== SNAP.FULL}`
+7. **snap 전환**: 핀 클릭 → `snapTo(SNAP.TITLE)`, 해제 → `snapTo(SNAP.PEEK)`
 
 ### ❌ 하지 말 것
 

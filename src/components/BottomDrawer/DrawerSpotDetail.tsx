@@ -55,7 +55,7 @@ export default function DrawerSpotDetail({
         <X className="h-4 w-4" />
       </Button>
 
-      {/* === titleRef: snap title — 이름 + 주소 + 운영시간 + 시설 === */}
+      {/* === titleRef: SNAP.TITLE 경계 — 이름 + 주소 + 운영시간 + 시설 === */}
       <div ref={titleRef}>
         <div className="h-4" />
 
@@ -100,7 +100,7 @@ export default function DrawerSpotDetail({
         )}
       </div>
 
-      {/* === contentRef: snap content — 전화 + 설명 + 사진 === */}
+      {/* === contentRef: SNAP.CONTENT 경계 — 전화 + 설명 + 사진 === */}
       <div ref={contentRef} className="px-4 pb-4 space-y-4">
         {/* 5. Phone */}
         {spot.phone && (
@@ -119,7 +119,7 @@ export default function DrawerSpotDetail({
         {/* 6. Description */}
         {spot.description && (
           <div className="p-3.5 bg-surface-dim rounded-xl">
-            <p className="text-[clamp(13px,3.5vw,15px)] text-text-secondary leading-relaxed">
+            <p className="text-[clamp(13px,3.5vw,15px)] text-text-secondary leading-relaxed whitespace-pre-line">
               {spot.description}
             </p>
           </div>
@@ -146,7 +146,7 @@ export default function DrawerSpotDetail({
         )}
       </div>
 
-      {/* === full snap 영역 — 액션 버튼 === */}
+      {/* === SNAP.FULL 영역 — 액션 버튼 === */}
       <div className="px-4 pb-6">
         {/* Action Button — custom URL or Naver Map */}
         {spot.extra_data?.custom_url ? (

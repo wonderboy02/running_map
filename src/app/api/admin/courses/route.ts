@@ -47,6 +47,7 @@ export const POST = withAuth(async (request: NextRequest) => {
     const difficulty_str = formData.get('difficulty') as string | null;
     const distance_km_str = formData.get('distance_km') as string | null;
     const pinpointsStr = formData.get('pinpoints') as string | null;
+    const searchTagsStr = formData.get('search_tags') as string | null;
 
     if (!name || !imageFile) {
       return NextResponse.json(
@@ -127,6 +128,13 @@ export const POST = withAuth(async (request: NextRequest) => {
           { success: false, error: '핀포인트 데이터가 올바르지 않습니다.' },
           { status: 400 },
         );
+      }
+    }
+    if (searchTagsStr !== null) {
+      try {
+        insertData.search_tags = JSON.parse(searchTagsStr);
+      } catch {
+        insertData.search_tags = [];
       }
     }
 
@@ -231,6 +239,15 @@ export const PATCH = withAuth(async (request: NextRequest) => {
           { success: false, error: '핀포인트 데이터가 올바르지 않습니다.' },
           { status: 400 },
         );
+      }
+    }
+
+    const searchTagsStr = formData.get('search_tags') as string | null;
+    if (searchTagsStr !== null) {
+      try {
+        updates.search_tags = JSON.parse(searchTagsStr);
+      } catch {
+        updates.search_tags = [];
       }
     }
 

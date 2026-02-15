@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import TagInput from '@/app/admin/components/TagInput';
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,7 @@ interface CourseForm {
   is_active: boolean;
   image: File | null;
   highlight_image: File | null;
+  search_tags: string[];
 }
 
 const EMPTY_FORM: CourseForm = {
@@ -72,6 +74,7 @@ const EMPTY_FORM: CourseForm = {
   is_active: true,
   image: null,
   highlight_image: null,
+  search_tags: [],
 };
 
 // --- Bulk Upload ---
@@ -832,6 +835,7 @@ export default function AdminCoursesPage() {
       is_active: course.is_active,
       image: null,
       highlight_image: null,
+      search_tags: course.search_tags ?? [],
     });
     setImagePreview(course.image_url);
     setHighlightPreview(course.highlight_image_url);
@@ -893,6 +897,7 @@ export default function AdminCoursesPage() {
     if (form.difficulty !== '') formData.append('difficulty', String(form.difficulty));
     if (form.distance_km !== '') formData.append('distance_km', String(form.distance_km));
     formData.append('pinpoints', JSON.stringify(form.pinpoints));
+    formData.append('search_tags', JSON.stringify(form.search_tags));
     if (form.image) {
       formData.append('image', form.image);
     }
@@ -1161,6 +1166,18 @@ export default function AdminCoursesPage() {
                   placeholder="1~10"
                 />
               </div>
+            </div>
+
+            {/* 검색 태그 */}
+            <div className="space-y-1.5">
+              <Label>검색 태그</Label>
+              <p className="text-xs text-muted-foreground">
+                검색 시 노출될 키워드 (예: 야경, 초보, 벚꽃)
+              </p>
+              <TagInput
+                value={form.search_tags}
+                onChange={(tags) => setForm((prev) => ({ ...prev, search_tags: tags }))}
+              />
             </div>
 
             {/* 코스 핀포인트 */}

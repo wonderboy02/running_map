@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
 import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages, CAPTION_HEIGHT } from '@/lib/marker-config';
 import { computeVisibleCaptions, type MarkerPixelInfo } from '@/lib/caption-collision';
@@ -28,9 +28,6 @@ interface NaverMapProps {
 /** 캡션 충돌 감지 수직 임계값 (아이콘 높이 + 캡션 높이 고려) */
 const CAPTION_COLLISION_THRESHOLD_Y = CAPTION_HEIGHT + 14;
 
-/** 코스 핀 마커가 보이기 시작하는 최소 줌 레벨 */
-const COURSE_PIN_MIN_ZOOM = 14;
-
 export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
@@ -42,7 +39,6 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   const myLocationMarkerRef = useRef<MyLocationMarker | null>(null);
   const hasMovedToInitialPos = useRef(false);
   const captionVisibleIdsRef = useRef<Set<string>>(new Set());
-  const [zoom, setZoom] = useState(13);
 
   // map 준비 시 마커 이미지 프리로드 + 부모에게 전달
   useEffect(() => {
@@ -118,7 +114,6 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
 
     const listener = naver.maps.Event.addListener(map, 'idle', () => {
       recalcCaptions();
-      setZoom(map.getZoom());
     });
 
     // 초기 계산
@@ -185,7 +180,12 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     if (!map || !selection) return;
 
     if (selection.type === 'spot') {
-      map.panTo(new naver.maps.LatLng(selection.data.latitude, selection.data.longitude));
+      const pos = new naver.maps.LatLng(selection.data.latitude, selection.data.longitude);
+      // 이미 뷰포트 안에 있으면 패닝 생략
+      const bounds = map.getBounds() as naver.maps.LatLngBounds;
+      if (!bounds.hasLatLng(pos)) {
+        map.panTo(pos);
+      }
     } else if (selection.type === 'course') {
       const course = selection.data;
       // bounds를 20% 확장하여 코스 주변 여유 공간 확보
@@ -379,10 +379,9 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     });
 
     // 새로운 핀 추가 또는 기존 핀 아이콘/가시성 업데이트
-    // 줌 레벨이 낮으면 코스 핀 숨김 (선택된 코스는 항상 표시)
     for (const course of courses) {
       const isSelected = course.id === selectedCourseId;
-      const pinVisible = showCourses && (zoom >= COURSE_PIN_MIN_ZOOM || isSelected);
+      const pinVisible = showCourses;
 
       for (let i = 0; i < course.pinpoints.length; i++) {
         const pin = course.pinpoints[i];
@@ -415,7 +414,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
 
     // 핀 동기화 후 캡션 충돌 재계산
     recalcCaptions();
-  }, [isReady, map, courses, onCoursePinClick, selection, showCourses, zoom, recalcCaptions]);
+  }, [isReady, map, courses, onCoursePinClick, selection, showCourses, recalcCaptions]);
 
   return (
     <div ref={containerRef} className="relative z-0 h-full w-full">

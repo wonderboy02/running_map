@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { isValidHttpUrl } from '@/lib/utils';
 import { toast } from 'sonner';
+import TagInput from '@/app/admin/components/TagInput';
 
 interface SpotFormProps {
   spot?: Spot;
@@ -33,6 +34,7 @@ const EMPTY_FORM: SpotInsert = {
   phone: null,
   photos: [],
   extra_data: {},
+  search_tags: [],
 };
 
 export default function SpotForm({ spot }: SpotFormProps) {
@@ -54,6 +56,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
           phone: spot.phone,
           photos: spot.photos,
           extra_data: spot.extra_data,
+          search_tags: spot.search_tags ?? [],
         }
       : EMPTY_FORM
   );
@@ -513,6 +516,18 @@ export default function SpotForm({ spot }: SpotFormProps) {
             <Plus className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      {/* 검색 태그 */}
+      <div className="space-y-1.5">
+        <Label>검색 태그</Label>
+        <p className="text-xs text-muted-foreground">
+          검색 시 노출될 키워드를 추가하세요 (예: 한강, 야경, 초보)
+        </p>
+        <TagInput
+          value={form.search_tags}
+          onChange={(tags) => updateField('search_tags', tags)}
+        />
       </div>
 
       {/* 설명 */}
