@@ -246,13 +246,9 @@ export default function AdminCheckPage() {
                       </div>
                     </td>
                     <td className="py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {result.categories.map((category) => (
-                          <Badge key={category} variant="outline">
-                            {category}
-                          </Badge>
-                        ))}
-                      </div>
+                      <Badge variant="outline">
+                        {result.category}
+                      </Badge>
                     </td>
                     <td className="py-3 text-center">
                       {result.checkStatus === 'ok' && (

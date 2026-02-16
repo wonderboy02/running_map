@@ -12,7 +12,7 @@ interface SameAddressTooltipProps {
   existingSpots: Array<{
     id: string;
     name: string;
-    categories: string[];
+    category: string;
   }>;
 }
 
@@ -37,19 +37,14 @@ export function SameAddressTooltip({ roadAddress, existingSpots }: SameAddressTo
                     <span>•</span>
                     <div className="flex-1">
                       <span className="font-medium">{spot.name}</span>
-                      {spot.categories.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {spot.categories.map((cat) => (
-                            <Badge
-                              key={cat}
-                              variant="secondary"
-                              className="text-xs px-1 py-0 h-4"
-                            >
-                              {cat}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
+                      <div className="mt-1">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs px-1 py-0 h-4"
+                        >
+                          {spot.category}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 ))}

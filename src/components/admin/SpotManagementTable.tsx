@@ -60,7 +60,7 @@ export function SpotManagementTable() {
 
       // 카테고리 필터
       if (categoryFilter !== 'all') {
-        query = query.contains('categories', [categoryFilter]);
+        query = query.eq('category', categoryFilter);
       }
 
       // 인기 장소 필터
@@ -293,17 +293,9 @@ export function SpotManagementTable() {
                       </div>
                     </td>
                     <td className="py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {spot.categories.map(cat => (
-                          <Badge
-                            key={cat}
-                            variant="secondary"
-                            className="text-xs"
-                          >
-                            {cat}
-                          </Badge>
-                        ))}
-                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {spot.category}
+                      </Badge>
                     </td>
                     <td className="py-3 text-center">
                       {spot.is_highlighted && (

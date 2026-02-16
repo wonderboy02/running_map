@@ -6,8 +6,12 @@ export interface Spot {
   address: string;
   latitude: number;
   longitude: number;
-  categories: string[];
+  category: Category;
   features: string[];
+  detail_address: string | null;
+  locker_small: number | null;
+  locker_medium: number | null;
+  locker_large: number | null;
   is_highlighted: boolean;
   operating_hours: Record<string, string> | null;
   description: string | null;

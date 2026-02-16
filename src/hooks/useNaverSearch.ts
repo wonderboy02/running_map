@@ -23,7 +23,7 @@ export interface SearchResultItem {
   existingSpots?: Array<{
     id: string;
     name: string;
-    categories: string[];
+    category: string;
   }>;
 }
 

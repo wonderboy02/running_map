@@ -25,7 +25,7 @@ function scoreSpot(spot: Spot, q: string): number {
 
   if (spot.search_tags?.some((tag) => tag.toLowerCase().includes(q))) score += 50;
   if (spot.address.toLowerCase().includes(q)) score += 30;
-  if (spot.categories.some((cat) => cat.toLowerCase().includes(q))) score += 20;
+  if (spot.category.toLowerCase().includes(q)) score += 20;
   if (spot.features.some((feat) => feat.toLowerCase().includes(q))) score += 20;
 
   return score;

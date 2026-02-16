@@ -86,7 +86,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         const spot = spots.find((s) => s.id === id);
         if (spot) {
           const isSelected = id === selectedSpotId;
-          marker.setIcon(getSpotMarkerIcon(spot.categories, isSelected, nowVisible ? spot.name : undefined));
+          marker.setIcon(getSpotMarkerIcon(spot.category, isSelected, nowVisible ? spot.name : undefined));
         }
       }
     });
@@ -147,7 +147,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     spots.forEach((spot) => {
       const isSelected = spot.id === selectedSpotId;
       const showCaption = isSelected || captionVisibleIdsRef.current.has(spot.id);
-      const icon = getSpotMarkerIcon(spot.categories, isSelected, showCaption ? spot.name : undefined);
+      const icon = getSpotMarkerIcon(spot.category, isSelected, showCaption ? spot.name : undefined);
       const existing = existingMarkers.get(spot.id);
 
       if (existing) {

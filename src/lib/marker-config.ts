@@ -156,19 +156,21 @@ export function preloadMarkerImages(): void {
 
 /**
  * 스팟 마커 아이콘 반환
- * @param categories - 스팟의 카테고리 배열 (CATEGORIES 우선순위: 러너스팟 > 샤워 > 짐보관)
+ * @param category - 스팟의 카테고리 (단일)
  * @param isSelected - 현재 선택된 마커인지
  * @param name - 스팟 이름 (캡션으로 표시)
  */
 export function getSpotMarkerIcon(
-  categories: string[],
+  category: string,
   isSelected: boolean,
   name?: string,
 ): naver.maps.HtmlIcon {
-  const category = CATEGORIES.find((c) => categories.includes(c)) ?? '러너스팟';
+  const cat = (CATEGORIES as readonly string[]).includes(category)
+    ? (category as Category)
+    : '러너스팟';
   const state = isSelected ? 'selected' : 'default';
-  const images = SPOT_IMAGES[category] ?? SPOT_IMAGES['러너스팟'];
-  const size = CATEGORY_SIZES[category]?.[state] ?? BASE_SIZES[state];
+  const images = SPOT_IMAGES[cat];
+  const size = CATEGORY_SIZES[cat]?.[state] ?? BASE_SIZES[state];
 
   return buildPngIcon(images[state], size, name);
 }

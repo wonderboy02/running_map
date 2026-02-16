@@ -35,9 +35,16 @@ export default function DrawerSpotDetail({
 }: DrawerSpotDetailProps) {
   const [hoursOpen, setHoursOpen] = useState(false);
 
-  const isRunnerSpot = spot.categories.includes('러너스팟');
+  const isRunnerSpot = spot.category === '러너스팟';
+  const isLocker = spot.category === '짐보관';
   const hasPhotos = isRunnerSpot && spot.photos && spot.photos.length > 0;
-  const hasFeatures = spot.features && spot.features.length > 0;
+  const hasFeatures = !isLocker && spot.features && spot.features.length > 0;
+
+  // 짐보관: 라커 합계
+  const lockerTotal = isLocker
+    ? (spot.locker_small ?? 0) + (spot.locker_medium ?? 0) + (spot.locker_large ?? 0)
+    : 0;
+  const hasLockerInfo = isLocker && lockerTotal > 0;
 
   const todayKey = getTodayKey();
   const todayHours = spot.operating_hours?.[todayKey];
@@ -85,7 +92,7 @@ export default function DrawerSpotDetail({
           </button>
         )}
 
-        {/* 4. Features */}
+        {/* 4. Features (짐보관이 아닌 경우만) */}
         {hasFeatures && (
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none px-4 pb-4">
             {spot.features.map((feature) => (
@@ -98,10 +105,44 @@ export default function DrawerSpotDetail({
             ))}
           </div>
         )}
+
+        {/* 4-1. 짐보관: 상세위치 */}
+        {isLocker && spot.detail_address && (
+          <div className="flex items-start gap-2 px-4 pb-3 text-text-secondary">
+            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-text-muted" />
+            <p className="text-[clamp(12px,3vw,14px)] leading-relaxed">{spot.detail_address}</p>
+          </div>
+        )}
       </div>
 
-      {/* === contentRef: SNAP.CONTENT 경계 — 전화 + 설명 + 사진 === */}
+      {/* === contentRef: SNAP.CONTENT 경계 — 라커 정보 + 전화 + 설명 + 사진 === */}
       <div ref={contentRef} className="px-4 pb-4 space-y-4">
+        {/* 짐보관: 라커 사이즈별 배지 */}
+        {hasLockerInfo && (
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap gap-2">
+              {spot.locker_small != null && spot.locker_small > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-locker-sm-muted px-3 py-1.5 text-[clamp(12px,3vw,14px)] font-medium text-locker-sm">
+                  소형 <span className="font-bold">{spot.locker_small}</span>
+                </span>
+              )}
+              {spot.locker_medium != null && spot.locker_medium > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-locker-md-muted px-3 py-1.5 text-[clamp(12px,3vw,14px)] font-medium text-locker-md">
+                  중형 <span className="font-bold">{spot.locker_medium}</span>
+                </span>
+              )}
+              {spot.locker_large != null && spot.locker_large > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-locker-lg-muted px-3 py-1.5 text-[clamp(12px,3vw,14px)] font-medium text-locker-lg">
+                  대형 <span className="font-bold">{spot.locker_large}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-[clamp(12px,3vw,13px)] text-text-muted">
+              총 {lockerTotal}개
+            </p>
+          </div>
+        )}
+
         {/* 5. Phone */}
         {spot.phone && (
           <div className="flex items-center gap-3">

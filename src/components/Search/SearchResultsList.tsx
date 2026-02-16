@@ -78,15 +78,11 @@ export default function SearchResultsList({
                 <p className="text-text-secondary text-[clamp(12px,3vw,13px)] truncate">
                   {spot.address}
                 </p>
-                {spot.categories.length > 0 && (
-                  <div className="flex gap-1 mt-1">
-                    {spot.categories.map((cat) => (
-                      <Badge key={cat} variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {cat}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+                <div className="flex gap-1 mt-1">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                    {spot.category}
+                  </Badge>
+                </div>
               </div>
             </button>
           ))}

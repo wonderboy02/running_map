@@ -76,7 +76,7 @@ export default function AdminDashboard() {
 
     // 카테고리 필터
     if (categoryFilter !== 'all') {
-      result = result.filter((s) => s.categories.includes(categoryFilter));
+      result = result.filter((s) => s.category === categoryFilter);
     }
 
     // 인기 필터
@@ -209,16 +209,13 @@ export default function AdminDashboard() {
                   </span>
                 </div>
 
-                <div className="mb-2 flex flex-wrap gap-1">
-                  {spot.categories.map((cat) => (
-                    <Badge
-                      key={cat}
-                      variant="secondary"
-                      className="bg-surface-dim text-text-secondary text-xs"
-                    >
-                      {cat}
-                    </Badge>
-                  ))}
+                <div className="mb-2">
+                  <Badge
+                    variant="secondary"
+                    className="bg-surface-dim text-text-secondary text-xs"
+                  >
+                    {spot.category}
+                  </Badge>
                 </div>
 
                 <div className="flex gap-2">

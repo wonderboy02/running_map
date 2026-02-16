@@ -9,7 +9,7 @@ export type AnalyticsEventMap = {
   spot_select: {
     spot_id: string;
     spot_name: string;
-    categories: string[];
+    category: string;
     source: SelectionSource;
     query?: string;
   };
