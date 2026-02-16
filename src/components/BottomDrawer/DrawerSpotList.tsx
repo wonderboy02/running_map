@@ -104,7 +104,7 @@ export default function DrawerSpotList({
   contentRef,
   onSpotClick,
 }: DrawerSpotListProps) {
-  const runnerSpots = spots.filter((spot) => spot.categories.includes('러너스팟'));
+  const runnerSpots = spots.filter((spot) => spot.category === '러너스팟');
 
   return (
     <>

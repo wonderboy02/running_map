@@ -40,9 +40,8 @@ export function BulkEditDialog({
   const [updateHighlight, setUpdateHighlight] = useState(false);
   const [highlightValue, setHighlightValue] = useState<boolean>(true);
 
-  const [updateCategories, setUpdateCategories] = useState(false);
-  const [categoryAction, setCategoryAction] = useState<'add' | 'remove'>('add');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [updateCategory, setUpdateCategory] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
 
   const [updateDescription, setUpdateDescription] = useState(false);
   const [description, setDescription] = useState('');
@@ -50,21 +49,17 @@ export function BulkEditDialog({
   const [updatePhone, setUpdatePhone] = useState(false);
   const [phone, setPhone] = useState('');
 
-  const handleToggleCategory = (category: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
+  const handleSelectCategory = (category: string) => {
+    setSelectedCategory(prev => prev === category ? '' : category);
   };
 
   const handleSubmit = async () => {
-    if (!updateHighlight && !updateCategories && !updateDescription && !updatePhone) {
+    if (!updateHighlight && !updateCategory && !updateDescription && !updatePhone) {
       toast.error('수정할 항목을 선택해주세요.');
       return;
     }
 
-    if (updateCategories && selectedCategories.length === 0) {
+    if (updateCategory && !selectedCategory) {
       toast.error('카테고리를 선택해주세요.');
       return;
     }
@@ -78,11 +73,8 @@ export function BulkEditDialog({
         updates.is_highlighted = highlightValue;
       }
 
-      if (updateCategories) {
-        updates.categories = {
-          action: categoryAction,
-          values: selectedCategories
-        };
+      if (updateCategory) {
+        updates.category = selectedCategory;
       }
 
       if (updateDescription) {
@@ -123,9 +115,8 @@ export function BulkEditDialog({
   const resetForm = () => {
     setUpdateHighlight(false);
     setHighlightValue(true);
-    setUpdateCategories(false);
-    setCategoryAction('add');
-    setSelectedCategories([]);
+    setUpdateCategory(false);
+    setSelectedCategory('');
     setUpdateDescription(false);
     setDescription('');
     setUpdatePhone(false);
@@ -178,44 +169,26 @@ export function BulkEditDialog({
           {/* 카테고리 수정 */}
           <div className="flex items-start space-x-3">
             <Checkbox
-              id="update-categories"
-              checked={updateCategories}
-              onCheckedChange={(checked) => setUpdateCategories(checked as boolean)}
+              id="update-category"
+              checked={updateCategory}
+              onCheckedChange={(checked) => setUpdateCategory(checked as boolean)}
             />
             <div className="flex-1 space-y-2">
-              <Label htmlFor="update-categories" className="font-medium">
-                카테고리 수정
+              <Label htmlFor="update-category" className="font-medium">
+                카테고리 변경
               </Label>
-              {updateCategories && (
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={categoryAction === 'add' ? 'default' : 'outline'}
-                      onClick={() => setCategoryAction('add')}
+              {updateCategory && (
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.map(cat => (
+                    <Badge
+                      key={cat}
+                      variant={selectedCategory === cat ? 'default' : 'outline'}
+                      className="cursor-pointer"
+                      onClick={() => handleSelectCategory(cat)}
                     >
-                      추가
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={categoryAction === 'remove' ? 'default' : 'outline'}
-                      onClick={() => setCategoryAction('remove')}
-                    >
-                      제거
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {CATEGORIES.map(cat => (
-                      <Badge
-                        key={cat}
-                        variant={selectedCategories.includes(cat) ? 'default' : 'outline'}
-                        className="cursor-pointer"
-                        onClick={() => handleToggleCategory(cat)}
-                      >
-                        {cat}
-                      </Badge>
-                    ))}
-                  </div>
+                      {cat}
+                    </Badge>
+                  ))}
                 </div>
               )}
             </div>

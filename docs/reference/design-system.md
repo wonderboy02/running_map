@@ -56,6 +56,12 @@
 | **Course** | `course` | `text-course` | 코스 아이콘/텍스트 |
 | **External** | `naver` | `bg-naver` | 네이버 지도 버튼 |
 | | `naver-hover` | `hover:bg-naver-hover` | 네이버 버튼 hover |
+| **Locker size** | `locker-sm` | `text-locker-sm` | 짐보관 소형 배지 텍스트 |
+| | `locker-sm-muted` | `bg-locker-sm-muted` | 짐보관 소형 배지 배경 |
+| | `locker-md` | `text-locker-md` | 짐보관 중형 배지 텍스트 |
+| | `locker-md-muted` | `bg-locker-md-muted` | 짐보관 중형 배지 배경 |
+| | `locker-lg` | `text-locker-lg` | 짐보관 대형 배지 텍스트 |
+| | `locker-lg-muted` | `bg-locker-lg-muted` | 짐보관 대형 배지 배경 |
 | **Marker** | — | PNG 기반 | `marker-config.ts`에서 관리 (CSS 토큰 없음) |
 
 ### Tier 3: 카테고리 (Placeholder)

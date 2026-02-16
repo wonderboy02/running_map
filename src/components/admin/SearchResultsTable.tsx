@@ -19,8 +19,7 @@ import { Loader2 } from 'lucide-react';
 import { DuplicateStatusBadge } from './DuplicateStatusBadge';
 import { SameAddressTooltip } from './SameAddressTooltip';
 import type { SearchResultItem } from '@/hooks/useNaverSearch';
-
-const CATEGORIES = ['러너스팟', '샤워', '짐보관'] as const;
+import { CATEGORIES } from '@/types';
 
 interface SearchResultsTableProps {
   results: (SearchResultItem & {
@@ -28,7 +27,7 @@ interface SearchResultsTableProps {
     existingSpots?: Array<{
       id: string;
       name: string;
-      categories: string[];
+      category: string;
     }>;
   })[];
 }
@@ -131,7 +130,7 @@ export function SearchResultsTable({ results }: SearchResultsTableProps) {
             latitude: item.latitude,
             longitude: item.longitude,
             phone: item.telephone || undefined,
-            categories: [confirmDialog.category],
+            category: confirmDialog.category,
             extra_data: {
               naver_category: item.category,
               naver_link: item.link

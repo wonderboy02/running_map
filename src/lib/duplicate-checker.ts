@@ -5,7 +5,7 @@ export interface DuplicateCheck {
   existingSpots?: Array<{
     id: string;
     name: string;
-    categories: string[];
+    category: string;
   }>;
 }
 
@@ -23,7 +23,7 @@ export async function checkDuplicate(
     // 1. 완전 중복 체크 (이름 + 주소)
     const { data: exactMatch, error: exactError } = await supabase
       .from('spots')
-      .select('id, name, categories')
+      .select('id, name, category')
       .eq('name', name)
       .eq('address', roadAddress)
       .maybeSingle();
@@ -42,7 +42,7 @@ export async function checkDuplicate(
     // 2. 같은 주소의 다른 장소들
     const { data: sameAddress, error: addressError } = await supabase
       .from('spots')
-      .select('id, name, categories')
+      .select('id, name, category')
       .eq('address', roadAddress);
 
     if (addressError) {

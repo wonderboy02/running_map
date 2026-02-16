@@ -26,8 +26,12 @@ const EMPTY_FORM: SpotInsert = {
   address: '',
   latitude: 37.5665,
   longitude: 126.978,
-  categories: [],
+  category: '러너스팟',
   features: [],
+  detail_address: null,
+  locker_small: null,
+  locker_medium: null,
+  locker_large: null,
   is_highlighted: false,
   operating_hours: null,
   description: null,
@@ -48,8 +52,12 @@ export default function SpotForm({ spot }: SpotFormProps) {
           address: spot.address,
           latitude: spot.latitude,
           longitude: spot.longitude,
-          categories: spot.categories,
+          category: spot.category,
           features: spot.features ?? [],
+          detail_address: spot.detail_address,
+          locker_small: spot.locker_small,
+          locker_medium: spot.locker_medium,
+          locker_large: spot.locker_large,
           is_highlighted: spot.is_highlighted,
           operating_hours: spot.operating_hours,
           description: spot.description,
@@ -96,12 +104,17 @@ export default function SpotForm({ spot }: SpotFormProps) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function toggleCategory(cat: string) {
+  function selectCategory(cat: string) {
     setForm((prev) => ({
       ...prev,
-      categories: prev.categories.includes(cat)
-        ? prev.categories.filter((c) => c !== cat)
-        : [...prev.categories, cat],
+      category: cat as SpotInsert['category'],
+      // 짐보관이 아닌 카테고리로 변경 시 관련 필드 초기화
+      ...(cat !== '짐보관' && {
+        detail_address: null,
+        locker_small: null,
+        locker_medium: null,
+        locker_large: null,
+      }),
     }));
   }
 
@@ -234,8 +247,8 @@ export default function SpotForm({ spot }: SpotFormProps) {
     e.preventDefault();
     setSaving(true);
 
-    if (form.categories.length === 0) {
-      toast.error('카테고리를 하나 이상 선택하세요.');
+    if (!form.category) {
+      toast.error('카테고리를 선택하세요.');
       setSaving(false);
       return;
     }
@@ -436,7 +449,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
         <Label>카테고리 *</Label>
         <div className="flex flex-wrap gap-2">
           {CATEGORIES.map((cat) => {
-            const isActive = form.categories.includes(cat);
+            const isActive = form.category === cat;
             return (
               <Badge
                 key={cat}
@@ -444,7 +457,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
                 className={`cursor-pointer rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
                   isActive ? 'bg-primary text-white hover:bg-primary-hover' : ''
                 }`}
-                onClick={() => toggleCategory(cat)}
+                onClick={() => selectCategory(cat)}
               >
                 {cat}
               </Badge>
@@ -452,6 +465,57 @@ export default function SpotForm({ spot }: SpotFormProps) {
           })}
         </div>
       </div>
+
+      {/* 짐보관 전용 필드 */}
+      {form.category === '짐보관' && (
+        <div className="space-y-4 rounded-lg border border-border p-4 bg-surface-dim/50">
+          <p className="text-sm font-medium text-text-secondary">짐보관 상세 정보</p>
+          <div className="space-y-1.5">
+            <Label>상세 위치</Label>
+            <Input
+              type="text"
+              value={form.detail_address ?? ''}
+              onChange={(e) => updateField('detail_address', e.target.value || null)}
+              placeholder="예: 지하 1층, 3번 출구 앞"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>라커 수량</Label>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-blue-600">소형</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.locker_small ?? ''}
+                  onChange={(e) => updateField('locker_small', e.target.value ? Number(e.target.value) : null)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-green-600">중형</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.locker_medium ?? ''}
+                  onChange={(e) => updateField('locker_medium', e.target.value ? Number(e.target.value) : null)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-orange-600">대형</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.locker_large ?? ''}
+                  onChange={(e) => updateField('locker_large', e.target.value ? Number(e.target.value) : null)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 제공 시설 */}
       <div className="space-y-1.5">

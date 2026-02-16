@@ -9,7 +9,7 @@ interface SpotInsertData {
   latitude: number;
   longitude: number;
   phone?: string;
-  categories?: string[];
+  category?: string;
   features?: string[];
   extra_data?: {
     naver_category?: string;
@@ -25,10 +25,7 @@ interface BulkUpdateRequest {
   spotIds: string[];
   updates: {
     is_highlighted?: boolean;
-    categories?: {
-      action: 'add' | 'remove';
-      values: string[];
-    };
+    category?: string;
     operating_hours?: Record<string, string>;
     description?: string;
     phone?: string;
@@ -73,7 +70,7 @@ export const POST = withAuth(async (request: NextRequest) => {
         address: check.spot.address,
         latitude: check.spot.latitude,
         longitude: check.spot.longitude,
-        categories: check.spot.categories || [], // 요청에서 받은 카테고리 사용
+        category: check.spot.category || '러너스팟',
         features: check.spot.features || [],
         is_highlighted: false,
         phone: check.spot.phone || null,
@@ -145,42 +142,9 @@ export const PATCH = withAuth(async (request: NextRequest) => {
       updates.is_highlighted = body.updates.is_highlighted;
     }
 
-    // 카테고리 추가/제거
-    if (body.updates.categories) {
-      const { action, values } = body.updates.categories;
-
-      // 현재 장소들의 카테고리 가져오기
-      const { data: spots, error: fetchError } = await supabaseServer
-        .from('spots')
-        .select('id, categories')
-        .in('id', body.spotIds);
-
-      if (fetchError || !spots) {
-        return NextResponse.json(
-          { success: false, error: '장소 정보를 가져오는데 실패했습니다.' },
-          { status: 500 }
-        );
-      }
-
-      // 각 장소마다 카테고리 업데이트
-      const updatePromises = spots.map(async (spot) => {
-        let newCategories = [...(spot.categories || [])];
-
-        if (action === 'add') {
-          // 중복 제거하면서 추가
-          const uniqueCategories = Array.from(new Set([...newCategories, ...values]));
-          newCategories = uniqueCategories;
-        } else if (action === 'remove') {
-          newCategories = newCategories.filter(cat => !values.includes(cat));
-        }
-
-        return supabaseServer
-          .from('spots')
-          .update({ categories: newCategories })
-          .eq('id', spot.id);
-      });
-
-      await Promise.all(updatePromises);
+    // 카테고리 변경
+    if (body.updates.category) {
+      updates.category = body.updates.category;
     }
 
     // 기타 필드 업데이트
@@ -194,7 +158,7 @@ export const PATCH = withAuth(async (request: NextRequest) => {
       updates.phone = body.updates.phone;
     }
 
-    // 카테고리 외 필드 업데이트
+    // 필드 업데이트
     if (Object.keys(updates).length > 0) {
       const { error } = await supabaseServer
         .from('spots')

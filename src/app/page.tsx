@@ -105,7 +105,7 @@ export default function HomePage() {
 
   const filteredSpots = activeFilters.length === 0
     ? []
-    : spots.filter((spot) => spot.categories.some((cat) => activeFilters.includes(cat)));
+    : spots.filter((spot) => activeFilters.includes(spot.category));
 
   const handleFilterToggle = (category: string) => {
     const isTogglingOn = !activeFilters.includes(category);
@@ -129,7 +129,7 @@ export default function HomePage() {
     // 스팟 수가 많아지면 Schwartzian transform(.map으로 거리 미리 계산 → .sort → 추출)으로 최적화 가능.
     // 현재 수십~수백 개 규모에서는 무시 가능한 수준.
     const nearest = spots
-      .filter((s) => s.categories.includes(category))
+      .filter((s) => s.category === category)
       .sort(
         (a, b) =>
           haversineDistance(center.lat(), center.lng(), a.latitude, a.longitude) -
@@ -168,7 +168,7 @@ export default function HomePage() {
     track('spot_select', {
       spot_id: spot.id,
       spot_name: spot.name,
-      categories: spot.categories,
+      category: spot.category,
       source: 'search',
       query: searchQuery,
     });
@@ -176,8 +176,8 @@ export default function HomePage() {
     setSelection({ type: 'spot', data: spot });
     // 해당 스팟의 카테고리가 필터에 없으면 추가 (마커가 보이도록)
     setActiveFilters((prev) => {
-      const missing = spot.categories.filter((cat) => !prev.includes(cat));
-      return missing.length > 0 ? [...prev, ...missing] : prev;
+      if (prev.includes(spot.category)) return prev;
+      return [...prev, spot.category];
     });
   }
 
@@ -190,7 +190,7 @@ export default function HomePage() {
     track('spot_select', {
       spot_id: spot.id,
       spot_name: spot.name,
-      categories: spot.categories,
+      category: spot.category,
       source,
     });
     setTargetLocation(null);

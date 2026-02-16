@@ -47,7 +47,7 @@ AnalyticsProvider (layout.tsx)
 
 | 이벤트명 | 트리거 시점 | 프로퍼티 | 적용 파일 |
 |---------|-----------|---------|----------|
-| `spot_select` | 스팟 선택 (모든 진입점) | `spot_id`, `spot_name`, `categories`, `source`, `query?` | `page.tsx` |
+| `spot_select` | 스팟 선택 (모든 진입점) | `spot_id`, `spot_name`, `category`, `source`, `query?` | `page.tsx` |
 | `course_select` | 코스 선택 (모든 진입점) | `course_id`, `course_name`, `source`, `query?` | `page.tsx` |
 
 - `source`: `'map'` (마커 클릭), `'search'` (검색 결과), `'drawer_list'` (드로어 목록)
@@ -157,7 +157,7 @@ Mixpanel 초기화. `AnalyticsProvider`의 `useEffect`에서 자동 호출된다
 import { track } from '@/lib/analytics';
 
 // 프로퍼티가 있는 이벤트
-track('spot_select', { spot_id: '...', spot_name: '...', categories: [...], source: 'map' });
+track('spot_select', { spot_id: '...', spot_name: '...', category: '러너스팟', source: 'map' });
 
 // 프로퍼티가 없는 이벤트 — 빈 객체 필수
 track('search_open', {});
