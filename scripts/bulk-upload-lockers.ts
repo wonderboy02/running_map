@@ -67,6 +67,43 @@ interface GeoResult {
 
 // ── CSV 파싱 ────────────────────────────────────────────────────
 
+/** RFC 4180 호환 CSV 행 파서 — 쌍따옴표 안의 쉼표/개행을 무시 */
+function parseCsvLine(line: string, separator: string): string[] {
+  const fields: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        // 연속 "" → escaped quote
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === separator) {
+        fields.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+  }
+
+  fields.push(current.trim());
+  return fields;
+}
+
 function parseNumber(value: string): number | null {
   if (!value || value.trim() === '' || value.trim() === '-') return null;
   // "1개", "2", " 3개 " 등에서 숫자만 추출
@@ -88,7 +125,7 @@ function parseCsv(filePath: string): CsvRow[] {
   const separator = headerLine.includes('\t') ? '\t' : ',';
   console.log(`[INFO] 구분자: ${separator === '\t' ? 'TAB' : 'COMMA'}`);
 
-  const headers = headerLine.split(separator).map((h) => h.trim());
+  const headers = parseCsvLine(headerLine, separator);
   console.log(`[INFO] 헤더: ${headers.join(' | ')}`);
 
   // 컬럼 인덱스 매핑 (중복 감지 포함)
@@ -121,7 +158,7 @@ function parseCsv(filePath: string): CsvRow[] {
   const rows: CsvRow[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(separator).map((c) => c.trim());
+    const cols = parseCsvLine(lines[i], separator);
     const name = cols[colName];
     const address = cols[colAddress];
 
@@ -223,6 +260,13 @@ function sleep(ms: number) {
 
 // ── 메인 ────────────────────────────────────────────────────────
 
+/** 그룹핑 결과: 1 그룹 = 1 스팟 */
+interface SpotGroup {
+  name: string;
+  address: string;
+  rows: CsvRow[];
+}
+
 async function main() {
   const csvPath = process.argv[2];
 
@@ -242,30 +286,69 @@ async function main() {
   const rows = parseCsv(resolvedPath);
   console.log(`[OK] ${rows.length}건 파싱 완료\n`);
 
-  // 2. Geocoding
-  console.log('--- 2단계: 주소 -> 좌표 변환 ---');
-  const geocoded: (CsvRow & GeoResult)[] = [];
-  const failed: CsvRow[] = [];
+  // 2. 그룹핑 (name + address → 1 스팟)
+  console.log('--- 2단계: name + address 그룹핑 ---');
+  const groupMap = new Map<string, SpotGroup>();
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    process.stdout.write(`  [${i + 1}/${rows.length}] "${row.name}" ... `);
-
-    const result = await resolveCoordinates(row.address);
-
-    if (result) {
-      geocoded.push({ ...row, ...result });
-      console.log(`OK (${result.latitude}, ${result.longitude})`);
+  for (const row of rows) {
+    const key = `${row.name}|||${row.address}`;
+    const existing = groupMap.get(key);
+    if (existing) {
+      existing.rows.push(row);
     } else {
-      failed.push(row);
-      console.log(`FAIL - 좌표 변환 실패`);
+      groupMap.set(key, { name: row.name, address: row.address, rows: [row] });
     }
-
-    // Rate limit 방지 (300ms 간격)
-    if (i < rows.length - 1) await sleep(300);
   }
 
-  console.log(`\n[OK] 좌표 변환 성공: ${geocoded.length}건`);
+  const groups = Array.from(groupMap.values());
+  const maxSections = Math.max(...groups.map((g) => g.rows.length));
+  console.log(
+    `[OK] ${rows.length}행 → ${groups.length}개 스팟 (최대 ${maxSections}개 섹션)\n`
+  );
+
+  // 3. Geocoding (그룹 단위, address 캐시)
+  console.log('--- 3단계: 주소 -> 좌표 변환 ---');
+  const addressCache = new Map<string, GeoResult | null>();
+
+  const geocoded: (SpotGroup & GeoResult)[] = [];
+  const failed: SpotGroup[] = [];
+
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i];
+    process.stdout.write(`  [${i + 1}/${groups.length}] "${group.name}" ... `);
+
+    let result: GeoResult | null;
+
+    if (addressCache.has(group.address)) {
+      result = addressCache.get(group.address)!;
+      if (result) {
+        console.log(`OK (캐시 ${result.latitude}, ${result.longitude})`);
+      } else {
+        console.log(`FAIL (캐시 - 이전에 실패)`);
+      }
+    } else {
+      result = await resolveCoordinates(group.address);
+      addressCache.set(group.address, result);
+
+      if (result) {
+        console.log(`OK (${result.latitude}, ${result.longitude})`);
+      } else {
+        console.log(`FAIL - 좌표 변환 실패`);
+      }
+
+      // Rate limit 방지 (300ms 간격, API 호출한 경우만)
+      if (i < groups.length - 1) await sleep(300);
+    }
+
+    if (result) {
+      geocoded.push({ ...group, ...result });
+    } else {
+      failed.push(group);
+    }
+  }
+
+  const cacheHits = groups.length - addressCache.size;
+  console.log(`\n[OK] 좌표 변환 성공: ${geocoded.length}건 (API 호출: ${addressCache.size}회, 캐시 히트: ${cacheHits}회)`);
   if (failed.length > 0) {
     console.log(`[FAIL] 좌표 변환 실패: ${failed.length}건`);
     failed.forEach((f) => console.log(`  - ${f.name} (${f.address})`));
@@ -276,8 +359,8 @@ async function main() {
     process.exit(0);
   }
 
-  // 3. 중복 체크
-  console.log('\n--- 3단계: 중복 체크 ---');
+  // 4. 중복 체크
+  console.log('\n--- 4단계: 중복 체크 ---');
   const toInsert: typeof geocoded = [];
 
   for (const item of geocoded) {
@@ -302,8 +385,8 @@ async function main() {
     process.exit(0);
   }
 
-  // 4. DB 삽입
-  console.log('\n--- 4단계: DB 삽입 ---');
+  // 5. DB 삽입
+  console.log('\n--- 5단계: DB 삽입 ---');
 
   const spotData = toInsert.map((item) => ({
     name: item.name,
@@ -311,14 +394,12 @@ async function main() {
     latitude: item.latitude,
     longitude: item.longitude,
     category: '짐보관' as const,
-    locker_sections: [
-      {
-        detail_address: item.detailAddress || null,
-        locker_small: item.lockerSmall,
-        locker_medium: item.lockerMedium,
-        locker_large: item.lockerLarge,
-      },
-    ],
+    locker_sections: item.rows.map((row) => ({
+      detail_address: row.detailAddress || null,
+      locker_small: row.lockerSmall,
+      locker_medium: row.lockerMedium,
+      locker_large: row.lockerLarge,
+    })),
     features: [],
     is_highlighted: false,
     photos: [],
@@ -348,9 +429,10 @@ async function main() {
     );
   }
 
-  // 5. 결과 요약
+  // 6. 결과 요약
   console.log('\n--- 결과 요약 ---');
-  console.log(`CSV 전체: ${rows.length}건`);
+  console.log(`CSV 전체: ${rows.length}행`);
+  console.log(`그룹핑: ${groups.length}개 스팟 (최대 ${maxSections}개 섹션)`);
   console.log(`좌표 변환 성공: ${geocoded.length}건`);
   console.log(`좌표 변환 실패: ${failed.length}건`);
   console.log(`중복 제외: ${geocoded.length - toInsert.length}건`);

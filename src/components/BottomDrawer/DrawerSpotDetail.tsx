@@ -9,13 +9,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { openNaverMap } from '@/lib/naver-map-utils';
+import { openNaverMap, getMobileOS } from '@/lib/naver-map-utils';
 import { isValidHttpUrl } from '@/lib/utils';
 import { hasLockerData, sectionTotal, allSectionsTotal } from '@/lib/locker-utils';
 import Image from 'next/image';
 import { WEEKDAYS, WEEKDAY_LABELS } from '@/types';
 import type { Spot, Weekday } from '@/types';
 import { track } from '@/lib/analytics';
+
+const TTARACKER_APP = {
+  ios: 'https://apps.apple.com/app/id1503291383',
+  android: 'https://play.google.com/store/apps/details?id=io.mobinity.locker',
+} as const;
 
 interface DrawerSpotDetailProps {
   spot: Spot;
@@ -215,7 +220,7 @@ export default function DrawerSpotDetail({
 
       {/* === SNAP.FULL 영역 — 액션 버튼 === */}
       <div className="px-4 pb-6">
-        {/* Action Button — custom URL or Naver Map */}
+        {/* Action Button — custom URL / 또타라커 앱 (짐보관) / Naver Map */}
         {spot.extra_data?.custom_url ? (
           <Button
             onClick={() => {
@@ -228,6 +233,19 @@ export default function DrawerSpotDetail({
           >
             <ExternalLink className="w-[18px] h-[18px]" />
             새 창에서 자세히 보기
+          </Button>
+        ) : isLocker ? (
+          <Button
+            onClick={() => {
+              track('drawer_action_click', { action_type: 'ttaracker_install', spot_id: spot.id });
+              const os = getMobileOS(); // null(데스크톱) → Android fallback (모바일 전용 웹앱)
+              const url = os === 'ios' ? TTARACKER_APP.ios : TTARACKER_APP.android;
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            className="w-full h-11 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-[clamp(13px,3.5vw,15px)] flex items-center justify-center gap-2 shadow-sm"
+          >
+            <ExternalLink className="w-[18px] h-[18px]" />
+            또타라커 앱에서 실시간 확인
           </Button>
         ) : (
           <Button
