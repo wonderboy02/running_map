@@ -47,7 +47,7 @@ export type AnalyticsEventMap = {
     content_type: 'list' | 'spot_detail' | 'course_detail';
   };
   drawer_action_click: {
-    action_type: 'naver_map' | 'custom_url' | 'phone_call';
+    action_type: 'naver_map' | 'custom_url' | 'phone_call' | 'ttaracker_install';
     spot_id: string;
   };
 

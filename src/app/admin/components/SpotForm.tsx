@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { MapPin, Search, Loader2, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { CATEGORIES, FEATURES, WEEKDAYS, WEEKDAY_LABELS } from '@/types';
-import type { Spot, SpotInsert } from '@/types';
+import type { Spot, SpotInsert, LockerSection } from '@/types';
 import { useGeocode, type GeocodeResult } from '@/hooks/useGeocode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { isValidHttpUrl } from '@/lib/utils';
+import { emptyLockerSection } from '@/lib/locker-utils';
 import { toast } from 'sonner';
 import TagInput from '@/app/admin/components/TagInput';
 
@@ -28,10 +29,7 @@ const EMPTY_FORM: SpotInsert = {
   longitude: 126.978,
   category: '러너스팟',
   features: [],
-  detail_address: null,
-  locker_small: null,
-  locker_medium: null,
-  locker_large: null,
+  locker_sections: null,
   is_highlighted: false,
   operating_hours: null,
   description: null,
@@ -54,10 +52,7 @@ export default function SpotForm({ spot }: SpotFormProps) {
           longitude: spot.longitude,
           category: spot.category,
           features: spot.features ?? [],
-          detail_address: spot.detail_address,
-          locker_small: spot.locker_small,
-          locker_medium: spot.locker_medium,
-          locker_large: spot.locker_large,
+          locker_sections: spot.locker_sections,
           is_highlighted: spot.is_highlighted,
           operating_hours: spot.operating_hours,
           description: spot.description,
@@ -108,14 +103,38 @@ export default function SpotForm({ spot }: SpotFormProps) {
     setForm((prev) => ({
       ...prev,
       category: cat as SpotInsert['category'],
-      // 짐보관이 아닌 카테고리로 변경 시 관련 필드 초기화
-      ...(cat !== '짐보관' && {
-        detail_address: null,
-        locker_small: null,
-        locker_medium: null,
-        locker_large: null,
+      // 짐보관이 아닌 카테고리로 변경 시 초기화
+      ...(cat !== '짐보관' && { locker_sections: null }),
+      // 짐보관으로 변경 시 기존 데이터 없으면 빈 구역 1개
+      ...(cat === '짐보관' && !prev.locker_sections && {
+        locker_sections: [emptyLockerSection()],
       }),
     }));
+  }
+
+  // ── 라커 섹션 CRUD ────────────────────────────────────────
+
+  function addLockerSection() {
+    setForm((prev) => ({
+      ...prev,
+      locker_sections: [...(prev.locker_sections ?? []), emptyLockerSection()],
+    }));
+  }
+
+  function removeLockerSection(index: number) {
+    setForm((prev) => {
+      const sections = prev.locker_sections ?? [];
+      if (sections.length <= 1) return prev;
+      return { ...prev, locker_sections: sections.filter((_, i) => i !== index) };
+    });
+  }
+
+  function updateLockerSection(index: number, field: keyof LockerSection, value: string | number | null) {
+    setForm((prev) => {
+      const sections = [...(prev.locker_sections ?? [])];
+      sections[index] = { ...sections[index], [field]: value };
+      return { ...prev, locker_sections: sections };
+    });
   }
 
   function toggleFeature(feat: string) {
@@ -466,54 +485,87 @@ export default function SpotForm({ spot }: SpotFormProps) {
         </div>
       </div>
 
-      {/* 짐보관 전용 필드 */}
-      {form.category === '짐보관' && (
+      {/* 짐보관 전용 필드 — 다중 구역 */}
+      {form.category === '짐보관' && form.locker_sections && (
         <div className="space-y-4 rounded-lg border border-border p-4 bg-surface-dim/50">
           <p className="text-sm font-medium text-text-secondary">짐보관 상세 정보</p>
-          <div className="space-y-1.5">
-            <Label>상세 위치</Label>
-            <Input
-              type="text"
-              value={form.detail_address ?? ''}
-              onChange={(e) => updateField('detail_address', e.target.value || null)}
-              placeholder="예: 지하 1층, 3번 출구 앞"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>라커 수량</Label>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs text-blue-600">소형</Label>
+
+          {form.locker_sections.map((section, idx) => (
+            <div key={idx} className="space-y-3 rounded-lg border border-border bg-surface p-3">
+              {/* 구역 헤더 */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-text-secondary">구역 {idx + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => removeLockerSection(idx)}
+                  disabled={form.locker_sections!.length <= 1}
+                  className="rounded p-1 text-text-muted hover:text-red-500 disabled:opacity-30 disabled:hover:text-text-muted"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {/* 상세 위치 */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">상세 위치</Label>
                 <Input
-                  type="number"
-                  min={0}
-                  value={form.locker_small ?? ''}
-                  onChange={(e) => updateField('locker_small', e.target.value ? Number(e.target.value) : null)}
-                  placeholder="0"
+                  type="text"
+                  value={section.detail_address ?? ''}
+                  onChange={(e) => updateLockerSection(idx, 'detail_address', e.target.value || null)}
+                  placeholder="예: 지하 1층, 3번 출구 앞"
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-green-600">중형</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.locker_medium ?? ''}
-                  onChange={(e) => updateField('locker_medium', e.target.value ? Number(e.target.value) : null)}
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-orange-600">대형</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.locker_large ?? ''}
-                  onChange={(e) => updateField('locker_large', e.target.value ? Number(e.target.value) : null)}
-                  placeholder="0"
-                />
+
+              {/* 라커 수량 */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">라커 수량</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-blue-600">소형</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={section.locker_small ?? ''}
+                      onChange={(e) => updateLockerSection(idx, 'locker_small', e.target.value ? Number(e.target.value) : null)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-green-600">중형</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={section.locker_medium ?? ''}
+                      onChange={(e) => updateLockerSection(idx, 'locker_medium', e.target.value ? Number(e.target.value) : null)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-orange-600">대형</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={section.locker_large ?? ''}
+                      onChange={(e) => updateLockerSection(idx, 'locker_large', e.target.value ? Number(e.target.value) : null)}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          ))}
+
+          {/* 구역 추가 버튼 */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addLockerSection}
+            className="w-full"
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            구역 추가
+          </Button>
         </div>
       )}
 

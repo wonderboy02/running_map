@@ -77,6 +77,9 @@ AnalyticsProvider (layout.tsx)
 | `drawer_snap` | 사용자 드래그로 snap 이동 (settle 후) | `from_snap`, `to_snap`, `content_type` | `BottomDrawer/index.tsx` |
 | `drawer_action_click` | 액션 버튼 클릭 | `action_type`, `spot_id` | `DrawerSpotDetail.tsx` |
 
+- `action_type`: `'naver_map'` | `'custom_url'` | `'phone_call'` | `'ttaracker_install'`
+  - `ttaracker_install`: 짐보관 스팟의 또타라커 앱 설치 배너 클릭 (OS에 따라 App Store / Play Store로 연결)
+
 > `drawer_snap`은 프로그래매틱 snap(selection 변경, onClose, backdrop tap)을 `isProgrammaticSnapRef`로 필터링하여 사용자 드래그만 추적한다.
 
 #### 피드백

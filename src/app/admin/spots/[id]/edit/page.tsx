@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { parseLockerSections } from "@/lib/locker-utils";
 import SpotForm from "@/app/admin/components/SpotForm";
 import type { Spot } from "@/types";
 
@@ -25,7 +26,10 @@ export default function EditSpotPage() {
         return;
       }
 
-      setSpot(data as Spot);
+      setSpot({
+        ...data,
+        locker_sections: parseLockerSections(data.locker_sections),
+      } as Spot);
       setLoading(false);
     }
 

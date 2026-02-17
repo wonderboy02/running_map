@@ -1,6 +1,17 @@
 import type { Spot } from '@/types';
 
 /**
+ * 모바일 OS 감지 (iOS / Android / 기타)
+ */
+export function getMobileOS(): 'ios' | 'android' | null {
+  if (typeof navigator === 'undefined') return null;
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad/i.test(ua)) return 'ios';
+  if (/Android/i.test(ua)) return 'android';
+  return null;
+}
+
+/**
  * 네이버 지도 앱/웹으로 연결하는 유틸리티
  * 모바일: 딥링크 시도 → 웹 fallback
  * 데스크톱: 웹으로 직접 연결
@@ -9,8 +20,7 @@ export function openNaverMap(spot: Spot): void {
   const { latitude, longitude, name } = spot;
   const encodedName = encodeURIComponent(name);
 
-  // 모바일 환경 감지
-  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  const isMobile = getMobileOS() !== null;
 
   if (isMobile) {
     // 모바일: 딥링크 시도

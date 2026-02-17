@@ -1,5 +1,13 @@
 import type { Database } from '@/lib/supabase/database';
 
+/** 짐보관 스팟의 단일 구역 */
+export interface LockerSection {
+  detail_address: string | null;
+  locker_small: number | null;
+  locker_medium: number | null;
+  locker_large: number | null;
+}
+
 export interface Spot {
   id: string;
   name: string;
@@ -8,10 +16,7 @@ export interface Spot {
   longitude: number;
   category: Category;
   features: string[];
-  detail_address: string | null;
-  locker_small: number | null;
-  locker_medium: number | null;
-  locker_large: number | null;
+  locker_sections: LockerSection[] | null;
   is_highlighted: boolean;
   operating_hours: Record<string, string> | null;
   description: string | null;
