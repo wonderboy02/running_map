@@ -116,15 +116,12 @@ export type Database = {
           category: string
           created_at: string | null
           description: string | null
-          detail_address: string | null
           extra_data: Json | null
           features: string[]
           id: string
           is_highlighted: boolean | null
           latitude: number
-          locker_large: number | null
-          locker_medium: number | null
-          locker_small: number | null
+          locker_sections: Json | null
           longitude: number
           name: string
           operating_hours: Json | null
@@ -138,15 +135,12 @@ export type Database = {
           category: string
           created_at?: string | null
           description?: string | null
-          detail_address?: string | null
           extra_data?: Json | null
           features?: string[]
           id?: string
           is_highlighted?: boolean | null
           latitude: number
-          locker_large?: number | null
-          locker_medium?: number | null
-          locker_small?: number | null
+          locker_sections?: Json | null
           longitude: number
           name: string
           operating_hours?: Json | null
@@ -160,15 +154,12 @@ export type Database = {
           category?: string
           created_at?: string | null
           description?: string | null
-          detail_address?: string | null
           extra_data?: Json | null
           features?: string[]
           id?: string
           is_highlighted?: boolean | null
           latitude?: number
-          locker_large?: number | null
-          locker_medium?: number | null
-          locker_small?: number | null
+          locker_sections?: Json | null
           longitude?: number
           name?: string
           operating_hours?: Json | null

@@ -394,6 +394,7 @@ docs/
 | `src/lib/utils.ts` | `cn()` (Tailwind 클래스 병합) |
 | `src/lib/marker-config.ts` | 마커 아이콘 (PNG 기반, `getSpotMarkerIcon()`, `getCoursePinIcon(isSelected?, name?)`, `getSearchPinIcon()`) |
 | `src/lib/category-config.ts` | 카테고리 배지 스타일 (`getCategoryBadgeStyle()`) |
+| `src/lib/locker-utils.ts` | 라커 섹션 유틸 (`emptyLockerSection()`, `sectionTotal()`, `allSectionsTotal()`, `hasLockerData()`, `parseLockerSections()`) |
 | `src/lib/naver-map-utils.ts` | 네이버 지도 유틸 |
 | `src/lib/auth/withAuth.ts` | Admin API 인증 HOF |
 

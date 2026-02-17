@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { parseLockerSections } from "@/lib/locker-utils";
 import type { Spot } from "@/types";
 
 export function useSpots() {
@@ -20,7 +21,12 @@ export function useSpots() {
       if (error) {
         setError(error.message);
       } else {
-        setSpots(data as Spot[]);
+        setSpots(
+          (data ?? []).map((row) => ({
+            ...row,
+            locker_sections: parseLockerSections(row.locker_sections),
+          })) as Spot[],
+        );
       }
       setLoading(false);
     }

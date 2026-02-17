@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { openNaverMap } from '@/lib/naver-map-utils';
 import { isValidHttpUrl } from '@/lib/utils';
+import { hasLockerData, sectionTotal, allSectionsTotal } from '@/lib/locker-utils';
 import Image from 'next/image';
 import { WEEKDAYS, WEEKDAY_LABELS } from '@/types';
 import type { Spot, Weekday } from '@/types';
@@ -40,11 +41,11 @@ export default function DrawerSpotDetail({
   const hasPhotos = isRunnerSpot && spot.photos && spot.photos.length > 0;
   const hasFeatures = !isLocker && spot.features && spot.features.length > 0;
 
-  // 짐보관: 라커 합계
-  const lockerTotal = isLocker
-    ? (spot.locker_small ?? 0) + (spot.locker_medium ?? 0) + (spot.locker_large ?? 0)
-    : 0;
-  const hasLockerInfo = isLocker && lockerTotal > 0;
+  // 짐보관: 다중 구역
+  const sections = isLocker ? spot.locker_sections ?? [] : [];
+  const hasLockerInfo = hasLockerData(spot.locker_sections);
+  const isMultiSection = sections.length > 1;
+  const grandTotal = hasLockerInfo ? allSectionsTotal(sections) : 0;
 
   const todayKey = getTodayKey();
   const todayHours = spot.operating_hours?.[todayKey];
@@ -106,39 +107,64 @@ export default function DrawerSpotDetail({
           </div>
         )}
 
-        {/* 4-1. 짐보관: 상세위치 */}
-        {isLocker && spot.detail_address && (
+        {/* 4-1. 짐보관: 상세위치 요약 */}
+        {isLocker && sections.length > 0 && sections[0].detail_address && (
           <div className="flex items-start gap-2 px-4 pb-3 text-text-secondary">
             <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-text-muted" />
-            <p className="text-[clamp(12px,3vw,14px)] leading-relaxed">{spot.detail_address}</p>
+            <p className="text-[clamp(12px,3vw,14px)] leading-relaxed">
+              {sections[0].detail_address}
+              {isMultiSection && ` 외 ${sections.length - 1}곳`}
+            </p>
           </div>
         )}
       </div>
 
       {/* === contentRef: SNAP.CONTENT 경계 — 라커 정보 + 전화 + 설명 + 사진 === */}
       <div ref={contentRef} className="px-4 pb-4 space-y-4">
-        {/* 짐보관: 라커 사이즈별 배지 */}
+        {/* 짐보관: 라커 사이즈별 배지 (다중 구역 대응) */}
         {hasLockerInfo && (
-          <div className="space-y-2.5">
-            <div className="flex flex-wrap gap-2">
-              {spot.locker_small != null && spot.locker_small > 0 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-locker-sm-muted px-3 py-1.5 text-[clamp(12px,3vw,14px)] font-medium text-locker-sm">
-                  소형 <span className="font-bold">{spot.locker_small}</span>
-                </span>
-              )}
-              {spot.locker_medium != null && spot.locker_medium > 0 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-locker-md-muted px-3 py-1.5 text-[clamp(12px,3vw,14px)] font-medium text-locker-md">
-                  중형 <span className="font-bold">{spot.locker_medium}</span>
-                </span>
-              )}
-              {spot.locker_large != null && spot.locker_large > 0 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-locker-lg-muted px-3 py-1.5 text-[clamp(12px,3vw,14px)] font-medium text-locker-lg">
-                  대형 <span className="font-bold">{spot.locker_large}</span>
-                </span>
-              )}
-            </div>
+          <div className="space-y-4">
+            {sections.map((section, idx) => {
+              const total = sectionTotal(section);
+              if (total === 0) return null;
+              return (
+                <div key={idx} className="space-y-2.5">
+                  {/* 다중 구역일 때만 구역 헤더 표시 */}
+                  {isMultiSection && (
+                    <div className="space-y-0.5">
+                      <p className="text-[clamp(11px,2.8vw,12px)] font-medium text-text-muted">상세위치</p>
+                      <p className="text-[clamp(12px,3vw,14px)] text-text-secondary">
+                        {section.detail_address || '(위치 미지정)'}
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {section.locker_small != null && section.locker_small > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-locker-sm-muted px-3 py-1.5 text-[clamp(12px,3vw,14px)] font-medium text-locker-sm">
+                        소형 <span className="font-bold">{section.locker_small}</span>
+                      </span>
+                    )}
+                    {section.locker_medium != null && section.locker_medium > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-locker-md-muted px-3 py-1.5 text-[clamp(12px,3vw,14px)] font-medium text-locker-md">
+                        중형 <span className="font-bold">{section.locker_medium}</span>
+                      </span>
+                    )}
+                    {section.locker_large != null && section.locker_large > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-locker-lg-muted px-3 py-1.5 text-[clamp(12px,3vw,14px)] font-medium text-locker-lg">
+                        대형 <span className="font-bold">{section.locker_large}</span>
+                      </span>
+                    )}
+                  </div>
+                  {isMultiSection && (
+                    <p className="text-[clamp(12px,3vw,13px)] text-text-muted">
+                      합계 {total}개
+                    </p>
+                  )}
+                </div>
+              );
+            })}
             <p className="text-[clamp(12px,3vw,13px)] text-text-muted">
-              총 {lockerTotal}개
+              총 {grandTotal}개
             </p>
           </div>
         )}
