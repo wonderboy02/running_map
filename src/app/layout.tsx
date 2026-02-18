@@ -5,7 +5,9 @@ import AnalyticsProvider from '@/components/AnalyticsProvider';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://running-map-sand.vercel.app'),
+  metadataBase: new URL(
+    `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL ?? 'localhost:3000'}`
+  ),
   title: "Runner's Spot",
   description: '러너를 위한 짐보관, 샤워실, 탈의실 장소 찾기',
   openGraph: {
