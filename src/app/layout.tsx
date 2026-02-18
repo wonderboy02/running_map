@@ -13,6 +13,14 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'ko_KR',
     siteName: "Runner's Spot",
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        type: 'image/png',
+      },
+    ],
   },
   icons: {
     icon: [
