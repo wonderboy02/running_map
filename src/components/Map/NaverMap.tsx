@@ -188,16 +188,27 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       }
     } else if (selection.type === 'course') {
       const course = selection.data;
-      // bounds를 20% 확장하여 코스 주변 여유 공간 확보
-      const latSpan = course.nw_lat - course.se_lat;
-      const lngSpan = course.se_lng - course.nw_lng;
-      const latPad = latSpan * 0.15;
-      const lngPad = lngSpan * 0.15;
-      const bounds = new naver.maps.LatLngBounds(
-        new naver.maps.LatLng(course.se_lat - latPad, course.nw_lng - lngPad),
-        new naver.maps.LatLng(course.nw_lat + latPad, course.se_lng + lngPad),
-      );
-      map.fitBounds(bounds);
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile) {
+        // 모바일: 코스 원본 bounds + padding으로 타이트하게 확대
+        const bounds = new naver.maps.LatLngBounds(
+          new naver.maps.LatLng(course.se_lat, course.nw_lng),
+          new naver.maps.LatLng(course.nw_lat, course.se_lng),
+        );
+        map.fitBounds(bounds, { padding: 60 });
+      } else {
+        // PC: bounds를 15% 확장하여 여유 공간 확보
+        const latSpan = course.nw_lat - course.se_lat;
+        const lngSpan = course.se_lng - course.nw_lng;
+        const latPad = latSpan * 0.15;
+        const lngPad = lngSpan * 0.15;
+        const bounds = new naver.maps.LatLngBounds(
+          new naver.maps.LatLng(course.se_lat - latPad, course.nw_lng - lngPad),
+          new naver.maps.LatLng(course.nw_lat + latPad, course.se_lng + lngPad),
+        );
+        map.fitBounds(bounds);
+      }
     }
   }, [map, selection]);
 
