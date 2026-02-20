@@ -153,14 +153,14 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       if (existing) {
         existing.setPosition(new naver.maps.LatLng(spot.latitude, spot.longitude));
         existing.setIcon(icon);
-        existing.setZIndex(isSelected ? 200 : 1);
+        existing.setZIndex(isSelected ? 200 : spot.category === '러너스팟' ? 10 : 1);
         existing.setMap(map);
       } else {
         const marker = new naver.maps.Marker({
           position: new naver.maps.LatLng(spot.latitude, spot.longitude),
           map,
           icon,
-          zIndex: isSelected ? 200 : 1,
+          zIndex: isSelected ? 200 : spot.category === '러너스팟' ? 10 : 1,
         });
 
         naver.maps.Event.addListener(marker, 'click', () => {
@@ -404,14 +404,14 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         if (existing) {
           existing.setPosition(new naver.maps.LatLng(pin.lat, pin.lng));
           existing.setIcon(icon);
-          existing.setZIndex(isSelected ? 200 : 50);
+          existing.setZIndex(isSelected ? 200 : 5);
           existing.setMap(pinVisible ? map : null);
         } else {
           const marker = new naver.maps.Marker({
             position: new naver.maps.LatLng(pin.lat, pin.lng),
             map: pinVisible ? map : null,
             icon,
-            zIndex: isSelected ? 200 : 50,
+            zIndex: isSelected ? 200 : 5,
           });
 
           naver.maps.Event.addListener(marker, 'click', () => {
