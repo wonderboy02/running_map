@@ -8,14 +8,11 @@ const NO_TRACK_KEY = 'analytics_no_track';
 let initialized = false;
 
 /**
- * is_test 여부를 판단한다.
- * - Vercel Production이 아니면 true (로컬, Preview)
- * - URL에 ?no_track=1 → localStorage에 저장하여 이후에도 유지
- * - URL에 ?no_track=0 → localStorage에서 제거하여 추적 재개
+ * no_track 상태를 URL 쿼리 + localStorage로 판단한다.
+ * - ?no_track=1 → localStorage에 저장, 이후 방문에도 유지
+ * - ?no_track=0 → localStorage에서 제거, 추적 재개
  */
-function resolveIsTest(): boolean {
-  if (!isProduction) return true;
-
+function isNoTrack(): boolean {
   try {
     const params = new URLSearchParams(window.location.search);
     const noTrackParam = params.get('no_track');
@@ -28,7 +25,6 @@ function resolveIsTest(): boolean {
 
     return localStorage.getItem(NO_TRACK_KEY) === '1';
   } catch {
-    // Safari 프라이빗 브라우징 등 localStorage 접근 불가 시
     return false;
   }
 }
@@ -36,14 +32,16 @@ function resolveIsTest(): boolean {
 /**
  * Mixpanel 초기화. 반드시 클라이언트(useEffect) 내에서 호출할 것.
  * 중복 호출 시 무시된다.
+ *
+ * - 비프로덕션 환경 또는 no_track=1 → 초기화 자체를 스킵하여
+ *   autocapture 포함 모든 이벤트 전송을 완전 차단
  */
 export function initAnalytics() {
   if (typeof window === 'undefined' || !MIXPANEL_TOKEN || initialized) return;
 
-  const isTest = resolveIsTest();
+  if (!isProduction || isNoTrack()) return;
 
   mixpanel.init(MIXPANEL_TOKEN, {
-    debug: isTest,
     track_pageview: false,
     persistence: 'localStorage',
     autocapture: {
@@ -57,7 +55,6 @@ export function initAnalytics() {
       mp.register({
         app_version: process.env.NEXT_PUBLIC_APP_VERSION ?? 'unknown',
         platform: 'web',
-        is_test: isTest,
       });
     },
   });
