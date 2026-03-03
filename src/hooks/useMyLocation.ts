@@ -12,7 +12,8 @@ export interface MyLocationPosition {
 
 const MIN_MOVE_METERS = 3;
 const THROTTLE_MS = 500;
-const SMOOTHING_FACTOR = 0.3;
+const COMPASS_THROTTLE_MS = 100;
+const SMOOTHING_FACTOR = 0.5;
 
 /** GeolocationPositionError → 문자열 에러 코드 */
 function mapGeolocationError(err: GeolocationPositionError): string {
@@ -41,6 +42,7 @@ export function useMyLocation() {
 
   const lastPosRef = useRef<{ lat: number; lng: number } | null>(null);
   const lastUpdateRef = useRef(0);
+  const lastCompassUpdateRef = useRef(0);
   const smoothedHeadingRef = useRef<number | null>(null);
   const gpsSpeedRef = useRef(0);
   const gpsHeadingRef = useRef<number | null>(null);
@@ -75,8 +77,8 @@ export function useMyLocation() {
         lastPosRef.current
       ) {
         const now = Date.now();
-        if (now - lastUpdateRef.current < THROTTLE_MS) return;
-        lastUpdateRef.current = now;
+        if (now - lastCompassUpdateRef.current < COMPASS_THROTTLE_MS) return;
+        lastCompassUpdateRef.current = now;
 
         const raw = compassHeadingRef.current;
         let smoothed = raw;
@@ -90,7 +92,7 @@ export function useMyLocation() {
         smoothedHeadingRef.current = smoothed;
 
         setPosition((prev) =>
-          prev ? { ...prev, heading: Math.round(smoothed) } : null,
+          prev ? { ...prev, heading: smoothed } : null,
         );
       }
     }
@@ -175,7 +177,7 @@ export function useMyLocation() {
         setPosition({
           lat: latitude,
           lng: longitude,
-          heading: smoothed != null ? Math.round(smoothed) : null,
+          heading: smoothed,
           accuracy,
         });
       },
