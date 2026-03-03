@@ -156,7 +156,7 @@ export class MyLocationMarker {
       </svg></div>`;
 
     return {
-      content: `<div class="my-location-marker" ${MARKER_DATA_ATTR} style="transform:rotate(${rotation}deg)">
+      content: `<div class="my-location-marker" ${MARKER_DATA_ATTR}="1" style="transform:rotate(${rotation}deg)">
         ${coneSvg}
         <div class="my-location-dot"></div>
         <div class="my-location-pulse"></div>

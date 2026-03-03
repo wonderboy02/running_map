@@ -207,7 +207,6 @@ body {
   align-items: center;
   justify-content: center;
   transition: transform 300ms ease-out;
-  will-change: transform;
 }
 
 .my-location-dot {
