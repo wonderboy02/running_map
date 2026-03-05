@@ -8,6 +8,7 @@ import DrawerSpotDetail from './DrawerSpotDetail';
 import DrawerSpotList from './DrawerSpotList';
 import DrawerCourseDetail from './DrawerCourseDetail';
 import type { Spot, DrawerSelection } from '@/types';
+import { BOTTOM_NAV_HEIGHT } from '@/components/BottomNavigation';
 import { track } from '@/lib/analytics';
 
 /**
@@ -129,9 +130,9 @@ export default function BottomDrawer({
       initialSnap={SNAP.TITLE}
       disableDismiss={true}
       onSnap={handleSnap}
-      style={{ zIndex: 30 }}
+      style={{ zIndex: 30, bottom: `${BOTTOM_NAV_HEIGHT}px` }}
     >
-      <Sheet.Container style={{ maxHeight: '75vh' }}>
+      <Sheet.Container style={{ maxHeight: `calc(75vh - ${BOTTOM_NAV_HEIGHT}px)` }}>
         <Sheet.Header />
         <Sheet.Content disableScroll={({ currentSnap }) => currentSnap !== SNAP.FULL}>
           {selection?.type === 'spot' ? (

@@ -8,6 +8,7 @@ import FilterChips from '@/components/FilterChips';
 import BottomDrawer from '@/components/BottomDrawer';
 import FloatingControls from '@/components/FloatingControls';
 import SearchOverlay from '@/components/Search/SearchOverlay';
+import BottomNavigation from '@/components/BottomNavigation';
 import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
@@ -259,6 +260,8 @@ export default function HomePage() {
         onSpotClick={handleDrawerSpotClick}
         onDeselect={handleDeselect}
       />
+
+      <BottomNavigation />
 
       {/* 검색 콘텐츠 패널 (헤더 아래) */}
       <SearchOverlay
