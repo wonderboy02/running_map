@@ -205,6 +205,17 @@ export default function HomePage() {
     handleSpotSelect(spot, 'drawer_list');
   }, [handleSpotSelect]);
 
+  const handleDrawerCourseClick = useCallback((course: Course) => {
+    track('course_select', {
+      course_id: course.id,
+      course_name: course.name,
+      source: 'drawer_list',
+    });
+    setTargetLocation(null);
+    setSelection({ type: 'course', data: course });
+    setShowCourses(true);
+  }, []);
+
   const handleCoursePinClick = useCallback((course: Course) => {
     track('course_select', {
       course_id: course.id,
@@ -255,8 +266,10 @@ export default function HomePage() {
 
       <BottomDrawer
         spots={filteredSpots}
+        courses={courses}
         selection={selection}
         onSpotClick={handleDrawerSpotClick}
+        onCourseClick={handleDrawerCourseClick}
         onDeselect={handleDeselect}
       />
 

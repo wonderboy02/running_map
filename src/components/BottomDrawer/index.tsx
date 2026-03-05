@@ -5,9 +5,9 @@ import { flushSync } from 'react-dom';
 import { Sheet, SheetRef } from 'react-modal-sheet';
 import { useSnapPoints } from './useSnapPoints';
 import DrawerSpotDetail from './DrawerSpotDetail';
-import DrawerSpotList from './DrawerSpotList';
+import DrawerListView from './DrawerListView';
 import DrawerCourseDetail from './DrawerCourseDetail';
-import type { Spot, DrawerSelection } from '@/types';
+import type { Spot, Course, DrawerSelection } from '@/types';
 import { track } from '@/lib/analytics';
 
 /**
@@ -29,15 +29,19 @@ const SNAP = {
 
 interface BottomDrawerProps {
   spots: Spot[];
+  courses: Course[];
   selection: DrawerSelection | null;
   onSpotClick: (spot: Spot) => void;
+  onCourseClick: (course: Course) => void;
   onDeselect: () => void;
 }
 
 export default function BottomDrawer({
   spots,
+  courses,
   selection,
   onSpotClick,
+  onCourseClick,
   onDeselect,
 }: BottomDrawerProps) {
   const sheetRef = useRef<SheetRef>(null);
@@ -46,6 +50,7 @@ export default function BottomDrawer({
 
   const { snapPoints, recalculate } = useSnapPoints({ titleRef, contentRef });
   const [currentSnap, setCurrentSnap] = useState<number>(SNAP.TITLE);
+  const [listTab, setListTab] = useState<'spot' | 'course'>('spot');
   const currentSnapRef = useRef<number>(SNAP.TITLE);
   const isProgrammaticSnapRef = useRef(false);
 
@@ -103,7 +108,7 @@ export default function BottomDrawer({
       return;
     }
 
-    const targetSnap = selection ? SNAP.TITLE : SNAP.PEEK;
+    const targetSnap = selection ? SNAP.TITLE : SNAP.PREVIEW;
 
     // rAF: 새 콘텐츠 DOM 커밋 대기 → flushSync로 snap points 동기 갱신 → 즉시 snapTo
     const raf = requestAnimationFrame(() => {
@@ -149,11 +154,16 @@ export default function BottomDrawer({
               onClose={onDeselect}
             />
           ) : (
-            <DrawerSpotList
+            <DrawerListView
               spots={spots}
+              courses={courses}
+              activeTab={listTab}
+              onTabChange={setListTab}
               titleRef={titleRef}
               contentRef={contentRef}
               onSpotClick={onSpotClick}
+              onCourseClick={onCourseClick}
+              onRecalculate={recalculate}
             />
           )}
         </Sheet.Content>
@@ -167,7 +177,7 @@ export default function BottomDrawer({
           ? {
               onTap: () => {
                 isProgrammaticSnapRef.current = true;
-                sheetRef.current?.snapTo(SNAP.PEEK);
+                sheetRef.current?.snapTo(SNAP.PREVIEW);
               },
             }
           : {})}
