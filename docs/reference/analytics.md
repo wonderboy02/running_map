@@ -19,8 +19,9 @@ src/
 ```
 AnalyticsProvider (layout.tsx)
   └─ useEffect → initAnalytics()
+       └─ 비프로덕션 또는 no_track → early return (init 스킵, 이벤트 완전 차단)
        └─ mixpanel.init() — autocapture, 페이지뷰 자동 추적
-            └─ loaded 콜백 → mixpanel.register() — super properties (app_version, platform, is_test)
+            └─ loaded 콜백 → mixpanel.register() — super properties (app_version, platform)
 
 각 컴포넌트
   └─ track('event_name', { ...properties })
@@ -98,21 +99,19 @@ AnalyticsProvider (layout.tsx)
 |---------|---|------|
 | `app_version` | `NEXT_PUBLIC_APP_VERSION` 또는 `'unknown'` | 앱 버전 (수동 설정) |
 | `platform` | `'web'` | 고정값 |
-| `is_test` | `true` / `false` | 테스트 데이터 여부 (아래 참조) |
 
 ---
 
-## 테스트/프로덕션 데이터 구분 (`is_test`)
+## 환경별 이벤트 전송 정책
 
-코드 레벨에서 이벤트를 차단하지 않고 **모든 환경에서 전송**한다.
-`is_test` super property로 구분:
+**프로덕션 환경에서만 Mixpanel을 초기화**한다. 비프로덕션 환경에서는 `mixpanel.init()` 자체를 호출하지 않아 autocapture 포함 모든 이벤트 전송이 완전 차단된다.
 
-| 환경 | `is_test` | 판단 기준 |
+| 환경 | 이벤트 전송 | 판단 기준 |
 |------|-----------|----------|
-| 로컬 개발 (`npm run dev`) | `true` | `NEXT_PUBLIC_VERCEL_ENV` 미설정 |
-| Vercel Preview | `true` | `NEXT_PUBLIC_VERCEL_ENV === 'preview'` |
-| Vercel Production | `false` | `NEXT_PUBLIC_VERCEL_ENV === 'production'` |
-| Production + `?no_track=1` | `true` | localStorage에 플래그 저장 |
+| 로컬 개발 (`npm run dev`) | **차단** | `NEXT_PUBLIC_VERCEL_ENV` 미설정 → `isProduction = false` |
+| Vercel Preview | **차단** | `NEXT_PUBLIC_VERCEL_ENV === 'preview'` → `isProduction = false` |
+| Vercel Production | **전송** | `NEXT_PUBLIC_VERCEL_ENV === 'production'` |
+| Production + `?no_track=1` | **차단** | localStorage에 플래그 저장 → `isNoTrack() = true` |
 
 ### 프로덕션에서 추적 제외하기
 
@@ -126,10 +125,7 @@ https://your-domain.com?no_track=1
 https://your-domain.com?no_track=0
 ```
 
-### Mixpanel 대시보드 설정
-
-- 모든 리포트/보드에 글로벌 필터 `is_test = false` 적용
-- 디버깅 시 필터 해제하면 테스트 데이터도 확인 가능
+`no_track=1`이 설정되면 `initAnalytics()`가 early return하여 Mixpanel 자체가 초기화되지 않는다.
 
 ---
 
@@ -153,6 +149,7 @@ Mixpanel 초기화. `AnalyticsProvider`의 `useEffect`에서 자동 호출된다
 - `typeof window === 'undefined'` 가드 — SSR 안전
 - `initialized` 플래그 — 중복 호출 무시 (React strict mode 대응)
 - 토큰 없으면 silent return — 로컬 개발에 영향 없음
+- 비프로덕션 또는 `no_track=1` → early return (init 스킵, 이벤트 완전 차단)
 
 ### `track(event, properties)`
 
