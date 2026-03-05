@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Compass, User } from 'lucide-react';
+import { Navigation, Route } from 'lucide-react';
 
 export const BOTTOM_NAV_HEIGHT = 56;
 
@@ -14,10 +14,10 @@ export default function BottomNavigation() {
       <button
         className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-text-muted pointer-events-none"
         aria-disabled="true"
-        aria-label="탐색 (준비 중)"
+        aria-label="길안내 (준비 중)"
       >
-        <Compass className="h-5 w-5" />
-        <span className="text-[10px]">탐색</span>
+        <Navigation className="h-5 w-5" />
+        <span className="text-[10px]">길안내</span>
       </button>
 
       <div className="flex flex-1 flex-col items-center">
@@ -28,7 +28,7 @@ export default function BottomNavigation() {
               alt=""
               width={48}
               height={48}
-              className="h-full w-full object-cover object-top"
+              className="h-full w-full scale-110 object-cover object-[50%_25%]"
             />
           </div>
           <span className="mt-0.5 text-[10px] font-semibold text-primary">홈</span>
@@ -38,10 +38,10 @@ export default function BottomNavigation() {
       <button
         className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-text-muted pointer-events-none"
         aria-disabled="true"
-        aria-label="마이 (준비 중)"
+        aria-label="코스 찾기 (준비 중)"
       >
-        <User className="h-5 w-5" />
-        <span className="text-[10px]">마이</span>
+        <Route className="h-5 w-5" />
+        <span className="text-[10px]">코스 찾기</span>
       </button>
     </nav>
   );
