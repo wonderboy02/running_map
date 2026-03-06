@@ -28,7 +28,7 @@ src/
 │   │   ├── index.tsx       # Sheet + snap 관리 + 콘텐츠 스위칭
 │   │   ├── useSnapPoints.ts # DOM 측정 → snap point 계산 훅
 │   │   ├── DrawerSpotDetail.tsx # 스팟 상세 콘텐츠
-│   │   └── DrawerSpotList.tsx   # 스팟 목록 콘텐츠
+│   │   └── DrawerListView.tsx   # 탭 토글 + 스팟/코스 그리드 목록
 │   ├── AnalyticsProvider.tsx # Mixpanel 초기화 Provider
 │   └── ui/                 # shadcn/ui 컴포넌트 (button, input, badge 등)
 ├── lib/                    # 유틸리티
@@ -408,7 +408,7 @@ docs/
 BottomDrawer (index.tsx)     ← Sheet 인스턴스 (항상 isOpen={true})
 ├── DrawerSpotDetail.tsx     ← selectedSpot이 있을 때
 ├── DrawerCourseDetail.tsx   ← selectedCourse가 있을 때
-└── DrawerSpotList.tsx       ← selection이 null일 때
+└── DrawerListView.tsx       ← selection이 null일 때 (탭: 러너스팟/러닝코스)
 ```
 
 - Sheet는 **절대 언마운트되지 않음** → 전환 애니메이션이 부드러움
