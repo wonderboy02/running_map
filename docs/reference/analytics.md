@@ -51,7 +51,7 @@ AnalyticsProvider (layout.tsx)
 | `spot_select` | 스팟 선택 (모든 진입점) | `spot_id`, `spot_name`, `category`, `source`, `query?` | `page.tsx` |
 | `course_select` | 코스 선택 (모든 진입점) | `course_id`, `course_name`, `source`, `query?` | `page.tsx` |
 
-- `source`: `'map'` (마커 클릭), `'search'` (검색 결과), `'drawer_list'` (드로어 목록)
+- `source`: `'map'` (마커 클릭), `'search'` (검색 결과), `'drawer_list'` (드로어 목록, spot_select만 해당)
 - `query`: `source === 'search'`일 때만 포함 — 검색어 → 선택 전환 분석용
 
 #### 지도 인터랙션

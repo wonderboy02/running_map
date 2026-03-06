@@ -498,9 +498,9 @@ export default function DrawerNewContent({ titleRef, contentRef, ... }: DrawerNe
 | **25** | **플로팅 버튼** | **`FloatingControls`** | 내 위치, 피드백, 오버레이 토글 — **드로어보다 아래** |
 | **30** | **Bottom Drawer** | **`BottomDrawer` (Sheet)** | `style={{ zIndex: 30 }}` |
 | **35** | **바텀 내비게이션** | **`BottomNavigation`** | 항상 최하단 고정, Sheet보다 위 |
+| **38** | **검색 오버레이** | **`SearchOverlay`** | Header 아래 전체화면, BottomNav보다 위 |
 | 40 | 헤더 | `Header` | 최상단 고정 |
 | 50 | 모달/다이얼로그 | shadcn/ui `Dialog`, `AlertDialog`, `Sheet`, `Tooltip` | 기본값 유지 |
-| 60 | 검색 오버레이 | `SearchOverlay` | 전체화면 오버레이 |
 
 ### 규칙
 

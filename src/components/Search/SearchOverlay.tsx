@@ -96,7 +96,7 @@ export default function SearchOverlay({
 
   return (
     <div
-      className={`fixed top-12 inset-x-0 bottom-0 z-[35] bg-surface ${
+      className={`fixed top-12 inset-x-0 bottom-0 z-[38] bg-surface ${
         isClosing ? 'search-panel-exit' : 'search-panel-enter'
       }`}
       onAnimationEnd={handleAnimationEnd}
