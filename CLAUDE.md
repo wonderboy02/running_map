@@ -498,6 +498,7 @@ export default function DrawerNewContent({ titleRef, contentRef, ... }: DrawerNe
 | 20 | 필터 칩 | `FilterChips` | 헤더 바로 아래 |
 | **25** | **플로팅 버튼** | **`FloatingControls`** | 내 위치, 피드백, 오버레이 토글 — **드로어보다 아래** |
 | **30** | **Bottom Drawer** | **`BottomDrawer` (Sheet)** | `style={{ zIndex: 30 }}` |
+| **35** | **바텀 내비게이션** | **`BottomNavigation`** | 항상 최하단 고정, Sheet보다 위 |
 | 40 | 헤더 | `Header` | 최상단 고정 |
 | 50 | 모달/다이얼로그 | shadcn/ui `Dialog`, `AlertDialog`, `Sheet`, `Tooltip` | 기본값 유지 |
 | 60 | 검색 오버레이 | `SearchOverlay` | 전체화면 오버레이 |
@@ -655,3 +656,9 @@ useEffect — 마커 동기화
 - `mixpanel.track()`을 직접 호출하지 않음 → `track()` 래퍼 사용
 - 서버 컴포넌트/API Route에서 `track()` import하지 않음 → 클라이언트 전용
 - `AnalyticsEventMap`에 없는 이벤트를 보내지 않음 → 타입 정의 먼저
+
+## Known Limitations
+
+| 항목 | 설명 | 영향 범위 |
+|------|------|----------|
+| **iOS Safe Area 미처리** | `env(safe-area-inset-bottom)` 미적용 — iPhone X 이후 홈 인디케이터 영역(~34px)에 UI가 가려질 수 있음. `BottomNavigation`, `BottomDrawer`, `FloatingControls` 등 하단 고정 요소 전체에 해당. `viewport-fit=cover` 메타 태그 + safe area padding 적용 필요. | 하단 고정 UI 전체 |

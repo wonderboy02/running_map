@@ -4,7 +4,10 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Loader2, LocateFixed, Navigation, Send } from 'lucide-react';
 import FeedbackDialog from '@/components/FeedbackDialog';
+import { BOTTOM_NAV_HEIGHT } from '@/components/BottomNavigation';
 import { track } from '@/lib/analytics';
+
+const FLOATING_BOTTOM_OFFSET = 60; // BottomDrawer peek 높이 기준 여백
 
 interface FloatingControlsProps {
   showCourses: boolean;
@@ -49,7 +52,10 @@ export default function FloatingControls({
       </div>
 
       {/* 오른쪽 하단: 내 위치 + 피드백 */}
-      <div className="fixed bottom-[60px] right-4 z-[25] flex flex-col items-center gap-2">
+      <div
+        className="fixed right-4 z-[25] flex flex-col items-center gap-2"
+        style={{ bottom: `${FLOATING_BOTTOM_OFFSET + BOTTOM_NAV_HEIGHT}px` }}
+      >
         <div className="flex flex-col items-center">
           <button
             onClick={onToggleFollow}

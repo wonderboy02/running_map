@@ -8,6 +8,7 @@ import FilterChips from '@/components/FilterChips';
 import BottomDrawer from '@/components/BottomDrawer';
 import FloatingControls from '@/components/FloatingControls';
 import SearchOverlay from '@/components/Search/SearchOverlay';
+import BottomNavigation from '@/components/BottomNavigation';
 import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
@@ -205,17 +206,6 @@ export default function HomePage() {
     handleSpotSelect(spot, 'drawer_list');
   }, [handleSpotSelect]);
 
-  const handleDrawerCourseClick = useCallback((course: Course) => {
-    track('course_select', {
-      course_id: course.id,
-      course_name: course.name,
-      source: 'drawer_list',
-    });
-    setTargetLocation(null);
-    setSelection({ type: 'course', data: course });
-    setShowCourses(true);
-  }, []);
-
   const handleCoursePinClick = useCallback((course: Course) => {
     track('course_select', {
       course_id: course.id,
@@ -266,12 +256,12 @@ export default function HomePage() {
 
       <BottomDrawer
         spots={filteredSpots}
-        courses={courses}
         selection={selection}
         onSpotClick={handleDrawerSpotClick}
-        onCourseClick={handleDrawerCourseClick}
         onDeselect={handleDeselect}
       />
+
+      <BottomNavigation />
 
       {/* 검색 콘텐츠 패널 (헤더 아래) */}
       <SearchOverlay
