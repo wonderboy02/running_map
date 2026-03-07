@@ -187,13 +187,13 @@ export default function DrawerListView({
 
         {/* 섹션 헤더 */}
         <div className="mt-3 flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-            {activeTab === 'spot' ? (
-              <MapPin className="h-4 w-4 text-primary" />
-            ) : (
-              <Route className="h-4 w-4 text-primary" />
-            )}
-          </div>
+          <Image
+            src={activeTab === 'spot' ? '/markers/runner-default.png' : '/markers/course-default.png'}
+            alt={activeTab === 'spot' ? '러너스팟' : '러닝코스'}
+            width={32}
+            height={32}
+            className="h-8 w-8"
+          />
           <div>
             <div className="text-[clamp(14px,3.8vw,16px)] font-bold text-text leading-tight">
               {activeTab === 'spot' ? '러너스팟' : '러닝코스'}
