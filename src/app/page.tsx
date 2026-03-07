@@ -12,11 +12,12 @@ import BottomNavigation from '@/components/BottomNavigation';
 import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
-import type { Spot, Course, DrawerSelection } from '@/types';
+import type { Spot, Course, DrawerSelection, AppMode } from '@/types';
 import { haversineDistance } from '@/lib/naver-map-utils';
 import { track } from '@/lib/analytics';
 
 export default function HomePage() {
+  const [appMode, setAppMode] = useState<AppMode>('home');
   const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']);
   const [selection, setSelection] = useState<DrawerSelection | null>(null);
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number; name?: string } | null>(null);
@@ -232,6 +233,11 @@ export default function HomePage() {
     setSelection(null);
   }, []);
 
+  const handleModeChange = useCallback((mode: AppMode) => {
+    setAppMode(mode);
+    setSelection(null);
+  }, []);
+
   return (
     <div className="relative flex h-dvh flex-col">
       <Header
@@ -241,7 +247,9 @@ export default function HomePage() {
         query={searchQuery}
         onQueryChange={setSearchQuery}
       />
-      <FilterChips activeFilters={activeFilters} onToggle={handleFilterToggle} />
+      {appMode === 'home' && (
+        <FilterChips activeFilters={activeFilters} onToggle={handleFilterToggle} />
+      )}
       <div className="relative flex-1">
         <NaverMap
           spots={filteredSpots}
@@ -256,26 +264,35 @@ export default function HomePage() {
           onMapClick={handleDeselect}
           onMapReady={handleMapReady}
         />
+        {appMode !== 'home' && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface">
+            <p className="text-text-muted">준비 중입니다</p>
+          </div>
+        )}
       </div>
 
-      <FloatingControls
-        showCourses={showCourses}
-        onToggleCourses={setShowCourses}
-        isFollowing={isFollowing}
-        isLocating={isFollowing && myLocation === null}
-        onToggleFollow={handleToggleFollow}
-      />
+      {appMode === 'home' && (
+        <>
+          <FloatingControls
+            showCourses={showCourses}
+            onToggleCourses={setShowCourses}
+            isFollowing={isFollowing}
+            isLocating={isFollowing && myLocation === null}
+            onToggleFollow={handleToggleFollow}
+          />
 
-      <BottomDrawer
-        spots={filteredSpots}
-        courses={courses}
-        selection={selection}
-        onSpotClick={handleDrawerSpotClick}
-        onCourseClick={handleDrawerCourseClick}
-        onDeselect={handleDeselect}
-      />
+          <BottomDrawer
+            spots={filteredSpots}
+            courses={courses}
+            selection={selection}
+            onSpotClick={handleDrawerSpotClick}
+            onCourseClick={handleDrawerCourseClick}
+            onDeselect={handleDeselect}
+          />
+        </>
+      )}
 
-      <BottomNavigation />
+      <BottomNavigation appMode={appMode} onModeChange={handleModeChange} />
 
       {/* 검색 콘텐츠 패널 (헤더 아래) */}
       <SearchOverlay

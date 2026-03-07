@@ -60,6 +60,8 @@ export type DrawerSelection =
   | { type: 'spot'; data: Spot }
   | { type: 'course'; data: Course };
 
+export type AppMode = 'home' | 'course' | 'navigation';
+
 export type Feedback = Database['public']['Tables']['feedback']['Row'];
 
 export const CATEGORIES = [

@@ -338,6 +338,11 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         ? course.highlight_image_url
         : course.image_url;
 
+      if (!targetUrl) {
+        console.warn(`Course "${course.name}" has no image URL, skipping overlay`);
+        return;
+      }
+
       // Vercel Edge 캐싱을 위해 같은 도메인 경로로 변환
       const imageUrl = rewriteStorageUrl(targetUrl);
 
