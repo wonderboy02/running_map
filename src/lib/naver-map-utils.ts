@@ -78,3 +78,42 @@ export function haversineDistance(
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+/** GPX 폴리라인 공통 스타일 상수 */
+export const GPX_STROKE_COLOR = '#4A90D9';
+export const GPX_STROKE_OPACITY = 1.0;
+
+/** Data Layer의 모든 Feature 좌표에서 LatLngBounds를 계산한다. */
+export function computeDataLayerBounds(
+  dataLayer: naver.maps.Data,
+): naver.maps.LatLngBounds | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const geoJson = dataLayer.toGeoJson() as any;
+  let minLat = Infinity, maxLat = -Infinity;
+  let minLng = Infinity, maxLng = -Infinity;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function extractCoords(coords: any) {
+    if (typeof coords[0] === 'number') {
+      // GeoJSON: [lng, lat]
+      minLng = Math.min(minLng, coords[0]);
+      maxLng = Math.max(maxLng, coords[0]);
+      minLat = Math.min(minLat, coords[1]);
+      maxLat = Math.max(maxLat, coords[1]);
+    } else {
+      coords.forEach(extractCoords);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  geoJson.features?.forEach((f: any) => {
+    if (f.geometry?.coordinates) extractCoords(f.geometry.coordinates);
+  });
+
+  if (minLat === Infinity) return null;
+
+  return new naver.maps.LatLngBounds(
+    new naver.maps.LatLng(minLat, minLng),
+    new naver.maps.LatLng(maxLat, maxLng),
+  );
+}

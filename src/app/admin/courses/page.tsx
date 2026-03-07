@@ -48,16 +48,21 @@ interface CourseForm {
   description: string;
   difficulty: number | '';
   distance_km: number | '';
+  pinpoints: Array<{ lat: number; lng: number }>;
+  is_active: boolean;
+  search_tags: string[];
+
+  // GPX 코스용
+  gpx_file: File | null;
+
+  // 레거시 (전환 기간)
   nw_lat: number;
   nw_lng: number;
   se_lat: number;
   se_lng: number;
-  pinpoints: Array<{ lat: number; lng: number }>;
   opacity: number;
-  is_active: boolean;
   image: File | null;
   highlight_image: File | null;
-  search_tags: string[];
 }
 
 const EMPTY_FORM: CourseForm = {
@@ -65,16 +70,21 @@ const EMPTY_FORM: CourseForm = {
   description: '',
   difficulty: '',
   distance_km: '',
+  pinpoints: [],
+  is_active: true,
+  search_tags: [],
+
+  // GPX
+  gpx_file: null,
+
+  // 레거시
   nw_lat: 0,
   nw_lng: 0,
   se_lat: 0,
   se_lng: 0,
-  pinpoints: [],
   opacity: 1.0,
-  is_active: true,
   image: null,
   highlight_image: null,
-  search_tags: [],
 };
 
 // --- Bulk Upload ---
@@ -774,6 +784,12 @@ export default function AdminCoursesPage() {
   const [pickerOverlayUrl, setPickerOverlayUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    const isGpx = !!form.gpx_file || !!editingCourse?.gpx_file_url;
+    if (isGpx) {
+      setPickerOverlayUrl(null);
+      return;
+    }
+
     let objectUrl: string | null = null;
 
     if (form.image) {
@@ -788,7 +804,7 @@ export default function AdminCoursesPage() {
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [form.image, editingCourse?.image_url]);
+  }, [form.image, form.gpx_file, editingCourse?.image_url, editingCourse?.gpx_file_url]);
 
   async function fetchCourses() {
     setLoading(true);
@@ -820,47 +836,33 @@ export default function AdminCoursesPage() {
   }
 
   function openEditDialog(course: Course) {
+    const isGpx = !!course.gpx_file_url;
     setEditingCourse(course);
     setForm({
       name: course.name,
       description: course.description || '',
       difficulty: course.difficulty ?? '',
       distance_km: course.distance_km ?? '',
+      pinpoints: course.pinpoints ?? [],
+      is_active: course.is_active,
+      search_tags: course.search_tags ?? [],
+
+      // GPX
+      gpx_file: null,
+
+      // 레거시
       nw_lat: course.nw_lat,
       nw_lng: course.nw_lng,
       se_lat: course.se_lat,
       se_lng: course.se_lng,
-      pinpoints: course.pinpoints ?? [],
       opacity: course.opacity,
-      is_active: course.is_active,
       image: null,
       highlight_image: null,
-      search_tags: course.search_tags ?? [],
     });
-    setImagePreview(course.image_url);
-    setHighlightPreview(course.highlight_image_url);
+    setImagePreview(isGpx ? null : course.image_url);
+    setHighlightPreview(isGpx ? null : course.highlight_image_url);
     setRemoveHighlight(false);
     setDialogOpen(true);
-  }
-
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) {
-      setForm((prev) => ({ ...prev, image: file }));
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  }
-
-  function handleHighlightImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) {
-      setForm((prev) => ({ ...prev, highlight_image: file }));
-      const reader = new FileReader();
-      reader.onloadend = () => setHighlightPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -873,39 +875,36 @@ export default function AdminCoursesPage() {
       return;
     }
 
-    if (!editingCourse && !form.image) {
-      toast.error('이미지를 선택해주세요.');
-      setSaving(false);
-      return;
-    }
-
-    if (!form.nw_lat || !form.nw_lng || !form.se_lat || !form.se_lng) {
-      toast.error('좌표를 모두 입력해주세요.');
+    if (!editingCourse && !form.gpx_file) {
+      toast.error('GPX 파일을 선택해주세요.');
       setSaving(false);
       return;
     }
 
     const formData = new FormData();
     formData.append('name', form.name);
-    formData.append('nw_lat', String(form.nw_lat));
-    formData.append('nw_lng', String(form.nw_lng));
-    formData.append('se_lat', String(form.se_lat));
-    formData.append('se_lng', String(form.se_lng));
-    formData.append('opacity', String(form.opacity));
     formData.append('is_active', String(form.is_active));
     if (form.description) formData.append('description', form.description);
     if (form.difficulty !== '') formData.append('difficulty', String(form.difficulty));
     if (form.distance_km !== '') formData.append('distance_km', String(form.distance_km));
     formData.append('pinpoints', JSON.stringify(form.pinpoints));
     formData.append('search_tags', JSON.stringify(form.search_tags));
-    if (form.image) {
-      formData.append('image', form.image);
+
+    // GPX 필드
+    if (form.gpx_file) {
+      formData.append('gpx_file', form.gpx_file);
     }
-    if (form.highlight_image) {
-      formData.append('highlight_image', form.highlight_image);
-    }
-    if (removeHighlight) {
-      formData.append('remove_highlight_image', 'true');
+
+    // 레거시 필드 (기존 PNG 코스 수정 시에만)
+    if (editingCourse && !editingCourse.gpx_file_url && !form.gpx_file) {
+      formData.append('nw_lat', String(form.nw_lat));
+      formData.append('nw_lng', String(form.nw_lng));
+      formData.append('se_lat', String(form.se_lat));
+      formData.append('se_lng', String(form.se_lng));
+      formData.append('opacity', String(form.opacity));
+      if (form.image) formData.append('image', form.image);
+      if (form.highlight_image) formData.append('highlight_image', form.highlight_image);
+      if (removeHighlight) formData.append('remove_highlight_image', 'true');
     }
 
     try {
@@ -1022,7 +1021,11 @@ export default function AdminCoursesPage() {
             >
               {/* 썸네일 */}
               <div className="bg-surface-dim flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-md">
-                {course.image_url ? (
+                {course.gpx_file_url ? (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-course/20 text-xs font-bold text-course">
+                    GPX
+                  </div>
+                ) : course.image_url ? (
                   <img
                     src={course.image_url}
                     alt={course.name}
@@ -1054,15 +1057,21 @@ export default function AdminCoursesPage() {
                     {course.difficulty && `난이도 ${course.difficulty}/10`}
                   </p>
                 )}
-                <p className="text-text-secondary mt-0.5 text-xs">
-                  NW({course.nw_lat.toFixed(4)}, {course.nw_lng.toFixed(4)}) →
-                  SE({course.se_lat.toFixed(4)}, {course.se_lng.toFixed(4)})
-                  &nbsp;· 투명도 {Math.round(course.opacity * 100)}%
-                </p>
-                {course.image_url && (
-                  <p className="mt-0.5 text-xs">
-                    <ImageMeta url={course.image_url} />
-                  </p>
+                {course.gpx_file_url ? (
+                  <p className="text-course mt-0.5 text-xs font-medium">GPX 코스</p>
+                ) : (
+                  <>
+                    <p className="text-text-secondary mt-0.5 text-xs">
+                      NW({course.nw_lat.toFixed(4)}, {course.nw_lng.toFixed(4)}) →
+                      SE({course.se_lat.toFixed(4)}, {course.se_lng.toFixed(4)})
+                      &nbsp;· 투명도 {Math.round(course.opacity * 100)}%
+                    </p>
+                    {course.image_url && (
+                      <p className="mt-0.5 text-xs">
+                        <ImageMeta url={course.image_url} />
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1253,97 +1262,68 @@ export default function AdminCoursesPage() {
               ))}
             </div>
 
-            {/* 이미지 업로드 */}
-            <div className="space-y-1.5">
-              <Label>{editingCourse ? '이미지 (변경 시 선택)' : '이미지 *'}</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-              />
-              {imagePreview && (
-                <div className="bg-surface-dim mt-2 overflow-hidden rounded-md">
-                  <img
-                    src={imagePreview}
-                    alt="미리보기"
-                    className="max-h-40 w-full object-contain"
-                  />
-                </div>
-              )}
-            </div>
+            {/* GPX 파일 업로드 */}
+            {(() => {
+              const isNewCourse = !editingCourse;
+              const isEditingGpx = !!editingCourse?.gpx_file_url;
+              const showLegacyFields = !isNewCourse && !isEditingGpx && !form.gpx_file;
 
-            {/* 하이라이팅 이미지 업로드 */}
-            <div className="space-y-1.5">
-              <Label>하이라이팅 이미지 (선택)</Label>
-              <p className="text-text-secondary text-xs">
-                코스 선택 시 강조 표시할 이미지. 미등록 시 기본 이미지 유지.
-              </p>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleHighlightImageChange}
-              />
-              {highlightPreview && (
-                <div className="bg-surface-dim relative mt-2 overflow-hidden rounded-md">
-                  <img
-                    src={highlightPreview}
-                    alt="하이라이팅 미리보기"
-                    className="max-h-40 w-full object-contain"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHighlightPreview(null);
-                      setForm((prev) => ({ ...prev, highlight_image: null }));
-                      setRemoveHighlight(true);
-                    }}
-                    className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white transition-colors hover:bg-black/70"
-                  >
-                    <XCircle className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-            </div>
+              return (
+                <>
+                  <div className="space-y-1.5">
+                    <Label>
+                      {isNewCourse
+                        ? 'GPX 파일 *'
+                        : isEditingGpx
+                          ? 'GPX 파일 (교체 시 선택)'
+                          : 'GPX 파일 (업로드 시 GPX로 전환)'}
+                    </Label>
+                    <Input
+                      type="file"
+                      accept=".gpx"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setForm((prev) => ({ ...prev, gpx_file: file }));
+                      }}
+                    />
+                    {isEditingGpx && !form.gpx_file && (
+                      <p className="text-text-secondary text-xs">현재 파일 유지 중. 새 파일 선택 시 교체됩니다.</p>
+                    )}
+                  </div>
 
-            {/* 왼쪽 위 좌표 */}
-            <CoordSearchInput
-              label="왼쪽 위 (NW) 좌표"
-              lat={form.nw_lat}
-              lng={form.nw_lng}
-              onCoordsChange={(lat, lng) =>
-                setForm((prev) => ({ ...prev, nw_lat: lat, nw_lng: lng }))
-              }
-            />
-
-            {/* 오른쪽 아래 좌표 */}
-            <CoordSearchInput
-              label="오른쪽 아래 (SE) 좌표"
-              lat={form.se_lat}
-              lng={form.se_lng}
-              onCoordsChange={(lat, lng) =>
-                setForm((prev) => ({ ...prev, se_lat: lat, se_lng: lng }))
-              }
-            />
-
-            {/* 투명도 */}
-            <div className="space-y-1.5">
-              <Label>투명도 ({Math.round(form.opacity * 100)}%)</Label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={form.opacity}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, opacity: parseFloat(e.target.value) }))
-                }
-                className="w-full accent-primary"
-              />
-              <div className="text-text-secondary flex justify-between text-xs">
-                <span>0% (투명)</span>
-                <span>100% (불투명)</span>
-              </div>
-            </div>
+                  {showLegacyFields && (
+                    <>
+                      {imagePreview && (
+                        <div className="space-y-1.5">
+                          <Label className="text-text-secondary">현재 이미지 (레거시)</Label>
+                          <div className="bg-surface-dim overflow-hidden rounded-md">
+                            <img src={imagePreview} alt="미리보기" className="max-h-40 w-full object-contain" />
+                          </div>
+                        </div>
+                      )}
+                      {highlightPreview && (
+                        <div className="space-y-1.5">
+                          <Label className="text-text-secondary">하이라이트 이미지 (레거시)</Label>
+                          <div className="bg-surface-dim overflow-hidden rounded-md">
+                            <img src={highlightPreview} alt="하이라이트" className="max-h-40 w-full object-contain" />
+                          </div>
+                        </div>
+                      )}
+                      <div className="space-y-1.5">
+                        <Label className="text-text-secondary">좌표 (레거시, 읽기 전용)</Label>
+                        <p className="text-text-muted text-xs">
+                          NW({form.nw_lat.toFixed(4)}, {form.nw_lng.toFixed(4)}) →
+                          SE({form.se_lat.toFixed(4)}, {form.se_lng.toFixed(4)})
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-text-secondary">투명도 (레거시): {Math.round(form.opacity * 100)}%</Label>
+                      </div>
+                    </>
+                  )}
+                </>
+              );
+            })()}
 
             {/* 활성화 */}
             <div className="flex items-center space-x-2">
@@ -1409,9 +1389,14 @@ export default function AdminCoursesPage() {
           onOpenChange={setPickerOpen}
           existingPinpoints={form.pinpoints}
           onConfirm={(pinpoints) => setForm((prev) => ({ ...prev, pinpoints }))}
-          overlayImageUrl={pickerOverlayUrl}
+          gpxSource={
+            form.gpx_file
+              ? form.gpx_file
+              : editingCourse?.gpx_file_url ?? null
+          }
+          overlayImageUrl={!form.gpx_file && !editingCourse?.gpx_file_url ? pickerOverlayUrl : null}
           bounds={
-            form.nw_lat && form.se_lat
+            !form.gpx_file && !editingCourse?.gpx_file_url && form.nw_lat && form.se_lat
               ? {
                   nw_lat: form.nw_lat,
                   nw_lng: form.nw_lng,
