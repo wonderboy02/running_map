@@ -21,13 +21,13 @@ export default function BottomNavigation() {
       </button>
 
       <div className="flex flex-1 flex-col items-center">
-        <button className="relative -mt-5 flex flex-col items-center" aria-label="홈">
-          <div className="h-12 w-12 overflow-hidden rounded-full shadow-lg ring-[3px] ring-surface">
+        <button className="relative -mt-4 flex flex-col items-center" aria-label="홈">
+          <div className="h-10 w-10 overflow-hidden rounded-full shadow-lg ring-[2.5px] ring-surface">
             <Image
               src="/logo/logo.png"
               alt=""
-              width={48}
-              height={48}
+              width={40}
+              height={40}
               className="h-full w-full scale-110 object-cover object-[50%_25%]"
             />
           </div>
