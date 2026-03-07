@@ -88,6 +88,7 @@ declare namespace naver.maps {
 
   class Map {
     constructor(element: HTMLElement | string, options?: MapOptions);
+    data: Data;
     getCenter(): LatLng;
     setCenter(center: LatLng): void;
     getZoom(): number;
@@ -222,6 +223,52 @@ declare namespace naver.maps {
     getRadius(): number;
     setVisible(visible: boolean): void;
     setOptions(options: Partial<CircleOptions>): void;
+  }
+
+  // --- Data Layer ---
+
+  namespace Data {
+    interface StyleOptions {
+      strokeColor?: string;
+      strokeWeight?: number;
+      strokeOpacity?: number;
+      fillColor?: string;
+      fillOpacity?: number;
+      clickable?: boolean;
+      visible?: boolean;
+      zIndex?: number;
+      icon?: string | ImageIcon | HtmlIcon;
+      title?: string | null;
+      shape?: unknown;
+    }
+
+    type StylingFunction = (feature: Feature) => StyleOptions;
+
+    class Feature {
+      getId(): string | number;
+      getProperty(key: string): unknown;
+      setProperty(key: string, value: unknown): void;
+      getGeometry(): unknown;
+    }
+  }
+
+  class Data {
+    constructor();
+    addGpx(xmlDoc: Document, autoStyle?: boolean): Data.Feature[];
+    addGeoJson(geojson: object, autoStyle?: boolean): Data.Feature[];
+    addKml(xmlDoc: Document, autoStyle?: boolean): Data.Feature[];
+    addFeature(feature: Data.Feature, autoStyle?: boolean): Data.Feature;
+    removeFeature(feature: Data.Feature): void;
+    getAllFeature(): Data.Feature[];
+    getFeatureById(id: string | number): Data.Feature | null;
+    forEach(callback: (info: { feature: Data.Feature; index: number }) => void): void;
+    setStyle(style: Data.StyleOptions | Data.StylingFunction): void;
+    getStyle(): Data.StyleOptions | Data.StylingFunction;
+    overrideStyle(feature: Data.Feature, style: Data.StyleOptions): void;
+    revertStyle(feature?: Data.Feature): void;
+    setMap(map: Map | null): void;
+    getMap(): Map | null;
+    toGeoJson(): object;
   }
 
   // Position constants
