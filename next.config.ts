@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
+const isLocal = !process.env.VERCEL_ENV;
+
 const nextConfig: NextConfig = {
   images: {
+    unoptimized: isLocal,
     remotePatterns: [
       {
         protocol: "https",
