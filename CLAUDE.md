@@ -627,14 +627,48 @@ useEffect — 마커 동기화
 
 ## 이미지 최적화 가이드
 
-- **유저 대면 이미지는 반드시 `next/image` (`<Image>`) 사용** — `<img>` 태그 금지
-  - Vercel이 자동으로 WebP/AVIF 변환 + 리사이즈 + Edge 캐싱 + lazy loading 처리
+### 태그 선택 기준 (`<Image>` vs `<img>`)
+
+`next/image`(`<Image>`)는 `/_next/image?url=...` 경로로 요청하므로, `public/` 원본 URL과 **브라우저 캐시를 공유하지 않는다.** 따라서 이미지 성격에 따라 태그를 구분해야 한다.
+
+| 이미지 성격 | 태그 | 이유 |
+|------------|------|------|
+| **유저 콘텐츠** (스팟/코스 사진, Supabase Storage URL) | `<Image>` | 큰 파일(수백 KB~), WebP 변환 + 리사이즈 + Edge 캐싱 효과 큼 |
+| **정적 UI 에셋** (로고, 마커 PNG, 토글 아이콘 등 `public/` 파일) | `<img>` | 작은 파일(수 KB), 최적화 실익 없음, `preloadMarkerImages()` 등 프리로드 캐시와 URL 공유 |
+| **Admin 전용** (DataURL 프리뷰, 폼 내부 이미지) | `<img>` | 관리자만 사용, 최적화 불필요 |
+| **SDK 직접 fetch** (Naver Maps `GroundOverlay`, `HtmlIcon` 마커) | `<img>` / raw URL | `next/image` 경유 불가 → 업로드 시점에 `sharp`로 최적화 |
+
+### 캐싱 구조
+
+```
+유저 콘텐츠 (Supabase URL)
+  └─ <Image> → /_next/image?url=...  → Vercel Edge CDN 캐싱 + WebP/AVIF 변환
+
+정적 UI 에셋 (public/ 파일)
+  └─ <img>  → /logo/logo.png         → Vercel Static CDN 캐싱 (Cache-Control: immutable)
+  └─ <img>  → /markers/*.png          → 동일 URL이므로 preloadMarkerImages() 캐시와 공유
+```
+
+- `public/` 파일은 Vercel이 정적 자산으로 CDN 캐싱 (별도 변환 없이도 빠름)
+- `preloadMarkerImages()`는 `new Image().src`로 raw URL을 브라우저 캐시에 적재 → 같은 URL의 `<img>`는 즉시 표시
+- `<Image>`는 `/_next/image` 경유 URL이므로 프리로드 캐시와 **별개** — 정적 에셋에 쓰면 이중 로드 발생
+
+### 규칙
+
+- **유저 콘텐츠 이미지는 반드시 `<Image>` 사용**
   - `next.config.ts`에 Supabase Storage `remotePatterns` 설정 완료
-- **Admin 전용 이미지** (미리보기, 폼 내부)는 `<img>` 허용 (DataURL 프리뷰 등)
+  - `fill` + `sizes` 패턴 권장 (전체 폭: `sizes="100vw"`, 고정 폭: `sizes="288px"` 등)
+- **정적 UI 에셋은 `<img>` 사용** — `<Image>` 금지
+  - 로고 (`/logo/logo.png`), 마커 PNG (`/markers/*.png`), 토글 아이콘 (`/logo/course_*.png`), 필터 칩 아이콘 등
+  - ESLint `@next/next/no-img-element` 경고는 주석으로 suppress하거나 무시
 - **서버 사이드 업로드 시 `sharp`로 WebP 변환** — 원본 포맷(png, jpg 등) 그대로 저장하지 않음
-  - Naver Maps SDK `GroundOverlay` 등 SDK가 직접 fetch하는 이미지는 `next/image` 경유 불가 → 업로드 시점에 최적화 필수
-- **`fill` + `sizes` 패턴 사용** — 반응형 레이아웃에서 이미지 크기를 효율적으로 지정
-  - 전체 폭: `sizes="100vw"`, 고정 폭: `sizes="288px"` 등
+  - Naver Maps SDK가 직접 fetch하는 이미지는 `next/image` 경유 불가 → 업로드 시점에 최적화 필수
+
+### ❌ 하지 말 것
+
+- 정적 UI 에셋(`public/`)에 `<Image>`를 사용하지 않음 → `/_next/image` 변환 오버헤드 + 프리로드 캐시 미공유
+- 유저 콘텐츠(Supabase URL)에 `<img>`를 사용하지 않음 → WebP 변환 + 리사이즈 이점 상실
+- 마커 PNG를 `<Image>`로 표시하지 않음 → `preloadMarkerImages()` 캐시와 URL 불일치
 
 ## Analytics (Mixpanel)
 

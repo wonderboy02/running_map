@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { Navigation, Route } from 'lucide-react';
 
 export const BOTTOM_NAV_HEIGHT = 56;
@@ -23,7 +22,8 @@ export default function BottomNavigation() {
       <div className="flex flex-1 flex-col items-center">
         <button className="relative -mt-4 flex flex-col items-center" aria-label="홈">
           <div className="h-10 w-10 overflow-hidden rounded-full shadow-lg ring-[2.5px] ring-surface">
-            <Image
+            {/* 정적 UI 에셋 — 로고 아이콘, next/image 최적화 실익 없음 */}
+            <img
               src="/logo/logo.png"
               alt=""
               width={40}

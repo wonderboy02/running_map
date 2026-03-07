@@ -187,7 +187,8 @@ export default function DrawerListView({
 
         {/* 섹션 헤더 */}
         <div className="mt-3 flex items-center gap-2.5">
-          <Image
+          {/* 정적 UI 에셋 — preloadMarkerImages() 캐시 공유를 위해 <img> 사용 */}
+          <img
             src={activeTab === 'spot' ? '/markers/runner-default.png' : '/markers/course-default.png'}
             alt={activeTab === 'spot' ? '러너스팟' : '러닝코스'}
             width={32}

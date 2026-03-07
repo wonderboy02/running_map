@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { Loader2, LocateFixed, Navigation, Send } from 'lucide-react';
 import FeedbackDialog from '@/components/FeedbackDialog';
 import { BOTTOM_NAV_HEIGHT } from '@/components/BottomNavigation';
@@ -38,7 +37,8 @@ export default function FloatingControls({
           className="h-10 w-10 rounded-full shadow-md transition-transform active:scale-95"
           aria-label="코스 토글"
         >
-          <Image
+          {/* 정적 UI 에셋 — 작은 토글 아이콘, next/image 최적화 실익 없음 */}
+          <img
             src={showCourses ? '/logo/course_on.png' : '/logo/course_off.png'}
             alt="코스 토글"
             width={40}

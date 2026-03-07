@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import { X } from 'lucide-react';
 
 interface HeaderProps {
@@ -47,12 +46,12 @@ export default function Header({
               : 'max-w-[160px] opacity-100 translate-x-0'
           }`}
         >
-          <Image
+          {/* 정적 UI 에셋 — 로고 아이콘, next/image 최적화 실익 없음 */}
+          <img
             src="/logo/logo.png"
             alt="Runner's Spot"
             width={25}
             height={32}
-            priority
           />
         </div>
 
