@@ -253,6 +253,7 @@ export default function HomePage() {
           targetLocation={targetLocation}
           myLocation={myLocation}
           onMapDrag={handleMapDrag}
+          onMapClick={handleDeselect}
           onMapReady={handleMapReady}
         />
       </div>

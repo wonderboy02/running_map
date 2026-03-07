@@ -22,13 +22,14 @@ interface NaverMapProps {
   targetLocation: { lat: number; lng: number; name?: string } | null;
   myLocation?: MyLocationPosition | null;
   onMapDrag?: () => void;
+  onMapClick?: () => void;
   onMapReady?: (map: naver.maps.Map) => void;
 }
 
 /** 캡션 충돌 감지 수직 임계값 (아이콘 높이 + 캡션 높이 고려) */
 const CAPTION_COLLISION_THRESHOLD_Y = CAPTION_HEIGHT + 14;
 
-export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapReady }: NaverMapProps) {
+export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapClick, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
@@ -257,6 +258,19 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       naver.maps.Event.removeListener(listener);
     };
   }, [isReady, map, onMapDrag]);
+
+  // 지도 빈 영역 클릭 → 선택 해제
+  useEffect(() => {
+    if (!isReady || !map || !onMapClick) return;
+
+    const listener = naver.maps.Event.addListener(map, 'click', () => {
+      onMapClick();
+    });
+
+    return () => {
+      naver.maps.Event.removeListener(listener);
+    };
+  }, [isReady, map, onMapClick]);
 
   // MyLocationMarker 언마운트 시 cleanup
   useEffect(() => {
