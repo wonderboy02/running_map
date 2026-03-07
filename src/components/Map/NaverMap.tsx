@@ -330,6 +330,9 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
 
     // 새로운 코스 오버레이 추가 또는 기존 이미지 교체 + 가시성 토글
     courses.forEach((course) => {
+      // GPX 코스는 image_url이 없으므로 GroundOverlay 스킵 (Step 4에서 Data Layer로 처리)
+      if (!course.image_url) return;
+
       const existing = existingOverlays.get(course.id);
       const isSelected = course.id === selectedCourseId;
 
