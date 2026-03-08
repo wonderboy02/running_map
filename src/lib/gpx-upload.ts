@@ -15,7 +15,7 @@ export function validateGpxFile(file: File): string | null {
 /** 서버에서 GPX XML 구조 기본 검증 (POST/PATCH에서 upload 전에 호출) */
 export async function validateGpxContent(file: File): Promise<string | null> {
   const text = await file.text();
-  if (!text.includes('<gpx')) {
+  if (!/<gpx[\s>]/.test(text)) {
     return '유효한 GPX 파일이 아닙니다. (<gpx> 루트 요소 없음)';
   }
   return null;

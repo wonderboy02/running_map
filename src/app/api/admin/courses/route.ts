@@ -329,6 +329,12 @@ export const PATCH = withAuth(async (request: NextRequest) => {
         await removeFromStorage('courses', [existingUrls.image_url]);
       }
 
+      // GPX→PNG 전환: 기존 GPX 파일 정리
+      if (existingUrls?.gpx_file_url) {
+        await removeFromStorage('courses', [existingUrls.gpx_file_url]);
+        updates.gpx_file_url = null;
+      }
+
       updates.image_url = image_url;
     }
 

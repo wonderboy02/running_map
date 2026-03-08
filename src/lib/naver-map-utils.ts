@@ -82,6 +82,7 @@ export function haversineDistance(
 /** GPX 폴리라인 공통 스타일 상수 */
 export const GPX_STROKE_COLOR = '#4A90D9';
 export const GPX_STROKE_OPACITY = 1.0;
+export const GPX_HIGHLIGHT_COLOR = '#FF6B35';
 
 /** Data Layer의 모든 Feature 좌표에서 LatLngBounds를 계산한다. */
 export function computeDataLayerBounds(

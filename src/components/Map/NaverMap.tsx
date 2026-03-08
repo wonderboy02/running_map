@@ -5,7 +5,7 @@ import { useNaverMap } from '@/hooks/useNaverMap';
 import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages, CAPTION_HEIGHT } from '@/lib/marker-config';
 import { computeVisibleCaptions, type MarkerPixelInfo } from '@/lib/caption-collision';
 import { rewriteStorageUrl } from '@/lib/utils';
-import { computeDataLayerBounds, GPX_STROKE_COLOR, GPX_STROKE_OPACITY } from '@/lib/naver-map-utils';
+import { computeDataLayerBounds, GPX_STROKE_COLOR, GPX_STROKE_OPACITY, GPX_HIGHLIGHT_COLOR } from '@/lib/naver-map-utils';
 import {
   MyLocationMarker,
   type MyLocationState,
@@ -26,9 +26,6 @@ interface NaverMapProps {
   onMapClick?: () => void;
   onMapReady?: (map: naver.maps.Map) => void;
 }
-
-/** GPX 하이라이트(선택) 색상 */
-const GPX_HIGHLIGHT_COLOR = '#FF6B35';
 
 /** 줌 레벨에 따른 GPX 선 두께 계산 */
 function getStrokeWeight(zoom: number, isSelected: boolean = false): number {
@@ -464,7 +461,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         existing.data.setMap(showCourses ? map : null);
       } else {
         // 새로 로드
-        loadGpxCourse(course, map, showCourses);
+        loadGpxCourse(course, map, showCourses, course.id === selectedCourseId);
       }
     });
 
@@ -472,6 +469,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       course: Course,
       mapInstance: naver.maps.Map,
       visible: boolean,
+      isSelected: boolean,
     ) {
       if (!course.gpx_file_url) return;
       try {
@@ -486,7 +484,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         const dataLayer = new naver.maps.Data();
         const features = dataLayer.addGpx(xmlDoc);
 
-        dataLayer.setStyle(buildGpxStyle(mapInstance.getZoom(), false));
+        dataLayer.setStyle(buildGpxStyle(mapInstance.getZoom(), isSelected));
         dataLayer.setMap(visible ? mapInstance : null);
         courseDataLayersRef.current.set(course.id, { data: dataLayer, features });
       } catch (err) {
