@@ -695,3 +695,4 @@ useEffect — 마커 동기화
 | 항목 | 설명 | 영향 범위 |
 |------|------|----------|
 | **iOS Safe Area 미처리** | `env(safe-area-inset-bottom)` 미적용 — iPhone X 이후 홈 인디케이터 영역(~34px)에 UI가 가려질 수 있음. `BottomNavigation`, `BottomDrawer`, `FloatingControls` 등 하단 고정 요소 전체에 해당. `viewport-fit=cover` 메타 태그 + safe area padding 적용 필요. | 하단 고정 UI 전체 |
+| **GPX 업로드 검증 최소화** | Admin 전용이므로 MIME 타입 검증, difficulty 범위(1~10) 검증 등을 생략. 확장자(`.gpx`) + 크기(5MB) + 기본 콘텐츠(`<gpx>` 태그) 검증만 수행. 공개 업로드 API로 전환 시 강화 필요. | `src/lib/gpx-upload.ts`, `src/app/api/admin/courses/route.ts` |
