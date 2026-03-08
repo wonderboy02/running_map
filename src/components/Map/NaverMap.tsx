@@ -180,6 +180,11 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
   useEffect(() => {
     if (!map || !selection) return;
 
+    // 컨테이너가 hidden→visible 전환된 경우 크기 복원 (fitBounds 전에 실행)
+    if (typeof (map as any).autoResize === 'function') {
+      (map as any).autoResize();
+    }
+
     if (selection.type === 'spot') {
       const pos = new naver.maps.LatLng(selection.data.latitude, selection.data.longitude);
       // 이미 뷰포트 안에 있으면 패닝 생략

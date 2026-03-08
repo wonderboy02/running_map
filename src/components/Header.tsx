@@ -9,6 +9,8 @@ interface HeaderProps {
   onSearchClose: () => void;
   query: string;
   onQueryChange: (q: string) => void;
+  /** 배경을 항상 불투명하게 표시 (코스 모드 등) */
+  opaque?: boolean;
 }
 
 export default function Header({
@@ -17,6 +19,7 @@ export default function Header({
   onSearchClose,
   query,
   onQueryChange,
+  opaque = false,
 }: HeaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -34,7 +37,7 @@ export default function Header({
   return (
     <header
       className={`absolute top-0 left-0 right-0 z-40 pointer-events-none transition-colors duration-200 ${
-        isSearchActive ? 'bg-surface' : ''
+        isSearchActive || opaque ? 'bg-surface' : ''
       }`}
     >
       <div className="flex h-12 items-center gap-3 px-4 pointer-events-auto">

@@ -9,6 +9,7 @@ import BottomDrawer from '@/components/BottomDrawer';
 import FloatingControls from '@/components/FloatingControls';
 import SearchOverlay from '@/components/Search/SearchOverlay';
 import BottomNavigation from '@/components/BottomNavigation';
+import CourseExplorer from '@/components/CourseExplorer';
 import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
@@ -160,9 +161,9 @@ export default function HomePage() {
       source: 'search',
       query: searchQuery,
     });
+    setAppMode('home');
     setTargetLocation(null);
     setSelection({ type: 'course', data: course });
-    // 코스 토글이 꺼져 있으면 켜기
     setShowCourses(true);
   }
 
@@ -174,6 +175,7 @@ export default function HomePage() {
       source: 'search',
       query: searchQuery,
     });
+    setAppMode('home');
     setTargetLocation(null);
     setSelection({ type: 'spot', data: spot });
     // 해당 스팟의 카테고리가 필터에 없으면 추가 (마커가 보이도록)
@@ -218,6 +220,18 @@ export default function HomePage() {
     setShowCourses(true);
   }, []);
 
+  const handleCourseExplorerClick = useCallback((course: Course) => {
+    track('course_select', {
+      course_id: course.id,
+      course_name: course.name,
+      source: 'course_explorer',
+    });
+    setAppMode('home');
+    setTargetLocation(null);
+    setShowCourses(true);
+    setSelection({ type: 'course', data: course });
+  }, []);
+
   const handleCoursePinClick = useCallback((course: Course) => {
     track('course_select', {
       course_id: course.id,
@@ -236,7 +250,13 @@ export default function HomePage() {
   const handleModeChange = useCallback((mode: AppMode) => {
     setAppMode(mode);
     setSelection(null);
-  }, []);
+    if (mode === 'course') setShowCourses(true);
+    // 비홈 모드 전환 시 검색/위치추적 정리
+    if (mode !== 'home') {
+      if (isSearchActive) requestCloseSearch();
+      setIsFollowing(false);
+    }
+  }, [isSearchActive, requestCloseSearch]);
 
   return (
     <div className="relative flex h-dvh flex-col">
@@ -246,11 +266,12 @@ export default function HomePage() {
         onSearchClose={requestCloseSearch}
         query={searchQuery}
         onQueryChange={setSearchQuery}
+        opaque={appMode !== 'home'}
       />
       {appMode === 'home' && (
         <FilterChips activeFilters={activeFilters} onToggle={handleFilterToggle} />
       )}
-      <div className="relative flex-1">
+      <div className={`relative flex-1 ${appMode !== 'home' ? 'hidden' : ''}`}>
         <NaverMap
           spots={filteredSpots}
           courses={courses}
@@ -264,12 +285,15 @@ export default function HomePage() {
           onMapClick={handleDeselect}
           onMapReady={handleMapReady}
         />
-        {appMode !== 'home' && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface">
-            <p className="text-text-muted">준비 중입니다</p>
-          </div>
-        )}
       </div>
+      {appMode === 'course' && (
+        <CourseExplorer courses={courses} onCourseClick={handleCourseExplorerClick} />
+      )}
+      {appMode === 'navigation' && (
+        <div className="flex flex-1 items-center justify-center bg-surface">
+          <p className="text-text-muted">준비 중입니다</p>
+        </div>
+      )}
 
       {appMode === 'home' && (
         <>
