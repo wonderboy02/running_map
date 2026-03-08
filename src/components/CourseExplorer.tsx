@@ -181,8 +181,7 @@ interface CourseExplorerProps {
 export default function CourseExplorer({ courses, onCourseClick }: CourseExplorerProps) {
   const [filters, setFilters] = useState<CourseFilters>(initialFilters);
 
-  const activeCourses = courses.filter((c) => c.is_active);
-  const filteredCourses = filterCourses(activeCourses, filters);
+  const filteredCourses = filterCourses(courses, filters);
 
   return (
     <div className="flex-1 overflow-y-auto bg-surface" style={{ paddingBottom: BOTTOM_NAV_HEIGHT }}>
