@@ -11,6 +11,7 @@ import {
   Trash2,
   Image as ImageIcon,
   Upload,
+  FileUp,
   AlertTriangle,
   CheckCircle2,
   XCircle,
@@ -636,6 +637,245 @@ function BulkUploadDialog({
   );
 }
 
+// --- GPX Bulk Upload ---
+
+interface GpxBulkItem {
+  id: string;
+  file: File;
+  name: string;
+  status: 'ready' | 'error';
+  error?: string;
+}
+
+function GpxBulkUploadDialog({
+  open,
+  onOpenChange,
+  onUploaded,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUploaded: () => void;
+}) {
+  const [items, setItems] = useState<GpxBulkItem[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function reset() {
+    setItems([]);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newItems: GpxBulkItem[] = Array.from(files).map((file, i) => {
+      const isGpx = file.name.toLowerCase().endsWith('.gpx');
+      const name = file.name.replace(/\.[^.]+$/, '');
+      return {
+        id: `${Date.now()}-${i}`,
+        file,
+        name,
+        status: isGpx ? 'ready' : 'error',
+        error: isGpx ? undefined : '.gpx 파일만 업로드할 수 있습니다.',
+      };
+    });
+
+    setItems(newItems);
+  }
+
+  function handleNameChange(id: string, name: string) {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, name } : item)),
+    );
+  }
+
+  function handleRemoveItem(id: string) {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  async function handleBulkUpload() {
+    const readyItems = items.filter((item) => item.status === 'ready' && item.name.trim());
+    if (readyItems.length === 0) {
+      toast.error('업로드 가능한 항목이 없습니다.');
+      return;
+    }
+
+    setUploading(true);
+
+    const formData = new FormData();
+    const metadata = readyItems.map((item, i) => {
+      formData.append(`gpx_${i}`, item.file);
+      return { name: item.name.trim() };
+    });
+    formData.append('metadata', JSON.stringify(metadata));
+
+    try {
+      const res = await fetch('/api/admin/courses/bulk-gpx', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const msg =
+          data.errorCount > 0
+            ? `${data.successCount}개 성공, ${data.errorCount}개 실패`
+            : `${data.successCount}개 업로드 완료`;
+        toast.success(msg);
+
+        if (data.errors?.length > 0) {
+          data.errors.forEach(
+            (err: { name: string; error: string }) =>
+              toast.error(`${err.name}: ${err.error}`),
+          );
+        }
+
+        onOpenChange(false);
+        reset();
+        onUploaded();
+      } else {
+        toast.error(data.error || 'GPX 일괄 업로드에 실패했습니다.');
+      }
+    } catch {
+      toast.error('서버 오류가 발생했습니다.');
+    }
+    setUploading(false);
+  }
+
+  const readyCount = items.filter((i) => i.status === 'ready' && i.name.trim()).length;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>GPX 코스 일괄 추가</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* 안내 */}
+          <div className="bg-surface-dim rounded-md p-3 text-sm">
+            <p className="font-medium">사용법</p>
+            <p className="text-text-secondary mt-1">
+              여러 <code className="bg-background rounded px-1 py-0.5 text-xs">.gpx</code> 파일을
+              한 번에 선택하세요.
+            </p>
+            <p className="text-text-secondary mt-1">
+              파일명(확장자 제외)이 코스 이름으로 자동 입력됩니다.
+            </p>
+            <p className="text-text-muted mt-1.5 text-xs">
+              이름은 업로드 전에 수정할 수 있습니다.
+            </p>
+          </div>
+
+          {/* 파일 선택 */}
+          <div className="space-y-1.5">
+            <Label>GPX 파일 선택</Label>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept=".gpx"
+              multiple
+              onChange={handleFilesSelected}
+            />
+          </div>
+
+          {/* 프리뷰 리스트 */}
+          {items.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">
+                프리뷰 ({readyCount}개 준비)
+              </p>
+              <div className="max-h-64 space-y-2 overflow-y-auto">
+                {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-2 rounded-md border p-2 text-sm ${
+                      item.status === 'error'
+                        ? 'border-red-200 bg-red-50'
+                        : 'border-border'
+                    }`}
+                  >
+                    {item.status === 'error' ? (
+                      <XCircle className="h-4 w-4 flex-shrink-0 text-red-500" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-500" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      {item.status === 'error' ? (
+                        <div>
+                          <p className="truncate text-red-700">{item.file.name}</p>
+                          <p className="text-xs text-red-500">{item.error}</p>
+                        </div>
+                      ) : (
+                        <Input
+                          value={item.name}
+                          onChange={(e) => handleNameChange(item.id, e.target.value)}
+                          className="h-7 text-sm"
+                          placeholder="코스 이름"
+                        />
+                      )}
+                    </div>
+                    <p className="text-text-muted flex-shrink-0 text-xs">
+                      {(item.file.size / 1024).toFixed(0)}KB
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(item.id)}
+                      className="text-text-muted hover:text-text flex-shrink-0"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 버튼 */}
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                onOpenChange(false);
+                reset();
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={handleBulkUpload}
+              disabled={uploading || readyCount === 0}
+              className="flex-1"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  업로드 중...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-1 h-4 w-4" />
+                  일괄 업로드 ({readyCount}개)
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CoordSearchInput({
   label,
   lat,
@@ -778,6 +1018,7 @@ export default function AdminCoursesPage() {
   const [highlightPreview, setHighlightPreview] = useState<string | null>(null);
   const [removeHighlight, setRemoveHighlight] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [gpxBulkDialogOpen, setGpxBulkDialogOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // 피커용 오버레이 이미지 URL (objectURL 생성/revoke를 useEffect로 관리)
@@ -995,7 +1236,11 @@ export default function AdminCoursesPage() {
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => setBulkDialogOpen(true)}>
             <Upload className="mr-1 h-4 w-4" />
-            일괄 추가
+            PNG 일괄
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setGpxBulkDialogOpen(true)}>
+            <FileUp className="mr-1 h-4 w-4" />
+            GPX 일괄
           </Button>
           <Button size="sm" onClick={openCreateDialog}>
             <Plus className="mr-1 h-4 w-4" />
@@ -1375,10 +1620,17 @@ export default function AdminCoursesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 일괄 추가 Dialog */}
+      {/* PNG 일괄 추가 Dialog */}
       <BulkUploadDialog
         open={bulkDialogOpen}
         onOpenChange={setBulkDialogOpen}
+        onUploaded={fetchCourses}
+      />
+
+      {/* GPX 일괄 추가 Dialog */}
+      <GpxBulkUploadDialog
+        open={gpxBulkDialogOpen}
+        onOpenChange={setGpxBulkDialogOpen}
         onUploaded={fetchCourses}
       />
 
