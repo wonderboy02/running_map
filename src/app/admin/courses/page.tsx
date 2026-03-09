@@ -1581,6 +1581,13 @@ export default function AdminCoursesPage() {
                         지도 띄워서 캡쳐
                       </Button>
                     </div>
+                    <p className="text-text-muted text-[11px] leading-relaxed">
+                      1. 지도 미리보기 띄우기 → OS 캡쳐 (Win+Shift+S)
+                      <br />
+                      2. 이 창에서 바로 Ctrl+V 붙여넣기, 파일 업로드, 드래그 앤 드롭 모두 가능
+                      <br />
+                      3. 4:3 자동 크롭 (가로 최대 채움, 세로가 길면 중심 기준 잘림)
+                    </p>
                     <ImageDropZone
                       preview={imagePreview}
                       onImageReady={(file) => {
