@@ -2,7 +2,7 @@
  * 수동 추적 이벤트의 이름 → 프로퍼티 매핑.
  * track() 호출 시 타입 체크를 강제하여 오타/누락을 방지한다.
  */
-export type SelectionSource = 'map' | 'search' | 'drawer_list';
+export type SelectionSource = 'map' | 'search' | 'drawer_list' | 'course_explorer';
 
 export type AnalyticsEventMap = {
   // 선택 (통합)

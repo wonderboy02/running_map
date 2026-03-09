@@ -8,14 +8,17 @@ import FilterChips from '@/components/FilterChips';
 import BottomDrawer from '@/components/BottomDrawer';
 import FloatingControls from '@/components/FloatingControls';
 import SearchOverlay from '@/components/Search/SearchOverlay';
+import BottomNavigation from '@/components/BottomNavigation';
+import CourseExplorer from '@/components/CourseExplorer';
 import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
-import type { Spot, Course, DrawerSelection } from '@/types';
+import type { Spot, Course, DrawerSelection, AppMode } from '@/types';
 import { haversineDistance } from '@/lib/naver-map-utils';
 import { track } from '@/lib/analytics';
 
 export default function HomePage() {
+  const [appMode, setAppMode] = useState<AppMode>('home');
   const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']);
   const [selection, setSelection] = useState<DrawerSelection | null>(null);
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number; name?: string } | null>(null);
@@ -158,9 +161,9 @@ export default function HomePage() {
       source: 'search',
       query: searchQuery,
     });
+    setAppMode('home');
     setTargetLocation(null);
     setSelection({ type: 'course', data: course });
-    // 코스 토글이 꺼져 있으면 켜기
     setShowCourses(true);
   }
 
@@ -172,6 +175,7 @@ export default function HomePage() {
       source: 'search',
       query: searchQuery,
     });
+    setAppMode('home');
     setTargetLocation(null);
     setSelection({ type: 'spot', data: spot });
     // 해당 스팟의 카테고리가 필터에 없으면 추가 (마커가 보이도록)
@@ -205,6 +209,29 @@ export default function HomePage() {
     handleSpotSelect(spot, 'drawer_list');
   }, [handleSpotSelect]);
 
+  const handleDrawerCourseClick = useCallback((course: Course) => {
+    track('course_select', {
+      course_id: course.id,
+      course_name: course.name,
+      source: 'drawer_list',
+    });
+    setTargetLocation(null);
+    setSelection({ type: 'course', data: course });
+    setShowCourses(true);
+  }, []);
+
+  const handleCourseExplorerClick = useCallback((course: Course) => {
+    track('course_select', {
+      course_id: course.id,
+      course_name: course.name,
+      source: 'course_explorer',
+    });
+    setAppMode('home');
+    setTargetLocation(null);
+    setShowCourses(true);
+    setSelection({ type: 'course', data: course });
+  }, []);
+
   const handleCoursePinClick = useCallback((course: Course) => {
     track('course_select', {
       course_id: course.id,
@@ -220,6 +247,17 @@ export default function HomePage() {
     setSelection(null);
   }, []);
 
+  const handleModeChange = useCallback((mode: AppMode) => {
+    setAppMode(mode);
+    setSelection(null);
+    if (mode === 'course') setShowCourses(true);
+    // 비홈 모드 전환 시 검색/위치추적 정리
+    if (mode !== 'home') {
+      if (isSearchActive) requestCloseSearch();
+      setIsFollowing(false);
+    }
+  }, [isSearchActive, requestCloseSearch]);
+
   return (
     <div className="relative flex h-dvh flex-col">
       <Header
@@ -228,9 +266,12 @@ export default function HomePage() {
         onSearchClose={requestCloseSearch}
         query={searchQuery}
         onQueryChange={setSearchQuery}
+        opaque={appMode !== 'home'}
       />
-      <FilterChips activeFilters={activeFilters} onToggle={handleFilterToggle} />
-      <div className="relative flex-1">
+      {appMode === 'home' && (
+        <FilterChips activeFilters={activeFilters} onToggle={handleFilterToggle} />
+      )}
+      <div className={`relative flex-1 ${appMode !== 'home' ? 'hidden' : ''}`}>
         <NaverMap
           spots={filteredSpots}
           courses={courses}
@@ -241,24 +282,41 @@ export default function HomePage() {
           targetLocation={targetLocation}
           myLocation={myLocation}
           onMapDrag={handleMapDrag}
+          onMapClick={handleDeselect}
           onMapReady={handleMapReady}
         />
       </div>
+      {appMode === 'course' && (
+        <CourseExplorer courses={courses} onCourseClick={handleCourseExplorerClick} />
+      )}
+      {appMode === 'navigation' && (
+        <div className="flex flex-1 items-center justify-center bg-surface">
+          <p className="text-text-muted">준비 중입니다</p>
+        </div>
+      )}
 
-      <FloatingControls
-        showCourses={showCourses}
-        onToggleCourses={setShowCourses}
-        isFollowing={isFollowing}
-        isLocating={isFollowing && myLocation === null}
-        onToggleFollow={handleToggleFollow}
-      />
+      {appMode === 'home' && (
+        <>
+          <FloatingControls
+            showCourses={showCourses}
+            onToggleCourses={setShowCourses}
+            isFollowing={isFollowing}
+            isLocating={isFollowing && myLocation === null}
+            onToggleFollow={handleToggleFollow}
+          />
 
-      <BottomDrawer
-        spots={filteredSpots}
-        selection={selection}
-        onSpotClick={handleDrawerSpotClick}
-        onDeselect={handleDeselect}
-      />
+          <BottomDrawer
+            spots={filteredSpots}
+            courses={courses}
+            selection={selection}
+            onSpotClick={handleDrawerSpotClick}
+            onCourseClick={handleDrawerCourseClick}
+            onDeselect={handleDeselect}
+          />
+        </>
+      )}
+
+      <BottomNavigation appMode={appMode} onModeChange={handleModeChange} />
 
       {/* 검색 콘텐츠 패널 (헤더 아래) */}
       <SearchOverlay
