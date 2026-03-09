@@ -35,10 +35,9 @@ export type Database = {
           description: string | null
           difficulty: number | null
           distance_km: number | null
-          gpx_file_url: string | null
           highlight_image_url: string | null
           id: string
-          image_url: string | null
+          image_url: string
           is_active: boolean | null
           name: string
           nw_lat: number
@@ -55,18 +54,17 @@ export type Database = {
           description?: string | null
           difficulty?: number | null
           distance_km?: number | null
-          gpx_file_url?: string | null
           highlight_image_url?: string | null
           id?: string
-          image_url?: string | null
+          image_url: string
           is_active?: boolean | null
           name: string
-          nw_lat?: number
-          nw_lng?: number
+          nw_lat: number
+          nw_lng: number
           opacity?: number
           pinpoints?: Json
-          se_lat?: number
-          se_lng?: number
+          se_lat: number
+          se_lng: number
           search_tags?: string[]
           updated_at?: string | null
         }
@@ -75,10 +73,9 @@ export type Database = {
           description?: string | null
           difficulty?: number | null
           distance_km?: number | null
-          gpx_file_url?: string | null
           highlight_image_url?: string | null
           id?: string
-          image_url?: string | null
+          image_url?: string
           is_active?: boolean | null
           name?: string
           nw_lat?: number

@@ -19,13 +19,8 @@ src/
 ```
 AnalyticsProvider (layout.tsx)
   └─ useEffect → initAnalytics()
-       └─ 비프로덕션 또는 no_track → early return (init 스킵, 이벤트 완전 차단)
        └─ mixpanel.init() — autocapture, 페이지뷰 자동 추적
-            └─ loaded 콜백:
-                 ├─ register()         — super properties (app_version, platform)
-                 ├─ identify()         — device-based ID → People 프로필 생성
-                 ├─ people.set_once()  — first-touch 속성 (UTM, referrer, 방문일, 랜딩페이지)
-                 └─ register_once()    — first-touch UTM super properties
+            └─ loaded 콜백 → mixpanel.register() — super properties (app_version, platform, is_test)
 
 각 컴포넌트
   └─ track('event_name', { ...properties })
@@ -55,7 +50,7 @@ AnalyticsProvider (layout.tsx)
 | `spot_select` | 스팟 선택 (모든 진입점) | `spot_id`, `spot_name`, `category`, `source`, `query?` | `page.tsx` |
 | `course_select` | 코스 선택 (모든 진입점) | `course_id`, `course_name`, `source`, `query?` | `page.tsx` |
 
-- `source`: `'map'` (마커 클릭), `'search'` (검색 결과), `'drawer_list'` (드로어 목록), `'course_explorer'` (코스 탭 카드 클릭)
+- `source`: `'map'` (마커 클릭), `'search'` (검색 결과), `'drawer_list'` (드로어 목록)
 - `query`: `source === 'search'`일 때만 포함 — 검색어 → 선택 전환 분석용
 
 #### 지도 인터랙션
@@ -97,127 +92,27 @@ AnalyticsProvider (layout.tsx)
 
 ## Super Properties
 
-### `register()` — 매 세션 설정
-
 모든 이벤트에 자동으로 포함되는 프로퍼티:
 
 | 프로퍼티 | 값 | 설명 |
 |---------|---|------|
 | `app_version` | `NEXT_PUBLIC_APP_VERSION` 또는 `'unknown'` | 앱 버전 (수동 설정) |
 | `platform` | `'web'` | 고정값 |
-
-### `register_once()` — 최초 1회 설정 (first-touch)
-
-UTM 파라미터가 있는 첫 방문 시에만 설정되며, 이후 방문에서 덮어쓰지 않음:
-
-| 프로퍼티 | 값 | 설명 |
-|---------|---|------|
-| `first_utm_source` | URL의 `utm_source` | 최초 유입 소스 (e.g. `instagram`, `naver`) |
-| `first_utm_medium` | URL의 `utm_medium` | 최초 유입 매체 (e.g. `social`, `cpc`) |
-| `first_utm_campaign` | URL의 `utm_campaign` | 최초 유입 캠페인명 |
-
-> UTM 없이 직접 접속한 경우 이 super properties는 설정되지 않음.
+| `is_test` | `true` / `false` | 테스트 데이터 여부 (아래 참조) |
 
 ---
 
-## 유저 식별 (User Identification)
+## 테스트/프로덕션 데이터 구분 (`is_test`)
 
-### Device-based 식별
+코드 레벨에서 이벤트를 차단하지 않고 **모든 환경에서 전송**한다.
+`is_test` super property로 구분:
 
-이 앱은 **로그인 없는 공개 웹앱**이므로 Mixpanel의 자동 생성 device ID(`distinct_id`)를 영구 식별자로 사용한다.
-
-```
-초기화 시: mp.identify(mp.get_distinct_id())
-```
-
-- `identify()` 호출이 있어야 **People 프로필이 생성**되어 Users 탭에 표시됨
-- 기존 anonymous ID를 그대로 사용하므로 ID merge가 발생하지 않음
-- Mixpanel 공식 문서의 "anonymous visitor에 identify() 비권장" 경고는 **나중에 로그인 merge가 있는 앱** 대상이므로 해당 없음
-
-### 한계점
-
-| 상황 | 결과 |
-|------|------|
-| 같은 브라우저, 같은 디바이스 | 같은 유저로 인식 |
-| 다른 브라우저 또는 다른 디바이스 | 다른 유저로 인식 |
-| 시크릿 모드 | 매번 새 유저로 인식 |
-| localStorage 삭제 | 새 유저로 인식 |
-
----
-
-## 유입 추적 (Acquisition Tracking)
-
-### People 프로필 속성 (`people.set_once`)
-
-최초 방문 시 1회만 저장. 재방문 시 덮어쓰지 않아 first-touch 어트리뷰션을 보존한다.
-
-| 프로퍼티 | 값 | 설명 |
-|---------|---|------|
-| `first_visit_date` | ISO 8601 timestamp | 최초 방문 시각 |
-| `first_landing_page` | `window.location.pathname` | 최초 진입 페이지 경로 |
-| `first_referrer` | `document.referrer` | 최초 유입 referrer URL (직접 접속 시 빈 문자열) |
-| `first_utm_source` | URL의 `utm_source` | 최초 유입 소스 (없으면 미저장) |
-| `first_utm_medium` | URL의 `utm_medium` | 최초 유입 매체 (없으면 미저장) |
-| `first_utm_campaign` | URL의 `utm_campaign` | 최초 유입 캠페인명 (없으면 미저장) |
-
-### UTM 링크 사용법
-
-외부에 공유하는 URL에 쿼리 파라미터를 붙이면 유입 경로가 자동 기록된다.
-
-```
-https://your-domain.com?utm_source=소스&utm_medium=매체&utm_campaign=캠페인명
-```
-
-| 파라미터 | 의미 | 예시 |
-|---------|------|------|
-| `utm_source` | 어디서 왔는지 | `instagram`, `kakao`, `naver_blog` |
-| `utm_medium` | 어떤 유형인지 | `social`, `messenger`, `blog`, `cpc` |
-| `utm_campaign` | 어떤 목적인지 | `launch`, `beta`, `event_name` |
-
-**채널별 예시:**
-
-| 채널 | URL 예시 |
-|------|---------|
-| 인스타 프로필 링크 | `?utm_source=instagram&utm_medium=social&utm_campaign=profile_link` |
-| 인스타 스토리 | `?utm_source=instagram&utm_medium=story&utm_campaign=launch` |
-| 카카오톡 공유 | `?utm_source=kakao&utm_medium=messenger&utm_campaign=share` |
-| 네이버 블로그 | `?utm_source=naver_blog&utm_medium=blog&utm_campaign=review` |
-| 러닝 커뮤니티 | `?utm_source=running_crew&utm_medium=community&utm_campaign=beta` |
-
-- 3개 모두 필수는 아님 — 있는 것만 저장됨
-- UTM 없이 접속해도 `first_referrer`(이전 페이지 URL)는 기록됨
-- **첫 방문 때 1회만 저장** — 이후 다른 UTM으로 재방문해도 덮어쓰지 않음
-
-### Mixpanel SDK 자동 UTM 수집과의 차이
-
-| 항목 | SDK 자동 수집 | 우리 구현 (`set_once` + `register_once`) |
-|------|-------------|--------------------------------------|
-| 저장 위치 | 이벤트 프로퍼티 | People 프로필 + super property |
-| 어트리뷰션 | last-touch (매 이벤트마다 현재 UTM) | first-touch (최초 UTM만 보존) |
-| Users 탭 | 표시 안 됨 | 표시됨 |
-| Breakdown 분석 | 이벤트 단위 | 유저 단위 |
-
-### 분석 예시
-
-| 분석 목표 | Mixpanel 경로 |
-|----------|-------------|
-| 유입 채널별 유저 수 | Users > Filter by `first_utm_source` |
-| 캠페인별 전환 분석 | Insights > Breakdown by `first_utm_campaign` |
-| 검색엔진 유입 분석 | Users > Filter by `first_referrer` contains `search` |
-| 채널별 리텐션 비교 | Retention > Breakdown by `first_utm_source` |
-
----
-
-## 환경별 이벤트 전송 정책
-
-**프로덕션 환경에서만 Mixpanel을 초기화**한다. 비프로덕션 환경에서는 `mixpanel.init()` 자체를 호출하지 않아 autocapture 포함 모든 이벤트 전송이 완전 차단된다.
-
-| 환경 | 이벤트 전송 | 판단 기준 |
+| 환경 | `is_test` | 판단 기준 |
 |------|-----------|----------|
-| 로컬 개발 (`npm run dev`) | **차단** | `NEXT_PUBLIC_VERCEL_ENV` 미설정 → `isProduction = false` |
-| Vercel Preview | **차단** | `NEXT_PUBLIC_VERCEL_ENV === 'preview'` → `isProduction = false` |
-| Vercel Production | **전송** | `NEXT_PUBLIC_VERCEL_ENV === 'production'` |
-| Production + `?no_track=1` | **차단** | localStorage에 플래그 저장 → `isNoTrack() = true` |
+| 로컬 개발 (`npm run dev`) | `true` | `NEXT_PUBLIC_VERCEL_ENV` 미설정 |
+| Vercel Preview | `true` | `NEXT_PUBLIC_VERCEL_ENV === 'preview'` |
+| Vercel Production | `false` | `NEXT_PUBLIC_VERCEL_ENV === 'production'` |
+| Production + `?no_track=1` | `true` | localStorage에 플래그 저장 |
 
 ### 프로덕션에서 추적 제외하기
 
@@ -231,7 +126,10 @@ https://your-domain.com?no_track=1
 https://your-domain.com?no_track=0
 ```
 
-`no_track=1`이 설정되면 `initAnalytics()`가 early return하여 Mixpanel 자체가 초기화되지 않는다.
+### Mixpanel 대시보드 설정
+
+- 모든 리포트/보드에 글로벌 필터 `is_test = false` 적용
+- 디버깅 시 필터 해제하면 테스트 데이터도 확인 가능
 
 ---
 
@@ -255,7 +153,6 @@ Mixpanel 초기화. `AnalyticsProvider`의 `useEffect`에서 자동 호출된다
 - `typeof window === 'undefined'` 가드 — SSR 안전
 - `initialized` 플래그 — 중복 호출 무시 (React strict mode 대응)
 - 토큰 없으면 silent return — 로컬 개발에 영향 없음
-- 비프로덕션 또는 `no_track=1` → early return (init 스킵, 이벤트 완전 차단)
 
 ### `track(event, properties)`
 
@@ -334,6 +231,4 @@ track('new_event', { property1: 'value', property2: 42 });
 | 검색 → 선택 전환율 | `search_open` → `spot_select(source=search)` | Funnels |
 | 스팟 탐색 → 액션 전환 | `spot_select` → `drawer_action_click` | Funnels |
 | 필터 사용 패턴 | `filter_toggle` → `category` | Insights > Breakdown |
-| 유입 채널별 유저 수 | `first_utm_source` (People 프로필) | Users > Filter by `first_utm_source` |
-| 캠페인별 리텐션 | `first_utm_campaign` (People 프로필) | Retention > Breakdown by `first_utm_campaign` |
-| 검색엔진 유입 분석 | `first_referrer` (People 프로필) | Users > Filter by `first_referrer` |
+| 유입 경로 | 자동 UTM 수집 | Insights > Breakdown by `utm_source` |

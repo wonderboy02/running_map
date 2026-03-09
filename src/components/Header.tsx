@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { X } from 'lucide-react';
 
 interface HeaderProps {
@@ -9,8 +10,6 @@ interface HeaderProps {
   onSearchClose: () => void;
   query: string;
   onQueryChange: (q: string) => void;
-  /** 배경을 항상 불투명하게 표시 (코스 모드 등) */
-  opaque?: boolean;
 }
 
 export default function Header({
@@ -19,7 +18,6 @@ export default function Header({
   onSearchClose,
   query,
   onQueryChange,
-  opaque = false,
 }: HeaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -37,7 +35,7 @@ export default function Header({
   return (
     <header
       className={`absolute top-0 left-0 right-0 z-40 pointer-events-none transition-colors duration-200 ${
-        isSearchActive || opaque ? 'bg-surface' : ''
+        isSearchActive ? 'bg-surface' : ''
       }`}
     >
       <div className="flex h-12 items-center gap-3 px-4 pointer-events-auto">
@@ -49,12 +47,12 @@ export default function Header({
               : 'max-w-[160px] opacity-100 translate-x-0'
           }`}
         >
-          {/* 정적 UI 에셋 — 로고 아이콘, next/image 최적화 실익 없음 */}
-          <img
+          <Image
             src="/logo/logo.png"
             alt="Runner's Spot"
             width={25}
             height={32}
+            priority
           />
         </div>
 

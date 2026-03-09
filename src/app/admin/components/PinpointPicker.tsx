@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { MapPin, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNaverMap } from '@/hooks/useNaverMap';
-import { useGpxDataLayer } from '@/hooks/useGpxDataLayer';
 import { getCoursePinIcon } from '@/lib/marker-config';
 
 interface PinpointPickerProps {
@@ -13,15 +12,14 @@ interface PinpointPickerProps {
   onOpenChange: (open: boolean) => void;
   existingPinpoints: Array<{ lat: number; lng: number }>;
   onConfirm: (pinpoints: Array<{ lat: number; lng: number }>) => void;
-  gpxSource: File | string | null;
-  overlayImageUrl?: string | null;
-  bounds?: {
+  overlayImageUrl: string | null;
+  bounds: {
     nw_lat: number;
     nw_lng: number;
     se_lat: number;
     se_lng: number;
   } | null;
-  opacity?: number;
+  opacity: number;
 }
 
 export default function PinpointPicker({
@@ -29,7 +27,6 @@ export default function PinpointPicker({
   onOpenChange,
   existingPinpoints,
   onConfirm,
-  gpxSource,
   overlayImageUrl,
   bounds,
   opacity,
@@ -42,9 +39,6 @@ export default function PinpointPicker({
 
   const { map, isReady } = useNaverMap(mapContainerRef);
 
-  // GPX Data Layer 렌더링 (공통 훅)
-  useGpxDataLayer({ map, isReady, gpxSource });
-
   const [localPins, setLocalPins] = useState<Array<{ lat: number; lng: number }>>([]);
 
   // open → localPins 초기화
@@ -55,9 +49,9 @@ export default function PinpointPicker({
     }
   }, [open, existingPinpoints]);
 
-  // GroundOverlay 표시 + fitBounds (레거시 PNG 코스용)
+  // GroundOverlay 표시 + fitBounds
   useEffect(() => {
-    if (!isReady || !map || gpxSource) return;
+    if (!isReady || !map) return;
 
     if (overlayRef.current) {
       overlayRef.current.setMap(null);
@@ -85,7 +79,7 @@ export default function PinpointPicker({
         overlayRef.current = null;
       }
     };
-  }, [isReady, map, gpxSource, overlayImageUrl, bounds, opacity]);
+  }, [isReady, map, overlayImageUrl, bounds, opacity]);
 
   // 맵 click 리스너
   useEffect(() => {
@@ -190,7 +184,7 @@ export default function PinpointPicker({
     if (e.target === e.currentTarget) onOpenChange(false);
   };
 
-  const hasOverlay = !!gpxSource || (!!overlayImageUrl && !!bounds);
+  const hasOverlay = !!overlayImageUrl && !!bounds;
 
   if (!open) return null;
 

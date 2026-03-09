@@ -4,7 +4,6 @@ import { RefObject } from 'react';
 import { Route, Gauge, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Course } from '@/types';
-import { getDifficultyLabel } from '@/lib/course-utils';
 
 interface DrawerCourseDetailProps {
   course: Course;
@@ -50,7 +49,7 @@ export default function DrawerCourseDetail({
             <div className="flex items-center gap-1.5">
               <Gauge className="w-4 h-4 text-course" />
               <span className="text-[clamp(13px,3.5vw,15px)] font-medium">
-                난이도 {getDifficultyLabel(course.difficulty)} ({course.difficulty}/10)
+                난이도 {course.difficulty}/10
               </span>
             </div>
           )}

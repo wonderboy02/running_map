@@ -38,9 +38,6 @@ next-env.d.ts
 # claude local settings
 .claude/settings.local.json
 
-# serena
-.serena/
-
 # vscode
 /.vscode/
 

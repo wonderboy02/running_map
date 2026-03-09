@@ -58,22 +58,20 @@ export function useNaverMap(
       setIsReady(true);
     }
 
-    let interval: ReturnType<typeof setInterval> | null = null;
-
     if (window.naver?.maps) {
       initMap();
-    } else {
-      interval = setInterval(() => {
-        if (window.naver?.maps) {
-          clearInterval(interval!);
-          interval = null;
-          initMap();
-        }
-      }, 100);
+      return;
     }
 
+    const interval = setInterval(() => {
+      if (window.naver?.maps) {
+        clearInterval(interval);
+        initMap();
+      }
+    }, 100);
+
     return () => {
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
       if (mapRef.current) {
         mapRef.current.destroy();
         mapRef.current = null;

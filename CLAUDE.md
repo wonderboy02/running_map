@@ -28,7 +28,7 @@ src/
 │   │   ├── index.tsx       # Sheet + snap 관리 + 콘텐츠 스위칭
 │   │   ├── useSnapPoints.ts # DOM 측정 → snap point 계산 훅
 │   │   ├── DrawerSpotDetail.tsx # 스팟 상세 콘텐츠
-│   │   └── DrawerListView.tsx   # 탭 토글 + 스팟/코스 그리드 목록
+│   │   └── DrawerSpotList.tsx   # 스팟 목록 콘텐츠
 │   ├── AnalyticsProvider.tsx # Mixpanel 초기화 Provider
 │   └── ui/                 # shadcn/ui 컴포넌트 (button, input, badge 등)
 ├── lib/                    # 유틸리티
@@ -407,8 +407,7 @@ docs/
 ```
 BottomDrawer (index.tsx)     ← Sheet 인스턴스 (항상 isOpen={true})
 ├── DrawerSpotDetail.tsx     ← selectedSpot이 있을 때
-├── DrawerCourseDetail.tsx   ← selectedCourse가 있을 때
-└── DrawerListView.tsx       ← selection이 null일 때 (탭: 러너스팟/러닝코스)
+└── DrawerSpotList.tsx       ← selectedSpot이 null일 때
 ```
 
 - Sheet는 **절대 언마운트되지 않음** → 전환 애니메이션이 부드러움
@@ -497,10 +496,9 @@ export default function DrawerNewContent({ titleRef, contentRef, ... }: DrawerNe
 | 20 | 필터 칩 | `FilterChips` | 헤더 바로 아래 |
 | **25** | **플로팅 버튼** | **`FloatingControls`** | 내 위치, 피드백, 오버레이 토글 — **드로어보다 아래** |
 | **30** | **Bottom Drawer** | **`BottomDrawer` (Sheet)** | `style={{ zIndex: 30 }}` |
-| **35** | **바텀 내비게이션** | **`BottomNavigation`** | 항상 최하단 고정, Sheet보다 위 |
-| **38** | **검색 오버레이** | **`SearchOverlay`** | Header 아래 전체화면, BottomNav보다 위 |
 | 40 | 헤더 | `Header` | 최상단 고정 |
 | 50 | 모달/다이얼로그 | shadcn/ui `Dialog`, `AlertDialog`, `Sheet`, `Tooltip` | 기본값 유지 |
+| 60 | 검색 오버레이 | `SearchOverlay` | 전체화면 오버레이 |
 
 ### 규칙
 
@@ -627,48 +625,14 @@ useEffect — 마커 동기화
 
 ## 이미지 최적화 가이드
 
-### 태그 선택 기준 (`<Image>` vs `<img>`)
-
-`next/image`(`<Image>`)는 `/_next/image?url=...` 경로로 요청하므로, `public/` 원본 URL과 **브라우저 캐시를 공유하지 않는다.** 따라서 이미지 성격에 따라 태그를 구분해야 한다.
-
-| 이미지 성격 | 태그 | 이유 |
-|------------|------|------|
-| **유저 콘텐츠** (스팟/코스 사진, Supabase Storage URL) | `<Image>` | 큰 파일(수백 KB~), WebP 변환 + 리사이즈 + Edge 캐싱 효과 큼 |
-| **정적 UI 에셋** (로고, 마커 PNG, 토글 아이콘 등 `public/` 파일) | `<img>` | 작은 파일(수 KB), 최적화 실익 없음, `preloadMarkerImages()` 등 프리로드 캐시와 URL 공유 |
-| **Admin 전용** (DataURL 프리뷰, 폼 내부 이미지) | `<img>` | 관리자만 사용, 최적화 불필요 |
-| **SDK 직접 fetch** (Naver Maps `GroundOverlay`, `HtmlIcon` 마커) | `<img>` / raw URL | `next/image` 경유 불가 → 업로드 시점에 `sharp`로 최적화 |
-
-### 캐싱 구조
-
-```
-유저 콘텐츠 (Supabase URL)
-  └─ <Image> → /_next/image?url=...  → Vercel Edge CDN 캐싱 + WebP/AVIF 변환
-
-정적 UI 에셋 (public/ 파일)
-  └─ <img>  → /logo/logo.png         → Vercel Static CDN 캐싱 (Cache-Control: immutable)
-  └─ <img>  → /markers/*.png          → 동일 URL이므로 preloadMarkerImages() 캐시와 공유
-```
-
-- `public/` 파일은 Vercel이 정적 자산으로 CDN 캐싱 (별도 변환 없이도 빠름)
-- `preloadMarkerImages()`는 `new Image().src`로 raw URL을 브라우저 캐시에 적재 → 같은 URL의 `<img>`는 즉시 표시
-- `<Image>`는 `/_next/image` 경유 URL이므로 프리로드 캐시와 **별개** — 정적 에셋에 쓰면 이중 로드 발생
-
-### 규칙
-
-- **유저 콘텐츠 이미지는 반드시 `<Image>` 사용**
+- **유저 대면 이미지는 반드시 `next/image` (`<Image>`) 사용** — `<img>` 태그 금지
+  - Vercel이 자동으로 WebP/AVIF 변환 + 리사이즈 + Edge 캐싱 + lazy loading 처리
   - `next.config.ts`에 Supabase Storage `remotePatterns` 설정 완료
-  - `fill` + `sizes` 패턴 권장 (전체 폭: `sizes="100vw"`, 고정 폭: `sizes="288px"` 등)
-- **정적 UI 에셋은 `<img>` 사용** — `<Image>` 금지
-  - 로고 (`/logo/logo.png`), 마커 PNG (`/markers/*.png`), 토글 아이콘 (`/logo/course_*.png`), 필터 칩 아이콘 등
-  - ESLint `@next/next/no-img-element` 경고는 주석으로 suppress하거나 무시
+- **Admin 전용 이미지** (미리보기, 폼 내부)는 `<img>` 허용 (DataURL 프리뷰 등)
 - **서버 사이드 업로드 시 `sharp`로 WebP 변환** — 원본 포맷(png, jpg 등) 그대로 저장하지 않음
-  - Naver Maps SDK가 직접 fetch하는 이미지는 `next/image` 경유 불가 → 업로드 시점에 최적화 필수
-
-### ❌ 하지 말 것
-
-- 정적 UI 에셋(`public/`)에 `<Image>`를 사용하지 않음 → `/_next/image` 변환 오버헤드 + 프리로드 캐시 미공유
-- 유저 콘텐츠(Supabase URL)에 `<img>`를 사용하지 않음 → WebP 변환 + 리사이즈 이점 상실
-- 마커 PNG를 `<Image>`로 표시하지 않음 → `preloadMarkerImages()` 캐시와 URL 불일치
+  - Naver Maps SDK `GroundOverlay` 등 SDK가 직접 fetch하는 이미지는 `next/image` 경유 불가 → 업로드 시점에 최적화 필수
+- **`fill` + `sizes` 패턴 사용** — 반응형 레이아웃에서 이미지 크기를 효율적으로 지정
+  - 전체 폭: `sizes="100vw"`, 고정 폭: `sizes="288px"` 등
 
 ## Analytics (Mixpanel)
 
@@ -689,10 +653,3 @@ useEffect — 마커 동기화
 - `mixpanel.track()`을 직접 호출하지 않음 → `track()` 래퍼 사용
 - 서버 컴포넌트/API Route에서 `track()` import하지 않음 → 클라이언트 전용
 - `AnalyticsEventMap`에 없는 이벤트를 보내지 않음 → 타입 정의 먼저
-
-## Known Limitations
-
-| 항목 | 설명 | 영향 범위 |
-|------|------|----------|
-| **iOS Safe Area 미처리** | `env(safe-area-inset-bottom)` 미적용 — iPhone X 이후 홈 인디케이터 영역(~34px)에 UI가 가려질 수 있음. `BottomNavigation`, `BottomDrawer`, `FloatingControls` 등 하단 고정 요소 전체에 해당. `viewport-fit=cover` 메타 태그 + safe area padding 적용 필요. | 하단 고정 UI 전체 |
-| **GPX 업로드 검증 최소화** | Admin 전용이므로 MIME 타입 검증, difficulty 범위(1~10) 검증 등을 생략. 확장자(`.gpx`) + 크기(5MB) + 기본 콘텐츠(`<gpx>` 태그) 검증만 수행. 공개 업로드 API로 전환 시 강화 필요. | `src/lib/gpx-upload.ts`, `src/app/api/admin/courses/route.ts` |

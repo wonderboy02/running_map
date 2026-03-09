@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useEffect, RefObject } from 'react';
-import { BOTTOM_NAV_HEIGHT } from '@/components/BottomNavigation';
 
 const HEADER_HEIGHT = 40; // Sheet.Header (drag handle) 높이
 const PREVIEW_CONTENT_RATIO = 0.25; // preview snap에서 보여줄 contentRef 비율 (≈ 첫 아이템 절반)
@@ -21,7 +20,7 @@ interface UseSnapPointsOptions {
  *   index 2: title — titleRef 영역까지 노출
  *   index 3: preview — title + contentRef의 ~25% (첫 아이템 절반, 초기 상태)
  *   index 4: content — contentRef 영역까지 노출
- *   index 5: full — 75vh - nav bar 높이, 스크롤 가능
+ *   index 5: full — 75vh 전체, 스크롤 가능
  */
 export function useSnapPoints({ titleRef, contentRef }: UseSnapPointsOptions) {
   const [snapPoints, setSnapPoints] = useState<number[]>(FALLBACK_SNAP_POINTS);
@@ -40,7 +39,7 @@ export function useSnapPoints({ titleRef, contentRef }: UseSnapPointsOptions) {
     const contentHeight = contentEl.offsetHeight;
     const previewSnap = titleSnap + Math.round(contentHeight * PREVIEW_CONTENT_RATIO);
     const contentSnap = titleSnap + contentHeight;
-    const maxPx = window.innerHeight * 0.75 - BOTTOM_NAV_HEIGHT;
+    const maxPx = window.innerHeight * 0.75;
 
     // 각 snap은 이전 snap의 clamped 값 기준으로 최소값 보장
     const clampedTitle = Math.max(Math.min(titleSnap, maxPx - 60), peekSnap + 20);

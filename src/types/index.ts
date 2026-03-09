@@ -39,15 +39,13 @@ export interface CoursePinpoint {
 export interface Course {
   id: string;
   name: string;
-  image_url: string | null;
+  image_url: string;
   highlight_image_url: string | null;
   nw_lat: number;
   nw_lng: number;
   se_lat: number;
   se_lng: number;
   opacity: number;
-  thumbnail_url: string | null;
-  gpx_file_url: string | null;
   is_active: boolean;
   description: string | null;
   difficulty: number | null;
@@ -61,8 +59,6 @@ export interface Course {
 export type DrawerSelection =
   | { type: 'spot'; data: Spot }
   | { type: 'course'; data: Course };
-
-export type AppMode = 'home' | 'course' | 'navigation';
 
 export type Feedback = Database['public']['Tables']['feedback']['Row'];
 
