@@ -46,6 +46,7 @@ export interface Course {
   se_lat: number;
   se_lng: number;
   opacity: number;
+  thumbnail_url: string | null;
   gpx_file_url: string | null;
   is_active: boolean;
   description: string | null;

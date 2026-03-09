@@ -39,6 +39,7 @@ export const POST = withAuth(async (request: NextRequest) => {
     const name = formData.get('name') as string;
     const is_active = formData.get('is_active') === 'true';
     const imageFile = formData.get('image') as File | null;
+    const thumbnailFile = formData.get('thumbnail') as File | null;
     const gpxFile = formData.get('gpx_file') as File | null;
     const description = formData.get('description') as string | null;
     const difficulty_str = formData.get('difficulty') as string | null;
@@ -79,18 +80,6 @@ export const POST = withAuth(async (request: NextRequest) => {
         );
       }
       insertData.gpx_file_url = await uploadGpxFile(gpxFile);
-
-      // GPX 코스 썸네일 (선택)
-      if (formData.get('thumbnail_mode') === 'true' && imageFile && imageFile.size > 0) {
-        const fileError = validateImageFile(imageFile);
-        if (fileError) {
-          return NextResponse.json(
-            { success: false, error: fileError },
-            { status: 400 },
-          );
-        }
-        insertData.image_url = await convertAndUpload(imageFile, COURSE_UPLOAD);
-      }
     } else {
       // --- 기존 이미지 흐름 ---
       const nw_lat = parseFloat(formData.get('nw_lat') as string);
@@ -176,6 +165,28 @@ export const POST = withAuth(async (request: NextRequest) => {
       } catch {
         insertData.search_tags = [];
       }
+    }
+
+    // 코스 썸네일 (thumbnail_url — image_url과 분리)
+    if (thumbnailFile && thumbnailFile.size > 0) {
+      const thumbError = validateImageFile(thumbnailFile);
+      if (thumbError) {
+        return NextResponse.json(
+          { success: false, error: `썸네일: ${thumbError}` },
+          { status: 400 },
+        );
+      }
+      const thumbnail_url = await convertAndUpload(thumbnailFile, COURSE_UPLOAD).catch((err) => {
+        console.error('[Courses POST] Thumbnail upload error:', err);
+        return null;
+      });
+      if (!thumbnail_url) {
+        return NextResponse.json(
+          { success: false, error: '썸네일 업로드에 실패했습니다.' },
+          { status: 500 },
+        );
+      }
+      insertData.thumbnail_url = thumbnail_url;
     }
 
     const { data, error } = await supabaseServer
@@ -291,26 +302,28 @@ export const PATCH = withAuth(async (request: NextRequest) => {
       }
     }
 
-    // 새 이미지/GPX가 있으면 교체
+    // 새 이미지/GPX/썸네일이 있으면 교체
     const imageFile = formData.get('image') as File | null;
     const highlightFile = formData.get('highlight_image') as File | null;
     const gpxFile = formData.get('gpx_file') as File | null;
-    const thumbnailMode = formData.get('thumbnail_mode') === 'true';
+    const thumbnailFile = formData.get('thumbnail') as File | null;
     const needsExisting =
       (imageFile && imageFile.size > 0) ||
       (highlightFile && highlightFile.size > 0) ||
-      (gpxFile && gpxFile.size > 0);
+      (gpxFile && gpxFile.size > 0) ||
+      (thumbnailFile && thumbnailFile.size > 0);
 
     // 기존 URL을 한 번의 쿼리로 가져오기
     let existingUrls: {
       image_url?: string;
       highlight_image_url?: string;
+      thumbnail_url?: string;
       gpx_file_url?: string;
     } | null = null;
     if (needsExisting) {
       const { data } = await supabaseServer
         .from('courses')
-        .select('image_url, highlight_image_url, gpx_file_url')
+        .select('image_url, highlight_image_url, thumbnail_url, gpx_file_url')
         .eq('id', id)
         .single();
       existingUrls = data;
@@ -342,8 +355,8 @@ export const PATCH = withAuth(async (request: NextRequest) => {
         await removeFromStorage('courses', [existingUrls.image_url]);
       }
 
-      // GPX→PNG 전환: 기존 GPX 파일 정리 (thumbnail_mode일 때는 GPX 유지)
-      if (!thumbnailMode && existingUrls?.gpx_file_url) {
+      // GPX→PNG 전환: 기존 GPX 파일 정리
+      if (existingUrls?.gpx_file_url) {
         await removeFromStorage('courses', [existingUrls.gpx_file_url]);
         updates.gpx_file_url = null;
       }
@@ -435,6 +448,36 @@ export const PATCH = withAuth(async (request: NextRequest) => {
       updates.gpx_file_url = gpx_file_url;
     }
 
+    // 썸네일 교체 (thumbnail_url 전용, image_url과 분리)
+    if (thumbnailFile && thumbnailFile.size > 0) {
+      const fileError = validateImageFile(thumbnailFile);
+      if (fileError) {
+        return NextResponse.json(
+          { success: false, error: `썸네일: ${fileError}` },
+          { status: 400 },
+        );
+      }
+
+      const thumbnail_url = await convertAndUpload(thumbnailFile, COURSE_UPLOAD).catch((err) => {
+        console.error('[Courses PATCH] Thumbnail upload error:', err);
+        return null;
+      });
+
+      if (!thumbnail_url) {
+        return NextResponse.json(
+          { success: false, error: '썸네일 업로드에 실패했습니다.' },
+          { status: 500 },
+        );
+      }
+
+      // 기존 썸네일 정리
+      if (existingUrls?.thumbnail_url) {
+        await removeFromStorage('courses', [existingUrls.thumbnail_url]);
+      }
+
+      updates.thumbnail_url = thumbnail_url;
+    }
+
     const { data, error } = await supabaseServer
       .from('courses')
       .update(updates)
@@ -474,7 +517,7 @@ export const DELETE = withAuth(async (request: NextRequest) => {
     // 기존 파일 URL 가져오기
     const { data: existing } = await supabaseServer
       .from('courses')
-      .select('image_url, highlight_image_url, gpx_file_url')
+      .select('image_url, highlight_image_url, thumbnail_url, gpx_file_url')
       .eq('id', id)
       .single();
 
@@ -482,6 +525,7 @@ export const DELETE = withAuth(async (request: NextRequest) => {
     const urlsToDelete = [
       existing?.image_url,
       existing?.highlight_image_url,
+      existing?.thumbnail_url,
       existing?.gpx_file_url,
     ].filter(Boolean) as string[];
 

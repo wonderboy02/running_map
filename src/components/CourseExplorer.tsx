@@ -112,9 +112,9 @@ function CourseCard({ course, onClick }: { course: Course; onClick: () => void }
     <button onClick={onClick} className="w-full overflow-hidden rounded-2xl border border-border bg-surface text-left">
       {/* 썸네일 */}
       <div className="relative mx-2.5 mt-2.5 aspect-[4/3] overflow-hidden rounded-xl bg-surface-dim">
-        {course.image_url ? (
+        {(course.thumbnail_url ?? course.image_url) ? (
           <Image
-            src={course.image_url}
+            src={(course.thumbnail_url ?? course.image_url)!}
             alt={course.name}
             fill
             className="object-cover"

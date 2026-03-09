@@ -93,9 +93,9 @@ function CourseGridCard({
     <button onClick={onClick} className="w-full text-left">
       {/* 지도 썸네일 */}
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-surface-dim">
-        {course.image_url ? (
+        {(course.thumbnail_url ?? course.image_url) ? (
           <Image
-            src={course.image_url}
+            src={(course.thumbnail_url ?? course.image_url)!}
             alt={course.name}
             fill
             className="object-cover"

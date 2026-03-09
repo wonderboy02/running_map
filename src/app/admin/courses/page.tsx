@@ -56,6 +56,9 @@ interface CourseForm {
   is_active: boolean;
   search_tags: string[];
 
+  // 코스 썸네일 (thumbnail_url 전용, image_url과 분리)
+  thumbnail: File | null;
+
   // GPX 코스용
   gpx_file: File | null;
 
@@ -77,6 +80,9 @@ const EMPTY_FORM: CourseForm = {
   pinpoints: [],
   is_active: true,
   search_tags: [],
+
+  // 썸네일
+  thumbnail: null,
 
   // GPX
   gpx_file: null,
@@ -1018,6 +1024,7 @@ export default function AdminCoursesPage() {
   const [form, setForm] = useState<CourseForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [highlightPreview, setHighlightPreview] = useState<string | null>(null);
   const [removeHighlight, setRemoveHighlight] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
@@ -1072,10 +1079,11 @@ export default function AdminCoursesPage() {
   }, []);
 
   function openCreateDialog() {
-    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    if (thumbnailPreview?.startsWith('blob:')) URL.revokeObjectURL(thumbnailPreview);
     setEditingCourse(null);
     setForm(EMPTY_FORM);
     setImagePreview(null);
+    setThumbnailPreview(null);
     setHighlightPreview(null);
     setRemoveHighlight(false);
     setMapPreviewOpen(false);
@@ -1083,7 +1091,7 @@ export default function AdminCoursesPage() {
   }
 
   function openEditDialog(course: Course) {
-    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    if (thumbnailPreview?.startsWith('blob:')) URL.revokeObjectURL(thumbnailPreview);
     const isGpx = !!course.gpx_file_url;
     setEditingCourse(course);
     setForm({
@@ -1094,6 +1102,9 @@ export default function AdminCoursesPage() {
       pinpoints: course.pinpoints ?? [],
       is_active: course.is_active,
       search_tags: course.search_tags ?? [],
+
+      // 썸네일
+      thumbnail: null,
 
       // GPX
       gpx_file: null,
@@ -1107,7 +1118,8 @@ export default function AdminCoursesPage() {
       image: null,
       highlight_image: null,
     });
-    setImagePreview(course.image_url || null);
+    setImagePreview(isGpx ? null : course.image_url);
+    setThumbnailPreview(course.thumbnail_url || null);
     setHighlightPreview(isGpx ? null : course.highlight_image_url);
     setRemoveHighlight(false);
     setDialogOpen(true);
@@ -1143,11 +1155,9 @@ export default function AdminCoursesPage() {
       formData.append('gpx_file', form.gpx_file);
     }
 
-    // GPX 코스 썸네일
-    const isGpxCourse = !!form.gpx_file || !!editingCourse?.gpx_file_url;
-    if (isGpxCourse && form.image) {
-      formData.append('image', form.image);
-      formData.append('thumbnail_mode', 'true');
+    // 코스 썸네일 (thumbnail_url 전용, image_url과 분리)
+    if (form.thumbnail) {
+      formData.append('thumbnail', form.thumbnail);
     }
 
     // 레거시 필드 (기존 PNG 코스 수정 시에만)
@@ -1280,9 +1290,9 @@ export default function AdminCoursesPage() {
             >
               {/* 썸네일 */}
               <div className="bg-surface-dim flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-md">
-                {course.image_url ? (
+                {(course.thumbnail_url ?? course.image_url) ? (
                   <img
-                    src={course.image_url}
+                    src={(course.thumbnail_url ?? course.image_url)!}
                     alt={course.name}
                     className="h-full w-full object-cover"
                   />
@@ -1371,8 +1381,8 @@ export default function AdminCoursesPage() {
       <Dialog
         open={dialogOpen && !pickerOpen && !mapPreviewOpen}
         onOpenChange={(open) => {
-          if (!open && imagePreview?.startsWith('blob:')) {
-            URL.revokeObjectURL(imagePreview);
+          if (!open && thumbnailPreview?.startsWith('blob:')) {
+            URL.revokeObjectURL(thumbnailPreview);
           }
           setDialogOpen(open);
         }}
@@ -1561,7 +1571,7 @@ export default function AdminCoursesPage() {
                     )}
                   </div>
 
-                  {/* 코스 썸네일 */}
+                  {/* 코스 썸네일 (thumbnail_url 전용, image_url과 분리) */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <Label>코스 썸네일</Label>
@@ -1589,26 +1599,34 @@ export default function AdminCoursesPage() {
                       3. 4:3 자동 크롭 (가로 최대 채움, 세로가 길면 중심 기준 잘림)
                     </p>
                     <ImageDropZone
-                      preview={imagePreview}
+                      preview={thumbnailPreview}
                       onImageReady={(file) => {
-                        if (imagePreview?.startsWith('blob:')) {
-                          URL.revokeObjectURL(imagePreview);
+                        if (thumbnailPreview?.startsWith('blob:')) {
+                          URL.revokeObjectURL(thumbnailPreview);
                         }
-                        setForm((prev) => ({ ...prev, image: file }));
-                        setImagePreview(URL.createObjectURL(file));
+                        setForm((prev) => ({ ...prev, thumbnail: file }));
+                        setThumbnailPreview(URL.createObjectURL(file));
                       }}
                       onClear={() => {
-                        if (imagePreview?.startsWith('blob:')) {
-                          URL.revokeObjectURL(imagePreview);
+                        if (thumbnailPreview?.startsWith('blob:')) {
+                          URL.revokeObjectURL(thumbnailPreview);
                         }
-                        setForm((prev) => ({ ...prev, image: null }));
-                        setImagePreview(null);
+                        setForm((prev) => ({ ...prev, thumbnail: null }));
+                        setThumbnailPreview(null);
                       }}
                     />
                   </div>
 
                   {showLegacyFields && (
                     <>
+                      {imagePreview && (
+                        <div className="space-y-1.5">
+                          <Label className="text-text-secondary">현재 이미지 (레거시)</Label>
+                          <div className="bg-surface-dim overflow-hidden rounded-md">
+                            <img src={imagePreview} alt="미리보기" className="max-h-40 w-full object-contain" />
+                          </div>
+                        </div>
+                      )}
                       {highlightPreview && (
                         <div className="space-y-1.5">
                           <Label className="text-text-secondary">하이라이트 이미지 (레거시)</Label>
