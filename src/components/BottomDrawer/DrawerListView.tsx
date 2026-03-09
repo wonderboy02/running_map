@@ -224,7 +224,7 @@ export default function DrawerListView({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {activeTab === 'spot'
               ? runnerSpots.slice(0, GRID_PREVIEW_COUNT).map((spot, i) => (
                   <SpotGridCard
@@ -248,7 +248,7 @@ export default function DrawerListView({
       {/* 나머지 아이템 (SNAP.FULL에서 보임) */}
       {currentItems.length > GRID_PREVIEW_COUNT && (
         <div className="mt-3 px-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {activeTab === 'spot'
               ? runnerSpots.slice(GRID_PREVIEW_COUNT).map((spot, i) => (
                   <SpotGridCard

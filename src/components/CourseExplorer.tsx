@@ -203,7 +203,7 @@ export default function CourseExplorer({ courses, onCourseClick }: CourseExplore
             <p className="text-sm text-text-secondary">조건에 맞는 코스가 없습니다.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {filteredCourses.map((course) => (
               <CourseCard key={course.id} course={course} onClick={() => onCourseClick(course)} />
             ))}
