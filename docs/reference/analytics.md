@@ -160,6 +160,34 @@ UTM 파라미터가 있는 첫 방문 시에만 설정되며, 이후 방문에�
 | `first_utm_medium` | URL의 `utm_medium` | 최초 유입 매체 (없으면 미저장) |
 | `first_utm_campaign` | URL의 `utm_campaign` | 최초 유입 캠페인명 (없으면 미저장) |
 
+### UTM 링크 사용법
+
+외부에 공유하는 URL에 쿼리 파라미터를 붙이면 유입 경로가 자동 기록된다.
+
+```
+https://your-domain.com?utm_source=소스&utm_medium=매체&utm_campaign=캠페인명
+```
+
+| 파라미터 | 의미 | 예시 |
+|---------|------|------|
+| `utm_source` | 어디서 왔는지 | `instagram`, `kakao`, `naver_blog` |
+| `utm_medium` | 어떤 유형인지 | `social`, `messenger`, `blog`, `cpc` |
+| `utm_campaign` | 어떤 목적인지 | `launch`, `beta`, `event_name` |
+
+**채널별 예시:**
+
+| 채널 | URL 예시 |
+|------|---------|
+| 인스타 프로필 링크 | `?utm_source=instagram&utm_medium=social&utm_campaign=profile_link` |
+| 인스타 스토리 | `?utm_source=instagram&utm_medium=story&utm_campaign=launch` |
+| 카카오톡 공유 | `?utm_source=kakao&utm_medium=messenger&utm_campaign=share` |
+| 네이버 블로그 | `?utm_source=naver_blog&utm_medium=blog&utm_campaign=review` |
+| 러닝 커뮤니티 | `?utm_source=running_crew&utm_medium=community&utm_campaign=beta` |
+
+- 3개 모두 필수는 아님 — 있는 것만 저장됨
+- UTM 없이 접속해도 `first_referrer`(이전 페이지 URL)는 기록됨
+- **첫 방문 때 1회만 저장** — 이후 다른 UTM으로 재방문해도 덮어쓰지 않음
+
 ### Mixpanel SDK 자동 UTM 수집과의 차이
 
 | 항목 | SDK 자동 수집 | 우리 구현 (`set_once` + `register_once`) |
