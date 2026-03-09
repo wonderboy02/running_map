@@ -60,7 +60,7 @@ function CourseFilterChips({
     onChange({ ...filters, distance: next });
   };
 
-  const toggleDifficulty = (value: DifficultyFilter) => {
+  const toggleDifficulty = (value: DifficultyLabel) => {
     const next = filters.difficulty.includes(value)
       ? filters.difficulty.filter((v) => v !== value)
       : [...filters.difficulty, value];
