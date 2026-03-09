@@ -6,20 +6,23 @@ import { MapPin, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNaverMap } from '@/hooks/useNaverMap';
 import { getCoursePinIcon } from '@/lib/marker-config';
+import { rewriteStorageUrl } from '@/lib/utils';
+import { computeDataLayerBounds, GPX_STROKE_COLOR, GPX_STROKE_OPACITY } from '@/lib/naver-map-utils';
 
 interface PinpointPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existingPinpoints: Array<{ lat: number; lng: number }>;
   onConfirm: (pinpoints: Array<{ lat: number; lng: number }>) => void;
-  overlayImageUrl: string | null;
-  bounds: {
+  gpxSource: File | string | null;
+  overlayImageUrl?: string | null;
+  bounds?: {
     nw_lat: number;
     nw_lng: number;
     se_lat: number;
     se_lng: number;
   } | null;
-  opacity: number;
+  opacity?: number;
 }
 
 export default function PinpointPicker({
@@ -27,6 +30,7 @@ export default function PinpointPicker({
   onOpenChange,
   existingPinpoints,
   onConfirm,
+  gpxSource,
   overlayImageUrl,
   bounds,
   opacity,
@@ -34,6 +38,7 @@ export default function PinpointPicker({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<naver.maps.Marker[]>([]);
   const overlayRef = useRef<naver.maps.GroundOverlay | null>(null);
+  const dataLayerRef = useRef<naver.maps.Data | null>(null);
   const clickListenerRef = useRef<naver.maps.MapEventListener | null>(null);
   const draggedRef = useRef(false);
 
@@ -49,9 +54,9 @@ export default function PinpointPicker({
     }
   }, [open, existingPinpoints]);
 
-  // GroundOverlay 표시 + fitBounds
+  // GroundOverlay 표시 + fitBounds (레거시 PNG 코스용)
   useEffect(() => {
-    if (!isReady || !map) return;
+    if (!isReady || !map || gpxSource) return;
 
     if (overlayRef.current) {
       overlayRef.current.setMap(null);
@@ -79,7 +84,61 @@ export default function PinpointPicker({
         overlayRef.current = null;
       }
     };
-  }, [isReady, map, overlayImageUrl, bounds, opacity]);
+  }, [isReady, map, gpxSource, overlayImageUrl, bounds, opacity]);
+
+  // GPX Data Layer 미리보기
+  useEffect(() => {
+    if (!isReady || !map || !gpxSource) return;
+    const currentMap = map;
+    let cancelled = false;
+
+    if (dataLayerRef.current) {
+      dataLayerRef.current.setMap(null);
+      dataLayerRef.current = null;
+    }
+
+    async function loadGpx() {
+      let gpxText: string;
+      if (gpxSource instanceof File) {
+        gpxText = await gpxSource.text();
+      } else {
+        const res = await fetch(rewriteStorageUrl(gpxSource as string));
+        gpxText = await res.text();
+      }
+
+      if (cancelled) return;
+
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(gpxText, 'text/xml');
+      const dataLayer = new naver.maps.Data();
+      const features = dataLayer.addGpx(xmlDoc);
+
+      dataLayer.setStyle({
+        strokeColor: GPX_STROKE_COLOR,
+        strokeWeight: 4,
+        strokeOpacity: GPX_STROKE_OPACITY,
+        clickable: false,
+      });
+
+      dataLayer.setMap(currentMap);
+      dataLayerRef.current = dataLayer;
+
+      if (features.length > 0) {
+        const gpxBounds = computeDataLayerBounds(dataLayer);
+        if (gpxBounds) currentMap.fitBounds(gpxBounds, { padding: 40 });
+      }
+    }
+
+    loadGpx().catch(console.error);
+
+    return () => {
+      cancelled = true;
+      if (dataLayerRef.current) {
+        dataLayerRef.current.setMap(null);
+        dataLayerRef.current = null;
+      }
+    };
+  }, [isReady, map, gpxSource]);
 
   // 맵 click 리스너
   useEffect(() => {
@@ -184,7 +243,7 @@ export default function PinpointPicker({
     if (e.target === e.currentTarget) onOpenChange(false);
   };
 
-  const hasOverlay = !!overlayImageUrl && !!bounds;
+  const hasOverlay = !!gpxSource || (!!overlayImageUrl && !!bounds);
 
   if (!open) return null;
 

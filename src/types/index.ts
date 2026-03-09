@@ -39,13 +39,14 @@ export interface CoursePinpoint {
 export interface Course {
   id: string;
   name: string;
-  image_url: string;
+  image_url: string | null;
   highlight_image_url: string | null;
   nw_lat: number;
   nw_lng: number;
   se_lat: number;
   se_lng: number;
   opacity: number;
+  gpx_file_url: string | null;
   is_active: boolean;
   description: string | null;
   difficulty: number | null;
