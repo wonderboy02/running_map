@@ -21,7 +21,11 @@ AnalyticsProvider (layout.tsx)
   └─ useEffect → initAnalytics()
        └─ 비프로덕션 또는 no_track → early return (init 스킵, 이벤트 완전 차단)
        └─ mixpanel.init() — autocapture, 페이지뷰 자동 추적
-            └─ loaded 콜백 → mixpanel.register() — super properties (app_version, platform)
+            └─ loaded 콜백:
+                 ├─ register()         — super properties (app_version, platform)
+                 ├─ identify()         — device-based ID → People 프로필 생성
+                 ├─ people.set_once()  — first-touch 속성 (UTM, referrer, 방문일, 랜딩페이지)
+                 └─ register_once()    — first-touch UTM super properties
 
 각 컴포넌트
   └─ track('event_name', { ...properties })
@@ -93,12 +97,86 @@ AnalyticsProvider (layout.tsx)
 
 ## Super Properties
 
+### `register()` — 매 세션 설정
+
 모든 이벤트에 자동으로 포함되는 프로퍼티:
 
 | 프로퍼티 | 값 | 설명 |
 |---------|---|------|
 | `app_version` | `NEXT_PUBLIC_APP_VERSION` 또는 `'unknown'` | 앱 버전 (수동 설정) |
 | `platform` | `'web'` | 고정값 |
+
+### `register_once()` — 최초 1회 설정 (first-touch)
+
+UTM 파라미터가 있는 첫 방문 시에만 설정되며, 이후 방문에서 덮어쓰지 않음:
+
+| 프로퍼티 | 값 | 설명 |
+|---------|---|------|
+| `first_utm_source` | URL의 `utm_source` | 최초 유입 소스 (e.g. `instagram`, `naver`) |
+| `first_utm_medium` | URL의 `utm_medium` | 최초 유입 매체 (e.g. `social`, `cpc`) |
+| `first_utm_campaign` | URL의 `utm_campaign` | 최초 유입 캠페인명 |
+
+> UTM 없이 직접 접속한 경우 이 super properties는 설정되지 않음.
+
+---
+
+## 유저 식별 (User Identification)
+
+### Device-based 식별
+
+이 앱은 **로그인 없는 공개 웹앱**이므로 Mixpanel의 자동 생성 device ID(`distinct_id`)를 영구 식별자로 사용한다.
+
+```
+초기화 시: mp.identify(mp.get_distinct_id())
+```
+
+- `identify()` 호출이 있어야 **People 프로필이 생성**되어 Users 탭에 표시됨
+- 기존 anonymous ID를 그대로 사용하므로 ID merge가 발생하지 않음
+- Mixpanel 공식 문서의 "anonymous visitor에 identify() 비권장" 경고는 **나중에 로그인 merge가 있는 앱** 대상이므로 해당 없음
+
+### 한계점
+
+| 상황 | 결과 |
+|------|------|
+| 같은 브라우저, 같은 디바이스 | 같은 유저로 인식 |
+| 다른 브라우저 또는 다른 디바이스 | 다른 유저로 인식 |
+| 시크릿 모드 | 매번 새 유저로 인식 |
+| localStorage 삭제 | 새 유저로 인식 |
+
+---
+
+## 유입 추적 (Acquisition Tracking)
+
+### People 프로필 속성 (`people.set_once`)
+
+최초 방문 시 1회만 저장. 재방문 시 덮어쓰지 않아 first-touch 어트리뷰션을 보존한다.
+
+| 프로퍼티 | 값 | 설명 |
+|---------|---|------|
+| `first_visit_date` | ISO 8601 timestamp | 최초 방문 시각 |
+| `first_landing_page` | `window.location.pathname` | 최초 진입 페이지 경로 |
+| `first_referrer` | `document.referrer` | 최초 유입 referrer URL (직접 접속 시 빈 문자열) |
+| `first_utm_source` | URL의 `utm_source` | 최초 유입 소스 (없으면 미저장) |
+| `first_utm_medium` | URL의 `utm_medium` | 최초 유입 매체 (없으면 미저장) |
+| `first_utm_campaign` | URL의 `utm_campaign` | 최초 유입 캠페인명 (없으면 미저장) |
+
+### Mixpanel SDK 자동 UTM 수집과의 차이
+
+| 항목 | SDK 자동 수집 | 우리 구현 (`set_once` + `register_once`) |
+|------|-------------|--------------------------------------|
+| 저장 위치 | 이벤트 프로퍼티 | People 프로필 + super property |
+| 어트리뷰션 | last-touch (매 이벤트마다 현재 UTM) | first-touch (최초 UTM만 보존) |
+| Users 탭 | 표시 안 됨 | 표시됨 |
+| Breakdown 분석 | 이벤트 단위 | 유저 단위 |
+
+### 분석 예시
+
+| 분석 목표 | Mixpanel 경로 |
+|----------|-------------|
+| 유입 채널별 유저 수 | Users > Filter by `first_utm_source` |
+| 캠페인별 전환 분석 | Insights > Breakdown by `first_utm_campaign` |
+| 검색엔진 유입 분석 | Users > Filter by `first_referrer` contains `search` |
+| 채널별 리텐션 비교 | Retention > Breakdown by `first_utm_source` |
 
 ---
 
@@ -228,4 +306,6 @@ track('new_event', { property1: 'value', property2: 42 });
 | 검색 → 선택 전환율 | `search_open` → `spot_select(source=search)` | Funnels |
 | 스팟 탐색 → 액션 전환 | `spot_select` → `drawer_action_click` | Funnels |
 | 필터 사용 패턴 | `filter_toggle` → `category` | Insights > Breakdown |
-| 유입 경로 | 자동 UTM 수집 | Insights > Breakdown by `utm_source` |
+| 유입 채널별 유저 수 | `first_utm_source` (People 프로필) | Users > Filter by `first_utm_source` |
+| 캠페인별 리텐션 | `first_utm_campaign` (People 프로필) | Retention > Breakdown by `first_utm_campaign` |
+| 검색엔진 유입 분석 | `first_referrer` (People 프로필) | Users > Filter by `first_referrer` |
