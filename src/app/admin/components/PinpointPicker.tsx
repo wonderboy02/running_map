@@ -5,9 +5,8 @@ import { createPortal } from 'react-dom';
 import { MapPin, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNaverMap } from '@/hooks/useNaverMap';
+import { useGpxDataLayer } from '@/hooks/useGpxDataLayer';
 import { getCoursePinIcon } from '@/lib/marker-config';
-import { rewriteStorageUrl } from '@/lib/utils';
-import { computeDataLayerBounds, GPX_STROKE_COLOR, GPX_STROKE_OPACITY } from '@/lib/naver-map-utils';
 
 interface PinpointPickerProps {
   open: boolean;
@@ -38,11 +37,13 @@ export default function PinpointPicker({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<naver.maps.Marker[]>([]);
   const overlayRef = useRef<naver.maps.GroundOverlay | null>(null);
-  const dataLayerRef = useRef<naver.maps.Data | null>(null);
   const clickListenerRef = useRef<naver.maps.MapEventListener | null>(null);
   const draggedRef = useRef(false);
 
   const { map, isReady } = useNaverMap(mapContainerRef);
+
+  // GPX Data Layer 렌더링 (공통 훅)
+  useGpxDataLayer({ map, isReady, gpxSource });
 
   const [localPins, setLocalPins] = useState<Array<{ lat: number; lng: number }>>([]);
 
@@ -85,60 +86,6 @@ export default function PinpointPicker({
       }
     };
   }, [isReady, map, gpxSource, overlayImageUrl, bounds, opacity]);
-
-  // GPX Data Layer 미리보기
-  useEffect(() => {
-    if (!isReady || !map || !gpxSource) return;
-    const currentMap = map;
-    let cancelled = false;
-
-    if (dataLayerRef.current) {
-      dataLayerRef.current.setMap(null);
-      dataLayerRef.current = null;
-    }
-
-    async function loadGpx() {
-      let gpxText: string;
-      if (gpxSource instanceof File) {
-        gpxText = await gpxSource.text();
-      } else {
-        const res = await fetch(rewriteStorageUrl(gpxSource as string));
-        gpxText = await res.text();
-      }
-
-      if (cancelled) return;
-
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(gpxText, 'text/xml');
-      const dataLayer = new naver.maps.Data();
-      const features = dataLayer.addGpx(xmlDoc);
-
-      dataLayer.setStyle({
-        strokeColor: GPX_STROKE_COLOR,
-        strokeWeight: 4,
-        strokeOpacity: GPX_STROKE_OPACITY,
-        clickable: false,
-      });
-
-      dataLayer.setMap(currentMap);
-      dataLayerRef.current = dataLayer;
-
-      if (features.length > 0) {
-        const gpxBounds = computeDataLayerBounds(dataLayer);
-        if (gpxBounds) currentMap.fitBounds(gpxBounds, { padding: 40 });
-      }
-    }
-
-    loadGpx().catch(console.error);
-
-    return () => {
-      cancelled = true;
-      if (dataLayerRef.current) {
-        dataLayerRef.current.setMap(null);
-        dataLayerRef.current = null;
-      }
-    };
-  }, [isReady, map, gpxSource]);
 
   // 맵 click 리스너
   useEffect(() => {

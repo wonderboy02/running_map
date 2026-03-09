@@ -79,6 +79,18 @@ export const POST = withAuth(async (request: NextRequest) => {
         );
       }
       insertData.gpx_file_url = await uploadGpxFile(gpxFile);
+
+      // GPX 코스 썸네일 (선택)
+      if (formData.get('thumbnail_mode') === 'true' && imageFile && imageFile.size > 0) {
+        const fileError = validateImageFile(imageFile);
+        if (fileError) {
+          return NextResponse.json(
+            { success: false, error: fileError },
+            { status: 400 },
+          );
+        }
+        insertData.image_url = await convertAndUpload(imageFile, COURSE_UPLOAD);
+      }
     } else {
       // --- 기존 이미지 흐름 ---
       const nw_lat = parseFloat(formData.get('nw_lat') as string);
@@ -283,6 +295,7 @@ export const PATCH = withAuth(async (request: NextRequest) => {
     const imageFile = formData.get('image') as File | null;
     const highlightFile = formData.get('highlight_image') as File | null;
     const gpxFile = formData.get('gpx_file') as File | null;
+    const thumbnailMode = formData.get('thumbnail_mode') === 'true';
     const needsExisting =
       (imageFile && imageFile.size > 0) ||
       (highlightFile && highlightFile.size > 0) ||
@@ -329,8 +342,8 @@ export const PATCH = withAuth(async (request: NextRequest) => {
         await removeFromStorage('courses', [existingUrls.image_url]);
       }
 
-      // GPX→PNG 전환: 기존 GPX 파일 정리
-      if (existingUrls?.gpx_file_url) {
+      // GPX→PNG 전환: 기존 GPX 파일 정리 (thumbnail_mode일 때는 GPX 유지)
+      if (!thumbnailMode && existingUrls?.gpx_file_url) {
         await removeFromStorage('courses', [existingUrls.gpx_file_url]);
         updates.gpx_file_url = null;
       }

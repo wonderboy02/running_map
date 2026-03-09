@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
+  Map,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,8 @@ import {
 import { toast } from 'sonner';
 import { useGeocode, type GeocodeResult } from '@/hooks/useGeocode';
 import PinpointPicker from '@/app/admin/components/PinpointPicker';
+import ImageDropZone from '@/app/admin/components/ImageDropZone';
+import CourseMapPreview from '@/app/admin/components/CourseMapPreview';
 import { rewriteStorageUrl } from '@/lib/utils';
 import type { Course } from '@/types';
 
@@ -1020,6 +1023,7 @@ export default function AdminCoursesPage() {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [gpxBulkDialogOpen, setGpxBulkDialogOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [mapPreviewOpen, setMapPreviewOpen] = useState(false);
 
   // 피커용 오버레이 이미지 URL (objectURL 생성/revoke를 useEffect로 관리)
   const [pickerOverlayUrl, setPickerOverlayUrl] = useState<string | null>(null);
@@ -1068,15 +1072,18 @@ export default function AdminCoursesPage() {
   }, []);
 
   function openCreateDialog() {
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
     setEditingCourse(null);
     setForm(EMPTY_FORM);
     setImagePreview(null);
     setHighlightPreview(null);
     setRemoveHighlight(false);
+    setMapPreviewOpen(false);
     setDialogOpen(true);
   }
 
   function openEditDialog(course: Course) {
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
     const isGpx = !!course.gpx_file_url;
     setEditingCourse(course);
     setForm({
@@ -1100,7 +1107,7 @@ export default function AdminCoursesPage() {
       image: null,
       highlight_image: null,
     });
-    setImagePreview(isGpx ? null : course.image_url);
+    setImagePreview(course.image_url || null);
     setHighlightPreview(isGpx ? null : course.highlight_image_url);
     setRemoveHighlight(false);
     setDialogOpen(true);
@@ -1134,6 +1141,13 @@ export default function AdminCoursesPage() {
     // GPX 필드
     if (form.gpx_file) {
       formData.append('gpx_file', form.gpx_file);
+    }
+
+    // GPX 코스 썸네일
+    const isGpxCourse = !!form.gpx_file || !!editingCourse?.gpx_file_url;
+    if (isGpxCourse && form.image) {
+      formData.append('image', form.image);
+      formData.append('thumbnail_mode', 'true');
     }
 
     // 레거시 필드 (기존 PNG 코스 수정 시에만)
@@ -1266,16 +1280,16 @@ export default function AdminCoursesPage() {
             >
               {/* 썸네일 */}
               <div className="bg-surface-dim flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-md">
-                {course.gpx_file_url ? (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-course/20 text-xs font-bold text-course">
-                    GPX
-                  </div>
-                ) : course.image_url ? (
+                {course.image_url ? (
                   <img
                     src={course.image_url}
                     alt={course.name}
                     className="h-full w-full object-cover"
                   />
+                ) : course.gpx_file_url ? (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-course/20 text-xs font-bold text-course">
+                    GPX
+                  </div>
                 ) : (
                   <ImageIcon className="text-text-secondary h-6 w-6" />
                 )}
@@ -1354,7 +1368,15 @@ export default function AdminCoursesPage() {
 
       {/* 추가/수정 Dialog */}
       {/* pickerOpen일 때 Dialog를 닫아서 Radix의 inert/focus-trap이 PinpointPicker를 방해하지 않도록 */}
-      <Dialog open={dialogOpen && !pickerOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen && !pickerOpen && !mapPreviewOpen}
+        onOpenChange={(open) => {
+          if (!open && imagePreview?.startsWith('blob:')) {
+            URL.revokeObjectURL(imagePreview);
+          }
+          setDialogOpen(open);
+        }}
+      >
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -1539,6 +1561,44 @@ export default function AdminCoursesPage() {
                     )}
                   </div>
 
+                  {/* GPX 코스 썸네일 */}
+                  {(isNewCourse || isEditingGpx || form.gpx_file) && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label>코스 썸네일</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setMapPreviewOpen(true)}
+                          disabled={!form.gpx_file && !editingCourse?.gpx_file_url}
+                        >
+                          <Map className="mr-1 h-3 w-3" />
+                          지도 미리보기
+                        </Button>
+                      </div>
+                      <ImageDropZone
+                        preview={imagePreview}
+                        onImageReady={(file) => {
+                          // 이전 objectURL revoke
+                          if (imagePreview?.startsWith('blob:')) {
+                            URL.revokeObjectURL(imagePreview);
+                          }
+                          setForm((prev) => ({ ...prev, image: file }));
+                          setImagePreview(URL.createObjectURL(file));
+                        }}
+                        onClear={() => {
+                          if (imagePreview?.startsWith('blob:')) {
+                            URL.revokeObjectURL(imagePreview);
+                          }
+                          setForm((prev) => ({ ...prev, image: null }));
+                          setImagePreview(null);
+                        }}
+                      />
+                    </div>
+                  )}
+
                   {showLegacyFields && (
                     <>
                       {imagePreview && (
@@ -1661,6 +1721,14 @@ export default function AdminCoursesPage() {
               : null
           }
           opacity={form.opacity}
+        />
+      )}
+
+      {/* 코스 지도 미리보기 */}
+      {mapPreviewOpen && (
+        <CourseMapPreview
+          onClose={() => setMapPreviewOpen(false)}
+          gpxSource={form.gpx_file ?? editingCourse?.gpx_file_url ?? null}
         />
       )}
 
