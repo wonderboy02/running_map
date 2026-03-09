@@ -59,9 +59,14 @@ export function useNaverMap(
     }
 
     let interval: ReturnType<typeof setInterval> | null = null;
+    let rafId: number | null = null;
 
     if (window.naver?.maps) {
-      initMap();
+      // 다음 프레임까지 지연 — createPortal 컨테이너 레이아웃 완료 보장
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        initMap();
+      });
     } else {
       interval = setInterval(() => {
         if (window.naver?.maps) {
@@ -73,6 +78,7 @@ export function useNaverMap(
     }
 
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       if (interval) clearInterval(interval);
       if (mapRef.current) {
         mapRef.current.destroy();
