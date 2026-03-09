@@ -10,16 +10,61 @@ import { useGpxDataLayer } from '@/hooks/useGpxDataLayer';
 interface CourseMapPreviewProps {
   onClose: () => void;
   gpxSource: File | string | null;
+  overlayImageUrl?: string | null;
+  bounds?: {
+    nw_lat: number;
+    nw_lng: number;
+    se_lat: number;
+    se_lng: number;
+  } | null;
+  opacity?: number;
 }
 
 export default function CourseMapPreview({
   onClose,
   gpxSource,
+  overlayImageUrl,
+  bounds,
+  opacity,
 }: CourseMapPreviewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<naver.maps.GroundOverlay | null>(null);
   const { map, isReady } = useNaverMap(mapContainerRef);
 
+  // GPX 코스 렌더링
   useGpxDataLayer({ map, isReady, gpxSource });
+
+  // 레거시 PNG GroundOverlay 렌더링
+  useEffect(() => {
+    if (!isReady || !map || gpxSource) return;
+
+    if (overlayRef.current) {
+      overlayRef.current.setMap(null);
+      overlayRef.current = null;
+    }
+
+    if (overlayImageUrl && bounds) {
+      const sw = new naver.maps.LatLng(bounds.se_lat, bounds.nw_lng);
+      const ne = new naver.maps.LatLng(bounds.nw_lat, bounds.se_lng);
+      const overlayBounds = new naver.maps.LatLngBounds(sw, ne);
+
+      const groundOverlay = new naver.maps.GroundOverlay(overlayImageUrl, overlayBounds, {
+        opacity,
+        clickable: false,
+      });
+      groundOverlay.setMap(map);
+      overlayRef.current = groundOverlay;
+
+      map.fitBounds(overlayBounds, { padding: 40 });
+    }
+
+    return () => {
+      if (overlayRef.current) {
+        overlayRef.current.setMap(null);
+        overlayRef.current = null;
+      }
+    };
+  }, [isReady, map, gpxSource, overlayImageUrl, bounds, opacity]);
 
   // ESC 키로 닫기
   useEffect(() => {

@@ -1561,54 +1561,47 @@ export default function AdminCoursesPage() {
                     )}
                   </div>
 
-                  {/* GPX 코스 썸네일 */}
-                  {(isNewCourse || isEditingGpx || form.gpx_file) && (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label>코스 썸네일</Label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => setMapPreviewOpen(true)}
-                          disabled={!form.gpx_file && !editingCourse?.gpx_file_url}
-                        >
-                          <Map className="mr-1 h-3 w-3" />
-                          지도 미리보기
-                        </Button>
-                      </div>
-                      <ImageDropZone
-                        preview={imagePreview}
-                        onImageReady={(file) => {
-                          // 이전 objectURL revoke
-                          if (imagePreview?.startsWith('blob:')) {
-                            URL.revokeObjectURL(imagePreview);
-                          }
-                          setForm((prev) => ({ ...prev, image: file }));
-                          setImagePreview(URL.createObjectURL(file));
-                        }}
-                        onClear={() => {
-                          if (imagePreview?.startsWith('blob:')) {
-                            URL.revokeObjectURL(imagePreview);
-                          }
-                          setForm((prev) => ({ ...prev, image: null }));
-                          setImagePreview(null);
-                        }}
-                      />
+                  {/* 코스 썸네일 */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label>코스 썸네일</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setMapPreviewOpen(true)}
+                        disabled={
+                          !form.gpx_file &&
+                          !editingCourse?.gpx_file_url &&
+                          !(editingCourse?.image_url && editingCourse?.nw_lat)
+                        }
+                      >
+                        <Map className="mr-1 h-3 w-3" />
+                        지도 띄워서 캡쳐
+                      </Button>
                     </div>
-                  )}
+                    <ImageDropZone
+                      preview={imagePreview}
+                      onImageReady={(file) => {
+                        if (imagePreview?.startsWith('blob:')) {
+                          URL.revokeObjectURL(imagePreview);
+                        }
+                        setForm((prev) => ({ ...prev, image: file }));
+                        setImagePreview(URL.createObjectURL(file));
+                      }}
+                      onClear={() => {
+                        if (imagePreview?.startsWith('blob:')) {
+                          URL.revokeObjectURL(imagePreview);
+                        }
+                        setForm((prev) => ({ ...prev, image: null }));
+                        setImagePreview(null);
+                      }}
+                    />
+                  </div>
 
                   {showLegacyFields && (
                     <>
-                      {imagePreview && (
-                        <div className="space-y-1.5">
-                          <Label className="text-text-secondary">현재 이미지 (레거시)</Label>
-                          <div className="bg-surface-dim overflow-hidden rounded-md">
-                            <img src={imagePreview} alt="미리보기" className="max-h-40 w-full object-contain" />
-                          </div>
-                        </div>
-                      )}
                       {highlightPreview && (
                         <div className="space-y-1.5">
                           <Label className="text-text-secondary">하이라이트 이미지 (레거시)</Label>
@@ -1729,6 +1722,17 @@ export default function AdminCoursesPage() {
         <CourseMapPreview
           onClose={() => setMapPreviewOpen(false)}
           gpxSource={form.gpx_file ?? editingCourse?.gpx_file_url ?? null}
+          overlayImageUrl={
+            !form.gpx_file && !editingCourse?.gpx_file_url
+              ? pickerOverlayUrl
+              : null
+          }
+          bounds={
+            !form.gpx_file && !editingCourse?.gpx_file_url && form.nw_lat && form.se_lat
+              ? { nw_lat: form.nw_lat, nw_lng: form.nw_lng, se_lat: form.se_lat, se_lng: form.se_lng }
+              : null
+          }
+          opacity={form.opacity}
         />
       )}
 
