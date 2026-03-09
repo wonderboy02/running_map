@@ -4,6 +4,7 @@ import { RefObject } from 'react';
 import { MapPin, Route, Mail } from 'lucide-react';
 import Image from 'next/image';
 import type { Spot, Course } from '@/types';
+import { getDifficultyLabel } from '@/lib/course-utils';
 
 interface DrawerListViewProps {
   spots: Spot[];
@@ -17,12 +18,6 @@ interface DrawerListViewProps {
 }
 
 const GRID_PREVIEW_COUNT = 4;
-
-function getDifficultyLabel(difficulty: number): string {
-  if (difficulty <= 3) return '하';
-  if (difficulty <= 6) return '중';
-  return '상';
-}
 
 function SpotGridCard({
   spot,

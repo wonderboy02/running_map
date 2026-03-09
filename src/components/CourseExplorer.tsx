@@ -5,12 +5,12 @@ import { Route } from 'lucide-react';
 import Image from 'next/image';
 import type { Course } from '@/types';
 import { BOTTOM_NAV_HEIGHT } from '@/components/BottomNavigation';
+import { getDifficultyLabel, type DifficultyLabel } from '@/lib/course-utils';
 
-type DifficultyFilter = '쉬움' | '보통' | '어려움';
 type DistanceFilter = '5km 이하' | '5-10km' | '10km 이상';
 
 interface CourseFilters {
-  difficulty: DifficultyFilter[];
+  difficulty: DifficultyLabel[];
   distance: DistanceFilter[];
 }
 
@@ -20,13 +20,7 @@ const initialFilters: CourseFilters = {
 };
 
 const DISTANCE_OPTIONS: DistanceFilter[] = ['5km 이하', '5-10km', '10km 이상'];
-const DIFFICULTY_OPTIONS: DifficultyFilter[] = ['쉬움', '보통', '어려움'];
-
-function getDifficultyLabel(difficulty: number): DifficultyFilter {
-  if (difficulty <= 3) return '쉬움';
-  if (difficulty <= 6) return '보통';
-  return '어려움';
-}
+const DIFFICULTY_OPTIONS: DifficultyLabel[] = ['쉬움', '보통', '어려움'];
 
 function filterCourses(courses: Course[], filters: CourseFilters): Course[] {
   return courses.filter((course) => {

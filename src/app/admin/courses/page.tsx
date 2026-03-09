@@ -1152,6 +1152,9 @@ export default function AdminCoursesPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>난이도 (1~10)</Label>
+                <p className="text-xs text-muted-foreground">
+                  1~3: 쉬움 · 4~6: 보통 · 7~10: 어려움
+                </p>
                 <Input
                   type="number"
                   min="1"
