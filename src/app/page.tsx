@@ -19,7 +19,7 @@ import { track } from '@/lib/analytics';
 
 export default function HomePage() {
   const [appMode, setAppMode] = useState<AppMode>('home');
-  const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟']);
+  const [activeFilters, setActiveFilters] = useState<string[]>(['러너스팟', '샤워', '짐보관']);
   const [selection, setSelection] = useState<DrawerSelection | null>(null);
   const [targetLocation, setTargetLocation] = useState<{ lat: number; lng: number; name?: string } | null>(null);
   const [naverMap, setNaverMap] = useState<naver.maps.Map | null>(null);
