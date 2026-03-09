@@ -58,27 +58,50 @@ export function useNaverMap(
       setIsReady(true);
     }
 
+    let initialized = false;
+    let cancelled = false;
+    let observer: ResizeObserver | null = null;
     let interval: ReturnType<typeof setInterval> | null = null;
-    let rafId: number | null = null;
 
-    if (window.naver?.maps) {
-      // 다음 프레임까지 지연 — createPortal 컨테이너 레이아웃 완료 보장
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        initMap();
-      });
-    } else {
+    function tryInit() {
+      if (cancelled || initialized || !containerRef.current || !window.naver?.maps) return;
+      const { offsetWidth, offsetHeight } = containerRef.current;
+      if (offsetWidth === 0 || offsetHeight === 0) return;
+
+      initialized = true;
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+      initMap();
+    }
+
+    // 컨테이너 레이아웃 감지 (createPortal 대응)
+    observer = new ResizeObserver(tryInit);
+    observer.observe(containerRef.current);
+
+    // naver.maps 스크립트 로딩 폴링 (아직 미로드 시)
+    if (!window.naver?.maps) {
       interval = setInterval(() => {
+        if (cancelled) return;
         if (window.naver?.maps) {
           clearInterval(interval!);
           interval = null;
-          initMap();
+          tryInit();
         }
       }, 100);
     }
 
+    // 이미 조건이 충족된 경우 즉시 초기화 시도
+    tryInit();
+
     return () => {
-      if (rafId) cancelAnimationFrame(rafId);
+      cancelled = true;
+      if (observer) observer.disconnect();
       if (interval) clearInterval(interval);
       if (mapRef.current) {
         mapRef.current.destroy();
