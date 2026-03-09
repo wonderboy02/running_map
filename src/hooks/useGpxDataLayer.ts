@@ -4,8 +4,10 @@ import { useEffect, useRef } from 'react';
 import { rewriteStorageUrl } from '@/lib/utils';
 import {
   computeDataLayerBounds,
+  wrapStyleHidingPoints,
   GPX_STROKE_COLOR,
   GPX_STROKE_OPACITY,
+  GPX_PREVIEW_STROKE_WEIGHT,
 } from '@/lib/naver-map-utils';
 
 interface UseGpxDataLayerOptions {
@@ -55,12 +57,12 @@ export function useGpxDataLayer({
       const dataLayer = new naver.maps.Data();
       const features = dataLayer.addGpx(xmlDoc);
 
-      dataLayer.setStyle({
+      dataLayer.setStyle(wrapStyleHidingPoints({
         strokeColor: GPX_STROKE_COLOR,
-        strokeWeight: 4,
+        strokeWeight: GPX_PREVIEW_STROKE_WEIGHT,
         strokeOpacity: GPX_STROKE_OPACITY,
         clickable: false,
-      });
+      }));
 
       dataLayer.setMap(currentMap);
       dataLayerRef.current = dataLayer;

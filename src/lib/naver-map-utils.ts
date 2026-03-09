@@ -84,6 +84,61 @@ export const GPX_STROKE_COLOR = '#4A90D9';
 export const GPX_STROKE_OPACITY = 1.0;
 export const GPX_HIGHLIGHT_COLOR = '#FF6B35';
 
+/** Admin 프리뷰 고정 선 두께 (줌 연동 없음, getStrokeWeight base와 동일 수준) */
+export const GPX_PREVIEW_STROKE_WEIGHT = 6;
+
+/**
+ * Data.StyleOptions를 감싸 Point feature(waypoint)는 숨기고
+ * LineString 등 나머지에만 원본 스타일을 적용하는 StylingFunction을 반환한다.
+ */
+export function wrapStyleHidingPoints(
+  style: naver.maps.Data.StyleOptions,
+): naver.maps.Data.StylingFunction {
+  return (feature: naver.maps.Data.Feature) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const geomType = (feature.getGeometry() as any)?.getType?.();
+    if (geomType === 0 || geomType === 'Point') {
+      return { visible: false, clickable: false };
+    }
+    return style;
+  };
+}
+
+/** GPX Data Layer에서 트랙의 시작/끝 좌표를 추출한다. (GeoJSON [lng,lat] → {lat,lng}) */
+export function extractGpxEndpoints(
+  dataLayer: naver.maps.Data,
+): { start: { lat: number; lng: number }; end: { lat: number; lng: number } } | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const geoJson = dataLayer.toGeoJson() as any;
+  let firstCoord: [number, number] | null = null;
+  let lastCoord: [number, number] | null = null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const f of geoJson.features ?? []) {
+    const geom = f.geometry;
+    if (!geom?.coordinates) continue;
+
+    if (geom.type === 'LineString' && geom.coordinates.length > 0) {
+      if (!firstCoord) firstCoord = geom.coordinates[0];
+      lastCoord = geom.coordinates[geom.coordinates.length - 1];
+    } else if (geom.type === 'MultiLineString') {
+      for (const line of geom.coordinates) {
+        if (line.length > 0) {
+          if (!firstCoord) firstCoord = line[0];
+          lastCoord = line[line.length - 1];
+        }
+      }
+    }
+  }
+
+  if (!firstCoord || !lastCoord) return null;
+  // GeoJSON: [lng, lat] → { lat, lng }
+  return {
+    start: { lat: firstCoord[1], lng: firstCoord[0] },
+    end: { lat: lastCoord[1], lng: lastCoord[0] },
+  };
+}
+
 /** Data Layer의 모든 Feature 좌표에서 LatLngBounds를 계산한다. */
 export function computeDataLayerBounds(
   dataLayer: naver.maps.Data,
