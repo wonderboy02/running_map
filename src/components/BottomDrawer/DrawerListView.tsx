@@ -111,13 +111,6 @@ function CourseGridCard({
             <Route className="h-8 w-8 text-text-muted" />
           </div>
         )}
-
-        {/* 거리 배지 */}
-        {course.distance_km != null && (
-          <span className="absolute bottom-2 left-2 rounded-full bg-white/90 px-2 py-0.5 text-[clamp(10px,2.5vw,11px)] font-semibold text-text backdrop-blur-sm">
-            {course.distance_km}km
-          </span>
-        )}
       </div>
 
       {/* 텍스트 */}
@@ -125,15 +118,18 @@ function CourseGridCard({
         <p className="text-[clamp(13px,3.5vw,14px)] font-semibold text-text leading-tight line-clamp-1">
           {course.name}
         </p>
-        <div className="mt-0.5 flex items-center gap-1.5">
+        <div className="mt-0.5 flex min-h-[18px] items-center gap-1.5">
           {course.difficulty != null && (
             <span className="text-[clamp(11px,2.8vw,12px)] font-medium text-course">
-              난이도 {getDifficultyLabel(course.difficulty)}
+              {getDifficultyLabel(course.difficulty)}
             </span>
           )}
-          {course.description && (
-            <span className="text-[clamp(11px,2.8vw,12px)] text-text-muted line-clamp-1">
-              {course.description}
+          {course.difficulty != null && course.distance_km != null && (
+            <span className="text-text-muted">·</span>
+          )}
+          {course.distance_km != null && (
+            <span className="text-[clamp(11px,2.8vw,12px)] text-text-secondary">
+              {course.distance_km}km
             </span>
           )}
         </div>

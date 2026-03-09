@@ -121,7 +121,7 @@ export default function BottomDrawer({
     return () => cancelAnimationFrame(raf);
   }, [selection]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 탭 전환 시: snap point 재계산 + PREVIEW로 이동 (FULL에서 콘텐츠 적은 탭 전환 시 빈 공간 방지)
+  // 탭 전환 시: snap point 재계산만 (현재 snap 단계 유지)
   const isFirstTabChange = useRef(true);
 
   useEffect(() => {
@@ -132,8 +132,6 @@ export default function BottomDrawer({
 
     const raf = requestAnimationFrame(() => {
       flushSync(() => recalculate());
-      isProgrammaticSnapRef.current = true;
-      sheetRef.current?.snapTo(SNAP.PREVIEW);
     });
 
     return () => cancelAnimationFrame(raf);

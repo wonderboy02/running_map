@@ -116,7 +116,7 @@ function CourseFilterChips({
 function CourseCard({ course, onClick }: { course: Course; onClick: () => void }) {
   return (
     <button onClick={onClick} className="w-full overflow-hidden rounded-2xl border border-border bg-surface text-left">
-      {/* 썸네일 + 거리 배지 */}
+      {/* 썸네일 */}
       <div className="relative mx-2.5 mt-2.5 aspect-[4/3] overflow-hidden rounded-xl bg-surface-dim">
         {course.image_url ? (
           <Image
@@ -131,43 +131,28 @@ function CourseCard({ course, onClick }: { course: Course; onClick: () => void }
             <Route className="h-8 w-8 text-text-muted" />
           </div>
         )}
-        {course.distance_km != null && (
-          <span className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-0.5 text-[clamp(10px,2.5vw,11px)] font-semibold text-white">
-            {course.distance_km}km
-          </span>
-        )}
       </div>
 
       {/* 카드 바디 */}
       <div className="p-2.5 pt-2">
-        {/* 태그 배지들 */}
-        <div className="mb-1.5 flex flex-wrap gap-1">
-          {course.difficulty != null && (
-            <span className="rounded-full border border-course/40 px-2 py-0.5 text-[10px] font-medium text-course">
-              {getDifficultyLabel(course.difficulty)}
-            </span>
-          )}
-          {(course.search_tags ?? []).slice(0, 2).map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full border border-border px-2 py-0.5 text-[10px] text-text-secondary"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        {/* 코스명 */}
         <p className="text-[clamp(13px,3.5vw,14px)] font-bold leading-tight text-text line-clamp-1">
           {course.name}
         </p>
-
-        {/* 설명 */}
-        {course.description && (
-          <p className="mt-0.5 text-[clamp(11px,2.8vw,12px)] text-text-muted line-clamp-1">
-            {course.description}
-          </p>
-        )}
+        <div className="mt-1 flex min-h-[18px] items-center gap-1.5">
+          {course.difficulty != null && (
+            <span className="text-[clamp(11px,2.8vw,12px)] font-medium text-course">
+              {getDifficultyLabel(course.difficulty)}
+            </span>
+          )}
+          {course.difficulty != null && course.distance_km != null && (
+            <span className="text-text-muted">·</span>
+          )}
+          {course.distance_km != null && (
+            <span className="text-[clamp(11px,2.8vw,12px)] text-text-secondary">
+              {course.distance_km}km
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );
