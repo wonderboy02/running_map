@@ -32,8 +32,9 @@ interface FilterChipsProps {
 
 export default function FilterChips({ activeFilters, onToggle }: FilterChipsProps) {
   return (
-    <div className="absolute top-[48px] left-0 right-0 z-20 px-4 pointer-events-none">
-      <div className="flex gap-2 justify-start pointer-events-auto">
+    <div className="absolute top-[48px] left-0 right-0 z-20 pointer-events-none">
+      <div className="flex gap-2 justify-start pointer-events-auto overflow-x-auto scrollbar-none">
+        <div className="flex-shrink-0 w-4" aria-hidden="true" />
         {CATEGORIES.map((category) => {
           const isActive = activeFilters.includes(category);
           const iconSrc = CHIP_ICONS[category];
@@ -42,7 +43,7 @@ export default function FilterChips({ activeFilters, onToggle }: FilterChipsProp
               key={category}
               onClick={() => onToggle(category)}
               className={`
-                pl-2 pr-3 py-1 rounded-full
+                flex-shrink-0 pl-2 pr-3 py-1 rounded-full
                 backdrop-blur-md
                 border
                 shadow-sm
@@ -74,6 +75,7 @@ export default function FilterChips({ activeFilters, onToggle }: FilterChipsProp
             </button>
           );
         })}
+        <div className="flex-shrink-0 w-4" aria-hidden="true" />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, LocateFixed, Navigation, Send } from 'lucide-react';
+import { Crosshair, Loader2, MessageCircleMore, Navigation } from 'lucide-react';
 import FeedbackDialog from '@/components/FeedbackDialog';
 import { BOTTOM_NAV_HEIGHT } from '@/components/BottomNavigation';
 import { track } from '@/lib/analytics';
@@ -74,12 +74,9 @@ export default function FloatingControls({
             ) : isFollowing ? (
               <Navigation className="h-5 w-5" />
             ) : (
-              <LocateFixed className="h-5 w-5" />
+              <Crosshair className="h-5 w-5" />
             )}
           </button>
-          <span className="text-shadow-outline mt-0.5 text-[10px] font-semibold text-text">
-            {isLocating ? '확인 중...' : isFollowing ? '길안내 ON' : '길안내 OFF'}
-          </span>
         </div>
 
         <div className="flex flex-col items-center">
@@ -88,11 +85,8 @@ export default function FloatingControls({
             className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-md transition-transform hover:scale-105"
             aria-label="의견 보내기"
           >
-            <Send className="h-5 w-5" />
+            <MessageCircleMore className="h-5 w-5" />
           </button>
-          <span className="text-shadow-outline mt-0.5 text-[10px] font-semibold text-text">
-            의견 보내기
-          </span>
         </div>
       </div>
 

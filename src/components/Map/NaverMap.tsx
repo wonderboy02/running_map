@@ -5,7 +5,7 @@ import { useNaverMap } from '@/hooks/useNaverMap';
 import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages, CAPTION_HEIGHT } from '@/lib/marker-config';
 import { computeVisibleCaptions, type MarkerPixelInfo } from '@/lib/caption-collision';
 import { rewriteStorageUrl } from '@/lib/utils';
-import { computeDataLayerBounds, GPX_STROKE_COLOR, GPX_STROKE_OPACITY, GPX_HIGHLIGHT_COLOR } from '@/lib/naver-map-utils';
+import { computeDataLayerBounds, extractGpxEndpoints, wrapStyleHidingPoints, GPX_STROKE_COLOR, GPX_STROKE_OPACITY, GPX_HIGHLIGHT_COLOR } from '@/lib/naver-map-utils';
 import {
   MyLocationMarker,
   type MyLocationState,
@@ -27,24 +27,24 @@ interface NaverMapProps {
   onMapReady?: (map: naver.maps.Map) => void;
 }
 
-/** 줌 레벨에 따른 GPX 선 두께 계산 */
+/** 줌 레벨에 따른 GPX 선 두께 계산 (기본 +2 보정) */
 function getStrokeWeight(zoom: number, isSelected: boolean = false): number {
-  const base = Math.max(1, Math.round(Math.pow(2, (zoom - 13) / 2 + 1)));
+  const base = Math.max(1, Math.round(Math.pow(2, (zoom - 13) / 2 + 1))) + 2;
   return isSelected ? base + 2 : base;
 }
 
-/** GPX Data Layer 스타일 생성 (effect + updateGpxStrokeWeights 공용) */
+/** GPX Data Layer 스타일 생성 — Point feature(waypoint)는 숨기고 LineString만 표시 */
 function buildGpxStyle(
   zoom: number,
   isSelected: boolean,
-): naver.maps.Data.StyleOptions {
-  return {
+): naver.maps.Data.StylingFunction {
+  return wrapStyleHidingPoints({
     strokeColor: isSelected ? GPX_HIGHLIGHT_COLOR : GPX_STROKE_COLOR,
     strokeWeight: getStrokeWeight(zoom, isSelected),
     strokeOpacity: isSelected ? 1.0 : GPX_STROKE_OPACITY,
     clickable: false,
     zIndex: isSelected ? 100 : 1,
-  };
+  });
 }
 
 /** 캡션 충돌 감지 수직 임계값 (아이콘 높이 + 캡션 높이 고려) */
@@ -65,6 +65,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     data: naver.maps.Data;
     features: naver.maps.Data.Feature[];
   }>>(new Map());
+  const gpxEndpointMarkersRef = useRef<Map<string, { start: naver.maps.Marker; end: naver.maps.Marker }>>(new Map());
 
   // map 준비 시 마커 이미지 프리로드 + 부모에게 전달
   useEffect(() => {
@@ -441,7 +442,7 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     }
   }, [isReady, map, courses, showCourses, selection]);
 
-  // GPX Data Layer 렌더링
+  // GPX Data Layer 렌더링 + 시작/끝 엔드포인트 마커
   useEffect(() => {
     if (!isReady || !map) return;
     let cancelled = false;
@@ -452,26 +453,44 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     const gpxCourses = courses.filter((c) => !!c.gpx_file_url);
     const gpxCourseIds = new Set(gpxCourses.map((c) => c.id));
 
-    // 삭제된 코스의 Data Layer 제거
+    // 삭제된 코스의 Data Layer + 엔드포인트 마커 제거
     courseDataLayersRef.current.forEach(({ data }, id) => {
       if (!gpxCourseIds.has(id)) {
         data.setMap(null);
         courseDataLayersRef.current.delete(id);
+        const ep = gpxEndpointMarkersRef.current.get(id);
+        if (ep) {
+          ep.start.setMap(null);
+          ep.end.setMap(null);
+          gpxEndpointMarkersRef.current.delete(id);
+        }
       }
     });
 
     // 각 GPX 코스 처리
     gpxCourses.forEach((course) => {
       const existing = courseDataLayersRef.current.get(course.id);
+      const isSelected = course.id === selectedCourseId;
 
       if (existing) {
         // 이미 로드됨 → 스타일 + 가시성만 업데이트
-        const isSelected = course.id === selectedCourseId;
         existing.data.setStyle(buildGpxStyle(map.getZoom(), isSelected));
         existing.data.setMap(showCourses ? map : null);
+
+        // 엔드포인트 마커 아이콘 + 가시성 업데이트
+        const ep = gpxEndpointMarkersRef.current.get(course.id);
+        if (ep) {
+          const icon = getCoursePinIcon(isSelected);
+          ep.start.setIcon(icon);
+          ep.end.setIcon(icon);
+          ep.start.setZIndex(isSelected ? 200 : 5);
+          ep.end.setZIndex(isSelected ? 200 : 5);
+          ep.start.setMap(showCourses ? map : null);
+          ep.end.setMap(showCourses ? map : null);
+        }
       } else {
         // 새로 로드
-        loadGpxCourse(course, map, showCourses, course.id === selectedCourseId);
+        loadGpxCourse(course, map, showCourses, isSelected);
       }
     });
 
@@ -497,13 +516,37 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
         dataLayer.setStyle(buildGpxStyle(mapInstance.getZoom(), isSelected));
         dataLayer.setMap(visible ? mapInstance : null);
         courseDataLayersRef.current.set(course.id, { data: dataLayer, features });
+
+        // 시작/끝 엔드포인트 마커 생성
+        const endpoints = extractGpxEndpoints(dataLayer);
+        if (endpoints) {
+          const icon = getCoursePinIcon(isSelected);
+          const startMarker = new naver.maps.Marker({
+            position: new naver.maps.LatLng(endpoints.start.lat, endpoints.start.lng),
+            map: visible ? mapInstance : null,
+            icon,
+            zIndex: isSelected ? 200 : 5,
+          });
+          const endMarker = new naver.maps.Marker({
+            position: new naver.maps.LatLng(endpoints.end.lat, endpoints.end.lng),
+            map: visible ? mapInstance : null,
+            icon,
+            zIndex: isSelected ? 200 : 5,
+          });
+
+          // 클릭 시 코스 선택
+          naver.maps.Event.addListener(startMarker, 'click', () => onCoursePinClick(course));
+          naver.maps.Event.addListener(endMarker, 'click', () => onCoursePinClick(course));
+
+          gpxEndpointMarkersRef.current.set(course.id, { start: startMarker, end: endMarker });
+        }
       } catch (err) {
         console.error(`[NaverMap] GPX 로드 실패 (${course.name}):`, err);
       }
     }
 
     return () => { cancelled = true; };
-  }, [isReady, map, courses, showCourses, selection]);
+  }, [isReady, map, courses, showCourses, selection, onCoursePinClick]);
 
   // 코스 핀 마커 렌더링 (멀티 핀포인트, 선택 상태 + 가시성 반영)
   // 스팟 마커와 별도 effect — 데이터 소스(courses)와 라이프사이클이 다르기 때문
@@ -568,11 +611,16 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     recalcCaptions();
   }, [isReady, map, courses, onCoursePinClick, selection, showCourses, recalcCaptions]);
 
-  // GPX Data Layer cleanup
+  // GPX Data Layer + 엔드포인트 마커 cleanup
   useEffect(() => {
     return () => {
       courseDataLayersRef.current.forEach(({ data }) => data.setMap(null));
       courseDataLayersRef.current.clear();
+      gpxEndpointMarkersRef.current.forEach(({ start, end }) => {
+        start.setMap(null);
+        end.setMap(null);
+      });
+      gpxEndpointMarkersRef.current.clear();
     };
   }, []);
 

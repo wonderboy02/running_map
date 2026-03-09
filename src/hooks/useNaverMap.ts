@@ -58,21 +58,50 @@ export function useNaverMap(
       setIsReady(true);
     }
 
+    let initialized = false;
+    let cancelled = false;
+    let observer: ResizeObserver | null = null;
     let interval: ReturnType<typeof setInterval> | null = null;
 
-    if (window.naver?.maps) {
+    function tryInit() {
+      if (cancelled || initialized || !containerRef.current || !window.naver?.maps) return;
+      const { offsetWidth, offsetHeight } = containerRef.current;
+      if (offsetWidth === 0 || offsetHeight === 0) return;
+
+      initialized = true;
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
       initMap();
-    } else {
+    }
+
+    // 컨테이너 레이아웃 감지 (createPortal 대응)
+    observer = new ResizeObserver(tryInit);
+    observer.observe(containerRef.current);
+
+    // naver.maps 스크립트 로딩 폴링 (아직 미로드 시)
+    if (!window.naver?.maps) {
       interval = setInterval(() => {
+        if (cancelled) return;
         if (window.naver?.maps) {
           clearInterval(interval!);
           interval = null;
-          initMap();
+          tryInit();
         }
       }, 100);
     }
 
+    // 이미 조건이 충족된 경우 즉시 초기화 시도
+    tryInit();
+
     return () => {
+      cancelled = true;
+      if (observer) observer.disconnect();
       if (interval) clearInterval(interval);
       if (mapRef.current) {
         mapRef.current.destroy();
