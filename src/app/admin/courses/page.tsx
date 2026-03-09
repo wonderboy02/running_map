@@ -15,7 +15,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Map,
+  Map as MapIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1577,7 +1577,7 @@ export default function AdminCoursesPage() {
                           !(editingCourse?.image_url && editingCourse?.nw_lat)
                         }
                       >
-                        <Map className="mr-1 h-3 w-3" />
+                        <MapIcon className="mr-1 h-3 w-3" />
                         지도 띄워서 캡쳐
                       </Button>
                     </div>
