@@ -50,7 +50,7 @@ export default function FilterChips({
           onClick={onToggleCourses}
           className={`
             flex-shrink-0 pl-2 pr-3 py-1 rounded-full
-            border
+            border-[1.5px]
             shadow-sm
             transition-colors duration-200
             flex items-center gap-1.5
@@ -72,6 +72,7 @@ export default function FilterChips({
               ${showCourses ? 'brightness-0 invert' : ''}
             `}
           />
+          {/* 아이콘 원본 PNG가 다른 카테고리 대비 작아서 19px로 보정 */}
           <span>러닝코스</span>
         </button>
 
@@ -84,8 +85,7 @@ export default function FilterChips({
               onClick={() => onToggle(category)}
               className={`
                 flex-shrink-0 pl-2 pr-3 py-1 rounded-full
-                backdrop-blur-md
-                border
+                border-[1.5px]
                 shadow-sm
                 transition-colors duration-200
                 flex items-center gap-1.5
