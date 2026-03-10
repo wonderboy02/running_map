@@ -1,12 +1,13 @@
 /**
  * 카테고리 배지 스타일 설정
- * 토큰: globals.css Tier 3 (cat-runner, cat-shower, cat-locker)
+ * 토큰: globals.css Tier 3 (cat-runner, cat-shower, cat-locker, cat-course)
  */
 
 export const CATEGORY_BADGE_STYLES: Record<string, string> = {
   러너스팟: 'bg-cat-runner-muted text-cat-runner-foreground border-cat-runner-border',
   샤워: 'bg-cat-shower-muted text-cat-shower-foreground border-cat-shower-border',
   짐보관: 'bg-cat-locker-muted text-cat-locker-foreground border-cat-locker-border',
+  러닝코스: 'bg-cat-course-muted text-cat-course-foreground border-cat-course-border',
 };
 
 export const DEFAULT_BADGE_STYLE =

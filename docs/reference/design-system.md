@@ -9,7 +9,7 @@
 |------|------|----------------|
 | **Tier 1** | shadcn/ui 코어 (`primary`, `secondary`, `muted`, `accent`, `destructive`, …) | 수정 금지 |
 | **Tier 2** | 앱 시맨틱 토큰 (`surface`, `text`, `highlight`, `naver`, `course`, …) | 자유 수정 |
-| **Tier 3** | 카테고리 토큰 — Placeholder (`cat-runner`, `cat-shower`, `cat-locker`) | 카테고리 개편 시 수정 |
+| **Tier 3** | 카테고리 토큰 — Placeholder (`cat-runner`, `cat-shower`, `cat-locker`, `cat-course`) | 카테고리 개편 시 수정 |
 
 ### Tailwind v4 `@theme` 작동 방식
 
@@ -53,7 +53,7 @@
 | | `warning-muted` | `bg-warning-muted` | 경고 배경 |
 | **Info** | `info-muted` | `bg-info-muted` | 정보 배경 (blue-50) |
 | | `info-border` | `border-info-border` | 정보 테두리 (blue-200) |
-| **Course** | `course` | `text-course` | 코스 아이콘/텍스트 |
+| **Course** | `course` | `text-course` | 코스 아이콘/텍스트 (Tier 3에 `cat-course` 계열도 참조) |
 | **External** | `naver` | `bg-naver` | 네이버 지도 버튼 |
 | | `naver-hover` | `hover:bg-naver-hover` | 네이버 버튼 hover |
 | **Locker size** | `locker-sm` | `text-locker-sm` | 짐보관 소형 배지 텍스트 |
@@ -71,6 +71,7 @@
 | 러너스팟 | `cat-runner-foreground` | `cat-runner-muted` | `cat-runner-border` |
 | 샤워 | `cat-shower-foreground` | `cat-shower-muted` | `cat-shower-border` |
 | 짐보관 | `cat-locker-foreground` | `cat-locker-muted` | `cat-locker-border` |
+| 러닝코스 | `cat-course-foreground` | `cat-course-muted` | `cat-course-border` |
 
 카테고리 배지 스타일은 `src/lib/category-config.ts`에서 관리합니다.
 

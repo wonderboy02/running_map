@@ -4,21 +4,16 @@ import { useState } from 'react';
 import { Crosshair, Loader2, MessageCircleMore, Navigation } from 'lucide-react';
 import FeedbackDialog from '@/components/FeedbackDialog';
 import { BOTTOM_NAV_HEIGHT } from '@/components/BottomNavigation';
-import { track } from '@/lib/analytics';
 
 const FLOATING_BOTTOM_OFFSET = 60; // BottomDrawer peek 높이 기준 여백
 
 interface FloatingControlsProps {
-  showCourses: boolean;
-  onToggleCourses: (checked: boolean) => void;
   isFollowing: boolean;
   isLocating: boolean;
   onToggleFollow: () => void;
 }
 
 export default function FloatingControls({
-  showCourses,
-  onToggleCourses,
   isFollowing,
   isLocating,
   onToggleFollow,
@@ -27,30 +22,6 @@ export default function FloatingControls({
 
   return (
     <>
-      {/* 오른쪽 상단: 코스 토글 */}
-      <div className="fixed right-3 top-[104px] z-[25] flex flex-col items-center">
-        <button
-          onClick={() => {
-            track('course_toggle', { show_courses: !showCourses });
-            onToggleCourses(!showCourses);
-          }}
-          className="h-10 w-10 rounded-full shadow-md transition-transform active:scale-95"
-          aria-label="코스 토글"
-        >
-          {/* 정적 UI 에셋 — 작은 토글 아이콘, next/image 최적화 실익 없음 */}
-          <img
-            src={showCourses ? '/logo/course_on.png' : '/logo/course_off.png'}
-            alt="코스 토글"
-            width={40}
-            height={40}
-            className="rounded-full"
-          />
-        </button>
-        <span className="text-shadow-outline mt-0.5 text-[10px] font-semibold text-text">
-          {showCourses ? '코스 ON' : '코스 OFF'}
-        </span>
-      </div>
-
       {/* 오른쪽 하단: 내 위치 + 피드백 */}
       <div
         className="fixed right-4 z-[25] flex flex-col items-center gap-2"

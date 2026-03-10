@@ -10,6 +10,7 @@ import FloatingControls from '@/components/FloatingControls';
 import SearchOverlay from '@/components/Search/SearchOverlay';
 import BottomNavigation from '@/components/BottomNavigation';
 import CourseExplorer from '@/components/CourseExplorer';
+import ComingSoon from '@/components/ComingSoon';
 import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
@@ -109,6 +110,13 @@ export default function HomePage() {
   const filteredSpots = activeFilters.length === 0
     ? []
     : spots.filter((spot) => activeFilters.includes(spot.category));
+
+  const handleCourseToggle = useCallback(() => {
+    setShowCourses((prev) => {
+      track('course_toggle', { show_courses: !prev });
+      return !prev;
+    });
+  }, []);
 
   const handleFilterToggle = (category: string) => {
     const isTogglingOn = !activeFilters.includes(category);
@@ -269,7 +277,12 @@ export default function HomePage() {
         opaque={appMode !== 'home'}
       />
       {appMode === 'home' && (
-        <FilterChips activeFilters={activeFilters} onToggle={handleFilterToggle} />
+        <FilterChips
+          activeFilters={activeFilters}
+          onToggle={handleFilterToggle}
+          showCourses={showCourses}
+          onToggleCourses={handleCourseToggle}
+        />
       )}
       <div className={`relative flex-1 ${appMode !== 'home' ? 'hidden' : ''}`}>
         <NaverMap
@@ -289,17 +302,11 @@ export default function HomePage() {
       {appMode === 'course' && (
         <CourseExplorer courses={courses} onCourseClick={handleCourseExplorerClick} />
       )}
-      {appMode === 'navigation' && (
-        <div className="flex flex-1 items-center justify-center bg-surface">
-          <p className="text-text-muted">준비 중입니다</p>
-        </div>
-      )}
+      {appMode === 'navigation' && <ComingSoon />}
 
       {appMode === 'home' && (
         <>
           <FloatingControls
-            showCourses={showCourses}
-            onToggleCourses={setShowCourses}
             isFollowing={isFollowing}
             isLocating={isFollowing && myLocation === null}
             onToggleFollow={handleToggleFollow}
