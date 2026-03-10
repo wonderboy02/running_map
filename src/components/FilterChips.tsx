@@ -17,7 +17,7 @@ const CHIP_ACTIVE_STYLES: Record<string, string> = {
 };
 
 const CHIP_INACTIVE =
-  'bg-surface/95 text-text-secondary border-border hover:border-border-strong';
+  'bg-surface text-text-secondary border-border hover:border-border-strong';
 
 // 모듈 로드 시 즉시 프리로드 (깜빡임 방지)
 if (typeof window !== 'undefined') {
@@ -50,7 +50,6 @@ export default function FilterChips({
           onClick={onToggleCourses}
           className={`
             flex-shrink-0 pl-2 pr-3 py-1 rounded-full
-            backdrop-blur-md
             border
             shadow-sm
             transition-colors duration-200
