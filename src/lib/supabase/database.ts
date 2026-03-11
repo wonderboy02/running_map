@@ -94,22 +94,25 @@ export type Database = {
       }
       feedback: {
         Row: {
-          content: string
+          content: string | null
           created_at: string
           id: string
           is_read: boolean
+          rating: number | null
         }
         Insert: {
-          content: string
+          content?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
+          rating?: number | null
         }
         Update: {
-          content?: string
+          content?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
+          rating?: number | null
         }
         Relationships: []
       }
