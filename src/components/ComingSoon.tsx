@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Instagram, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { track } from '@/lib/analytics';
 
-const INSTAGRAM_URL = 'https://www.instagram.com/runners_spot';
+const INSTAGRAM_URL = 'https://www.instagram.com/runner.spott';
 const STORAGE_KEY = 'runners_spot_coming_soon_voted';
 const VIEW_SESSION_KEY = 'runners_spot_coming_soon_viewed';
 
