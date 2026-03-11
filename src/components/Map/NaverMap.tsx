@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { useNaverMap } from '@/hooks/useNaverMap';
 import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages, CAPTION_HEIGHT } from '@/lib/marker-config';
 import { computeVisibleCaptions, type MarkerPixelInfo } from '@/lib/caption-collision';
@@ -50,7 +50,7 @@ function buildGpxStyle(
 /** 캡션 충돌 감지 수직 임계값 (아이콘 높이 + 캡션 높이 고려) */
 const CAPTION_COLLISION_THRESHOLD_Y = CAPTION_HEIGHT + 14;
 
-export default function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapClick, onMapReady }: NaverMapProps) {
+const NaverMap = memo(function NaverMap({ spots, courses = [], showCourses = true, onMarkerClick, onCoursePinClick, selection, targetLocation, myLocation, onMapDrag, onMapClick, onMapReady }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { map, isReady } = useNaverMap(containerRef);
   const markersRef = useRef<Map<string, naver.maps.Marker>>(new Map());
@@ -135,12 +135,18 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     captionVisibleIdsRef.current = newVisible;
   }, [map, spots, courses, selection]);
 
-  // GPX 줌 연동: 줌 레벨에 따라 선 두께 + 선택 하이라이트 업데이트
+  // GPX 줌 연동 — 줌 또는 선택 코스가 변경된 경우에만 setStyle 호출
+  const lastGpxStateRef = useRef<{ zoom: number; selectedId: string | null } | null>(null);
+
   const updateGpxStrokeWeights = useCallback(() => {
     if (!map) return;
     const zoom = map.getZoom();
     const selectedCourseId =
       selection?.type === 'course' ? selection.data.id : null;
+
+    const prev = lastGpxStateRef.current;
+    if (prev && prev.zoom === zoom && prev.selectedId === selectedCourseId) return;
+    lastGpxStateRef.current = { zoom, selectedId: selectedCourseId };
 
     courseDataLayersRef.current.forEach(({ data }, courseId) => {
       const isSelected = courseId === selectedCourseId;
@@ -148,73 +154,123 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
     });
   }, [map, selection]);
 
+  // ref 패턴으로 idle listener lifecycle을 callback identity와 분리
+  const recalcCaptionsRef = useRef(recalcCaptions);
+  const updateGpxStrokeWeightsRef = useRef(updateGpxStrokeWeights);
+  recalcCaptionsRef.current = recalcCaptions;
+  updateGpxStrokeWeightsRef.current = updateGpxStrokeWeights;
+
+  // microtask 디바운스 — 동일 React commit 내 recalcCaptions 1회만 실행
+  const captionRecalcScheduledRef = useRef(false);
+
+  const scheduleRecalcCaptions = useCallback(() => {
+    if (captionRecalcScheduledRef.current) return;
+    captionRecalcScheduledRef.current = true;
+    queueMicrotask(() => {
+      captionRecalcScheduledRef.current = false;
+      recalcCaptionsRef.current();
+    });
+  }, []);
+
   // idle 이벤트로 캡션 충돌 재계산 (줌/팬 완료 시)
   useEffect(() => {
     if (!isReady || !map) return;
 
     const listener = naver.maps.Event.addListener(map, 'idle', () => {
-      recalcCaptions();
-      updateGpxStrokeWeights();
+      recalcCaptionsRef.current();
+      updateGpxStrokeWeightsRef.current();
     });
 
     // 초기 계산
-    recalcCaptions();
+    recalcCaptionsRef.current();
 
     return () => {
       naver.maps.Event.removeListener(listener);
     };
-  }, [isReady, map, recalcCaptions, updateGpxStrokeWeights]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, map]);
+
+  // diff 기반 마커 업데이트 — selection만 변경 시 fast path (최대 2개만 업데이트)
+  const prevSyncStateRef = useRef<{
+    spots: Spot[];
+    selectedSpotId: string | null;
+  } | null>(null);
 
   // 마커 동기화 — spots 데이터 변경 또는 선택 변경 시 마커 생성/제거/아이콘 업데이트
   // selection이 deps에 포함되어 단일 effect에서 선택 상태까지 처리.
-  // 스팟 수십~수백 개 규모에서 전체 순회 setIcon() 비용은 < 1ms로 무시 가능.
   useEffect(() => {
     if (!isReady || !map) return;
 
-    const currentIds = new Set(spots.map((s) => s.id));
     const existingMarkers = markersRef.current;
     const selectedSpotId =
       selection?.type === 'spot' ? selection.data.id : null;
 
-    // 더 이상 없는 마커 제거
-    existingMarkers.forEach((marker, id) => {
-      if (!currentIds.has(id)) {
-        marker.setMap(null);
-        existingMarkers.delete(id);
-      }
-    });
+    const prev = prevSyncStateRef.current;
+    const isSelectionOnlyChange = prev
+      && prev.spots === spots          // useMemo로 안정된 참조
+      && prev.selectedSpotId !== selectedSpotId;
 
-    // 새로운 마커 추가 또는 기존 마커 업데이트
-    spots.forEach((spot) => {
-      const isSelected = spot.id === selectedSpotId;
-      const showCaption = isSelected || captionVisibleIdsRef.current.has(spot.id);
-      const icon = getSpotMarkerIcon(spot.category, isSelected, showCaption ? spot.name : undefined);
-      const existing = existingMarkers.get(spot.id);
+    if (isSelectionOnlyChange) {
+      // Fast path: 이전 선택 + 새 선택 마커만 업데이트 (최대 2개)
+      const idsToUpdate = new Set<string>();
+      if (prev.selectedSpotId) idsToUpdate.add(prev.selectedSpotId);
+      if (selectedSpotId) idsToUpdate.add(selectedSpotId);
 
-      if (existing) {
-        existing.setPosition(new naver.maps.LatLng(spot.latitude, spot.longitude));
-        existing.setIcon(icon);
-        existing.setZIndex(isSelected ? 200 : spot.category === '러너스팟' ? 10 : 1);
-        existing.setMap(map);
-      } else {
-        const marker = new naver.maps.Marker({
-          position: new naver.maps.LatLng(spot.latitude, spot.longitude),
-          map,
-          icon,
-          zIndex: isSelected ? 200 : spot.category === '러너스팟' ? 10 : 1,
-        });
+      idsToUpdate.forEach((id) => {
+        const marker = existingMarkers.get(id);
+        const spot = spots.find((s) => s.id === id);
+        if (!marker || !spot) return;
+        const isSelected = id === selectedSpotId;
+        const showCaption = isSelected || captionVisibleIdsRef.current.has(id);
+        marker.setIcon(getSpotMarkerIcon(spot.category, isSelected, showCaption ? spot.name : undefined));
+        marker.setZIndex(isSelected ? 200 : spot.category === '러너스팟' ? 10 : 1);
+      });
+    } else {
+      // Full sync: 마커 생성/제거/전체 업데이트
+      const currentIds = new Set(spots.map((s) => s.id));
 
-        naver.maps.Event.addListener(marker, 'click', () => {
-          onMarkerClick(spot);
-        });
+      // 더 이상 없는 마커 제거
+      existingMarkers.forEach((marker, id) => {
+        if (!currentIds.has(id)) {
+          marker.setMap(null);
+          existingMarkers.delete(id);
+        }
+      });
 
-        existingMarkers.set(spot.id, marker);
-      }
-    });
+      // 새로운 마커 추가 또는 기존 마커 업데이트
+      spots.forEach((spot) => {
+        const isSelected = spot.id === selectedSpotId;
+        const showCaption = isSelected || captionVisibleIdsRef.current.has(spot.id);
+        const icon = getSpotMarkerIcon(spot.category, isSelected, showCaption ? spot.name : undefined);
+        const existing = existingMarkers.get(spot.id);
 
-    // 마커 동기화 후 캡션 충돌 재계산
-    recalcCaptions();
-  }, [isReady, map, spots, onMarkerClick, selection, recalcCaptions]);
+        if (existing) {
+          existing.setPosition(new naver.maps.LatLng(spot.latitude, spot.longitude));
+          existing.setIcon(icon);
+          existing.setZIndex(isSelected ? 200 : spot.category === '러너스팟' ? 10 : 1);
+          existing.setMap(map);
+        } else {
+          const marker = new naver.maps.Marker({
+            position: new naver.maps.LatLng(spot.latitude, spot.longitude),
+            map,
+            icon,
+            zIndex: isSelected ? 200 : spot.category === '러너스팟' ? 10 : 1,
+          });
+
+          naver.maps.Event.addListener(marker, 'click', () => {
+            onMarkerClick(spot);
+          });
+
+          existingMarkers.set(spot.id, marker);
+        }
+      });
+    }
+
+    prevSyncStateRef.current = { spots, selectedSpotId };
+
+    // 마커 동기화 후 캡션 충돌 재계산 (microtask 디바운스)
+    scheduleRecalcCaptions();
+  }, [isReady, map, spots, onMarkerClick, selection, scheduleRecalcCaptions]);
 
   // 선택된 마커/핀으로 지도 이동 (줌 유지)
   useEffect(() => {
@@ -607,9 +663,9 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       }
     }
 
-    // 핀 동기화 후 캡션 충돌 재계산
-    recalcCaptions();
-  }, [isReady, map, courses, onCoursePinClick, selection, showCourses, recalcCaptions]);
+    // 핀 동기화 후 캡션 충돌 재계산 (microtask 디바운스)
+    scheduleRecalcCaptions();
+  }, [isReady, map, courses, onCoursePinClick, selection, showCourses, scheduleRecalcCaptions]);
 
   // GPX Data Layer + 엔드포인트 마커 cleanup
   useEffect(() => {
@@ -633,4 +689,6 @@ export default function NaverMap({ spots, courses = [], showCourses = true, onMa
       )}
     </div>
   );
-}
+});
+
+export default NaverMap;

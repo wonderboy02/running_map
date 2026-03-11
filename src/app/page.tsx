@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import NaverMap from '@/components/Map/NaverMap';
 import Header from '@/components/Header';
@@ -107,9 +107,12 @@ export default function HomePage() {
     }
   }, [isFollowing, myLocation, locationError, hasOrientationSensor]);
 
-  const filteredSpots = activeFilters.length === 0
-    ? []
-    : spots.filter((spot) => activeFilters.includes(spot.category));
+  const filteredSpots = useMemo(
+    () => activeFilters.length === 0
+      ? []
+      : spots.filter((spot) => activeFilters.includes(spot.category)),
+    [spots, activeFilters],
+  );
 
   const handleCourseToggle = useCallback(() => {
     setShowCourses((prev) => {

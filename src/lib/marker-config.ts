@@ -152,6 +152,10 @@ export function preloadMarkerImages(): void {
   allImages.forEach((src) => { new Image().src = src; });
 }
 
+// ─── 아이콘 캐시 ──────────────────────────────────────
+// (category, isSelected, name) 조합은 유한 → 메모리 무시 가능
+const _iconCache = new Map<string, naver.maps.HtmlIcon>();
+
 // ─── 공개 API ────────────────────────────────────────
 
 /**
@@ -165,6 +169,10 @@ export function getSpotMarkerIcon(
   isSelected: boolean,
   name?: string,
 ): naver.maps.HtmlIcon {
+  const key = `spot|${category}|${isSelected}|${name ?? ''}`;
+  const cached = _iconCache.get(key);
+  if (cached) return cached;
+
   const cat = (CATEGORIES as readonly string[]).includes(category)
     ? (category as Category)
     : '러너스팟';
@@ -172,29 +180,45 @@ export function getSpotMarkerIcon(
   const images = SPOT_IMAGES[cat];
   const size = CATEGORY_SIZES[cat]?.[state] ?? BASE_SIZES[state];
 
-  return buildPngIcon(images[state], size, name);
+  const icon = buildPngIcon(images[state], size, name);
+  _iconCache.set(key, icon);
+  return icon;
 }
 
 /** 코스 핀 아이콘 (PNG 기반 + 캡션) */
 export function getCoursePinIcon(isSelected = false, name?: string): naver.maps.HtmlIcon {
+  const key = `course|${isSelected}|${name ?? ''}`;
+  const cached = _iconCache.get(key);
+  if (cached) return cached;
+
   const state = isSelected ? 'selected' : 'default';
   const size = COURSE_SIZES[state];
 
-  return buildPngIcon(COURSE_IMAGES[state], size, name);
+  const icon = buildPngIcon(COURSE_IMAGES[state], size, name);
+  _iconCache.set(key, icon);
+  return icon;
 }
 
 /** 검색 결과 핀 아이콘 — 브랜드 컬러 원형 (기본 마커의 60%) + 캡션 */
 export function getSearchPinIcon(name?: string): naver.maps.HtmlIcon {
+  const key = `search|${name ?? ''}`;
+  const cached = _iconCache.get(key);
+  if (cached) return cached;
+
   const dotSize = 12;
   const dotHtml = `<div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#152558;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>`;
 
+  let icon: naver.maps.HtmlIcon;
   if (!name) {
-    return {
+    icon = {
       content: dotHtml,
       size: new naver.maps.Size(dotSize, dotSize),
       anchor: new naver.maps.Point(dotSize / 2, dotSize / 2),
     };
+  } else {
+    icon = buildCaptionedIcon(dotHtml, name, dotSize / 2);
   }
 
-  return buildCaptionedIcon(dotHtml, name, dotSize / 2);
+  _iconCache.set(key, icon);
+  return icon;
 }
