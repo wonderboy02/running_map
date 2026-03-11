@@ -91,7 +91,7 @@ AnalyticsProvider (layout.tsx)
 
 | 이벤트명 | 트리거 시점 | 프로퍼티 | 적용 파일 |
 |---------|-----------|---------|----------|
-| `feedback_submit` | 피드백 제출 성공 | `content_length` | `FeedbackDialog.tsx` |
+| `feedback_submit` | 피드백 제출 성공 | `rating`, `content_length` | `FeedbackDialog.tsx` |
 
 #### Coming Soon
 

@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import FilterChips from '@/components/FilterChips';
 import BottomDrawer from '@/components/BottomDrawer';
 import FloatingControls from '@/components/FloatingControls';
+import FeedbackDialog from '@/components/FeedbackDialog';
 import SearchOverlay from '@/components/Search/SearchOverlay';
 import BottomNavigation from '@/components/BottomNavigation';
 import CourseExplorer from '@/components/CourseExplorer';
@@ -14,6 +15,7 @@ import ComingSoon from '@/components/ComingSoon';
 import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
+import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
 import type { Spot, Course, DrawerSelection, AppMode } from '@/types';
 import { haversineDistance } from '@/lib/naver-map-utils';
 import { track } from '@/lib/analytics';
@@ -41,6 +43,7 @@ export default function HomePage() {
     requestCompassPermission,
     retryLocation,
   } = useMyLocation();
+  const { feedbackOpen, openFeedback, onFeedbackOpenChange } = useFeedbackPrompt();
 
   // 팔로우 중이고 위치가 갱신되면 지도 이동
   const prevLocationRef = useRef(myLocation);
@@ -313,6 +316,7 @@ export default function HomePage() {
             isFollowing={isFollowing}
             isLocating={isFollowing && myLocation === null}
             onToggleFollow={handleToggleFollow}
+            onFeedbackClick={openFeedback}
           />
 
           <BottomDrawer
@@ -342,6 +346,8 @@ export default function HomePage() {
         onSpotSelect={handleSearchSpotSelect}
         onLocationSelect={handleSearchLocationSelect}
       />
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={onFeedbackOpenChange} />
     </div>
   );
 }

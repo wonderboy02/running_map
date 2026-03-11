@@ -696,3 +696,4 @@ useEffect — 마커 동기화
 |------|------|----------|
 | **iOS Safe Area 미처리** | `env(safe-area-inset-bottom)` 미적용 — iPhone X 이후 홈 인디케이터 영역(~34px)에 UI가 가려질 수 있음. `BottomNavigation`, `BottomDrawer`, `FloatingControls` 등 하단 고정 요소 전체에 해당. `viewport-fit=cover` 메타 태그 + safe area padding 적용 필요. | 하단 고정 UI 전체 |
 | **GPX 업로드 검증 최소화** | Admin 전용이므로 MIME 타입 검증, difficulty 범위(1~10) 검증 등을 생략. 확장자(`.gpx`) + 크기(5MB) + 기본 콘텐츠(`<gpx>` 태그) 검증만 수행. 공개 업로드 API로 전환 시 강화 필요. | `src/lib/gpx-upload.ts`, `src/app/api/admin/courses/route.ts` |
+| **클라이언트 fetch 비-JSON 응답 미처리** | 클라이언트 fetch 후 `res.ok` 체크 없이 바로 `res.json()` 호출하는 패턴이 프로젝트 전반에 사용됨. 502/503 등 비-JSON 응답 시 파싱 에러가 catch로 빠져 "네트워크 오류"로 표시됨. 서버 오류와 네트워크 오류 구분 불가. | 클라이언트 fetch 전체 (`FeedbackDialog`, `SpotForm`, `admin/courses`, `useGeocode` 등) |
