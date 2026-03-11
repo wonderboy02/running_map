@@ -69,8 +69,8 @@ export default function FeedbackDialog({ open, onOpenChange }: FeedbackDialogPro
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>의견 보내기</DialogTitle>
-          <DialogDescription>
+          <DialogTitle>의견을 보내주세요!</DialogTitle>
+          <DialogDescription className="text-xs">
             개발자들이 항상 새로운 기능을 만들 준비를 하고 있습니다!
             <br />
             마구 제안해주세요
@@ -107,6 +107,7 @@ export default function FeedbackDialog({ open, onOpenChange }: FeedbackDialogPro
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="불편한 점이나 개선 아이디어를 자유롭게 적어주세요 (선택)"
+            className="text-xs"
             rows={4}
             maxLength={FEEDBACK_MAX_LENGTH}
             disabled={loading}
