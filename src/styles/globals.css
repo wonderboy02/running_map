@@ -125,6 +125,12 @@
   --color-cat-locker-foreground: #926e00;
   --color-cat-locker-muted: #fef9e6;
   --color-cat-locker-border: #fae08a;
+
+  /* 러닝코스 — 코스 컬러(그린 #20AC37) */
+  --color-cat-course: #20AC37;
+  --color-cat-course-foreground: #1a8f2e;
+  --color-cat-course-muted: #eefbf0;
+  --color-cat-course-border: #a0e6ad;
 }
 
 /* 모바일 전용 레이아웃 */

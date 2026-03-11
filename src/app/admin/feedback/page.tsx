@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { CheckCircle, Circle, Trash2 } from 'lucide-react';
+import { CheckCircle, Circle, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Feedback } from '@/types';
 
@@ -161,7 +161,22 @@ export default function AdminFeedbackPage() {
 
                 {/* 내용 */}
                 <div className="min-w-0 flex-1">
-                  <p className="whitespace-pre-wrap text-sm">{fb.content}</p>
+                  {fb.rating != null && (
+                    <div className="mb-1 flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((v) => (
+                        <Star
+                          key={v}
+                          className={`h-4 w-4 ${v <= fb.rating! ? 'text-highlight fill-current' : 'text-text-muted'}`}
+                        />
+                      ))}
+                      <span className="ml-1 text-xs text-muted-foreground">{fb.rating}/5</span>
+                    </div>
+                  )}
+                  {fb.content ? (
+                    <p className="whitespace-pre-wrap text-sm">{fb.content}</p>
+                  ) : (
+                    <p className="text-sm italic text-muted-foreground">텍스트 없음</p>
+                  )}
                   <p className="text-muted-foreground mt-2 text-xs">
                     {new Date(fb.created_at).toLocaleString('ko-KR')}
                   </p>

@@ -52,7 +52,11 @@ export type AnalyticsEventMap = {
   };
 
   // 피드백
-  feedback_submit: { content_length: number };
+  feedback_submit: { rating: 1 | 2 | 3 | 4 | 5; content_length: number };
+
+  // Coming Soon
+  coming_soon_view: Record<string, never>;
+  coming_soon_vote: { vote: 'up' | 'down' };
 };
 
 export type AnalyticsEvent = keyof AnalyticsEventMap;

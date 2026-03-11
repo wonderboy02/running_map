@@ -1,18 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import NaverMap from '@/components/Map/NaverMap';
 import Header from '@/components/Header';
 import FilterChips from '@/components/FilterChips';
 import BottomDrawer from '@/components/BottomDrawer';
 import FloatingControls from '@/components/FloatingControls';
+import FeedbackDialog from '@/components/FeedbackDialog';
 import SearchOverlay from '@/components/Search/SearchOverlay';
 import BottomNavigation from '@/components/BottomNavigation';
 import CourseExplorer from '@/components/CourseExplorer';
+import ComingSoon from '@/components/ComingSoon';
 import { useSpots } from '@/hooks/useSpots';
 import { useCourses } from '@/hooks/useCourses';
 import { useMyLocation } from '@/hooks/useMyLocation';
+import { useFeedbackPrompt } from '@/hooks/useFeedbackPrompt';
 import type { Spot, Course, DrawerSelection, AppMode } from '@/types';
 import { haversineDistance } from '@/lib/naver-map-utils';
 import { track } from '@/lib/analytics';
@@ -40,6 +43,7 @@ export default function HomePage() {
     requestCompassPermission,
     retryLocation,
   } = useMyLocation();
+  const { feedbackOpen, openFeedback, onFeedbackOpenChange } = useFeedbackPrompt();
 
   // 팔로우 중이고 위치가 갱신되면 지도 이동
   const prevLocationRef = useRef(myLocation);
@@ -106,9 +110,19 @@ export default function HomePage() {
     }
   }, [isFollowing, myLocation, locationError, hasOrientationSensor]);
 
-  const filteredSpots = activeFilters.length === 0
-    ? []
-    : spots.filter((spot) => activeFilters.includes(spot.category));
+  const filteredSpots = useMemo(
+    () => activeFilters.length === 0
+      ? []
+      : spots.filter((spot) => activeFilters.includes(spot.category)),
+    [spots, activeFilters],
+  );
+
+  const handleCourseToggle = useCallback(() => {
+    setShowCourses((prev) => {
+      track('course_toggle', { show_courses: !prev });
+      return !prev;
+    });
+  }, []);
 
   const handleFilterToggle = (category: string) => {
     const isTogglingOn = !activeFilters.includes(category);
@@ -269,7 +283,12 @@ export default function HomePage() {
         opaque={appMode !== 'home'}
       />
       {appMode === 'home' && (
-        <FilterChips activeFilters={activeFilters} onToggle={handleFilterToggle} />
+        <FilterChips
+          activeFilters={activeFilters}
+          onToggle={handleFilterToggle}
+          showCourses={showCourses}
+          onToggleCourses={handleCourseToggle}
+        />
       )}
       <div className={`relative flex-1 ${appMode !== 'home' ? 'hidden' : ''}`}>
         <NaverMap
@@ -289,20 +308,15 @@ export default function HomePage() {
       {appMode === 'course' && (
         <CourseExplorer courses={courses} onCourseClick={handleCourseExplorerClick} />
       )}
-      {appMode === 'navigation' && (
-        <div className="flex flex-1 items-center justify-center bg-surface">
-          <p className="text-text-muted">준비 중입니다</p>
-        </div>
-      )}
+      {appMode === 'navigation' && <ComingSoon />}
 
       {appMode === 'home' && (
         <>
           <FloatingControls
-            showCourses={showCourses}
-            onToggleCourses={setShowCourses}
             isFollowing={isFollowing}
             isLocating={isFollowing && myLocation === null}
             onToggleFollow={handleToggleFollow}
+            onFeedbackClick={openFeedback}
           />
 
           <BottomDrawer
@@ -332,6 +346,8 @@ export default function HomePage() {
         onSpotSelect={handleSearchSpotSelect}
         onLocationSelect={handleSearchLocationSelect}
       />
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={onFeedbackOpenChange} />
     </div>
   );
 }

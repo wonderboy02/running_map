@@ -6,16 +6,18 @@ const CHIP_ICONS: Record<string, string> = {
   러너스팟: '/icons/runner.png',
   샤워: '/icons/shower.png',
   짐보관: '/icons/locker.png',
+  러닝코스: '/icons/course.png',
 };
 
 const CHIP_ACTIVE_STYLES: Record<string, string> = {
   러너스팟: 'bg-cat-runner text-white border-cat-runner',
   샤워: 'bg-cat-shower text-white border-cat-shower',
   짐보관: 'bg-cat-locker text-white border-cat-locker',
+  러닝코스: 'bg-cat-course text-white border-cat-course',
 };
 
 const CHIP_INACTIVE =
-  'bg-surface/95 text-text-secondary border-border hover:border-border-strong';
+  'bg-surface text-text-secondary border-border hover:border-border-strong';
 
 // 모듈 로드 시 즉시 프리로드 (깜빡임 방지)
 if (typeof window !== 'undefined') {
@@ -28,13 +30,52 @@ if (typeof window !== 'undefined') {
 interface FilterChipsProps {
   activeFilters: string[];
   onToggle: (category: string) => void;
+  showCourses: boolean;
+  onToggleCourses: () => void;
 }
 
-export default function FilterChips({ activeFilters, onToggle }: FilterChipsProps) {
+export default function FilterChips({
+  activeFilters,
+  onToggle,
+  showCourses,
+  onToggleCourses,
+}: FilterChipsProps) {
   return (
     <div className="absolute top-[48px] left-0 right-0 z-20 pointer-events-none">
       <div className="flex gap-2 justify-start pointer-events-auto overflow-x-auto scrollbar-none">
-        <div className="flex-shrink-0 w-4" aria-hidden="true" />
+        <div className="flex-shrink-0 w-2" aria-hidden="true" />
+
+        {/* 코스 레이어 토글 칩 — separator를 오른쪽 border로 처리하여 gap 일정 유지 */}
+        <button
+          onClick={onToggleCourses}
+          className={`
+            flex-shrink-0 pl-2 pr-3 py-1 rounded-full
+            border-[1.5px]
+            shadow-sm
+            transition-colors duration-200
+            flex items-center gap-1.5
+            text-[clamp(13px,3.5vw,15px)] font-medium
+            ${
+              showCourses
+                ? CHIP_ACTIVE_STYLES['러닝코스']
+                : CHIP_INACTIVE
+            }
+          `}
+        >
+          <img
+            src={CHIP_ICONS['러닝코스']}
+            alt=""
+            width={19}
+            height={19}
+            className={`
+              w-[19px] h-[19px] transition-[filter] duration-200
+              ${showCourses ? 'brightness-0 invert' : ''}
+            `}
+          />
+          {/* 아이콘 원본 PNG가 다른 카테고리 대비 작아서 19px로 보정 */}
+          <span>러닝코스</span>
+        </button>
+
         {CATEGORIES.map((category) => {
           const isActive = activeFilters.includes(category);
           const iconSrc = CHIP_ICONS[category];
@@ -44,10 +85,9 @@ export default function FilterChips({ activeFilters, onToggle }: FilterChipsProp
               onClick={() => onToggle(category)}
               className={`
                 flex-shrink-0 pl-2 pr-3 py-1 rounded-full
-                backdrop-blur-md
-                border
+                border-[1.5px]
                 shadow-sm
-                transition-all duration-200
+                transition-colors duration-200
                 flex items-center gap-1.5
                 text-[clamp(13px,3.5vw,15px)] font-medium
                 ${
@@ -75,7 +115,8 @@ export default function FilterChips({ activeFilters, onToggle }: FilterChipsProp
             </button>
           );
         })}
-        <div className="flex-shrink-0 w-4" aria-hidden="true" />
+
+        <div className="flex-shrink-0 w-2" aria-hidden="true" />
       </div>
     </div>
   );

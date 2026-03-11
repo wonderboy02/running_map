@@ -62,7 +62,7 @@ AnalyticsProvider (layout.tsx)
 
 | 이벤트명 | 트리거 시점 | 프로퍼티 | 적용 파일 |
 |---------|-----------|---------|----------|
-| `course_toggle` | 코스 오버레이 on/off | `show_courses` | `FloatingControls.tsx` |
+| `course_toggle` | 코스 오버레이 on/off | `show_courses` | `page.tsx` |
 | `filter_toggle` | 필터 칩 토글 | `category`, `is_active`, `active_filters` | `page.tsx` |
 | `my_location_click` | 내 위치 버튼 클릭 | `has_location` | `page.tsx` |
 
@@ -91,7 +91,17 @@ AnalyticsProvider (layout.tsx)
 
 | 이벤트명 | 트리거 시점 | 프로퍼티 | 적용 파일 |
 |---------|-----------|---------|----------|
-| `feedback_submit` | 피드백 제출 성공 | `content_length` | `FeedbackDialog.tsx` |
+| `feedback_submit` | 피드백 제출 성공 | `rating`, `content_length` | `FeedbackDialog.tsx` |
+
+#### Coming Soon
+
+| 이벤트명 | 트리거 시점 | 프로퍼티 | 적용 파일 |
+|---------|-----------|---------|----------|
+| `coming_soon_view` | 길안내 탭 최초 진입 (세션당 1회, sessionStorage) | — | `ComingSoon.tsx` |
+| `coming_soon_vote` | up/down 버튼 클릭 (사용자당 1회, localStorage) | `vote` (`'up'` \| `'down'`) | `ComingSoon.tsx` |
+
+- view는 `sessionStorage` (`runners_spot_coming_soon_viewed`)로 세션당 1회 제한 — 탭 전환 노이즈 제거, 재방문 시 재발화
+- 투표는 `localStorage` (`runners_spot_coming_soon_voted`)로 영구 중복 방지
 
 ---
 
@@ -337,3 +347,4 @@ track('new_event', { property1: 'value', property2: 42 });
 | 유입 채널별 유저 수 | `first_utm_source` (People 프로필) | Users > Filter by `first_utm_source` |
 | 캠페인별 리텐션 | `first_utm_campaign` (People 프로필) | Retention > Breakdown by `first_utm_campaign` |
 | 검색엔진 유입 분석 | `first_referrer` (People 프로필) | Users > Filter by `first_referrer` |
+| 길안내 기능 관심도 | `coming_soon_vote` / `coming_soon_view` unique | Funnels |
