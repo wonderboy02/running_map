@@ -625,6 +625,57 @@ useEffect — 마커 동기화
 - 선택 상태 전환을 별도 useEffect로 분리하지 않음 → ref 기반 교차 결합 발생, 복잡도만 증가
 - `prevSelectedSpotIdRef` 같은 mutable ref로 effect 간 상태를 공유하지 않음 → deps에서 직접 파생
 
+## useNaverMap 지연 파괴 패턴
+
+`useNaverMap` 훅은 `map.destroy()`를 **`queueMicrotask`로 지연 실행**한다.
+
+### 배경
+
+React는 컴포넌트 언마운트 시 effect cleanup을 **선언 순서대로 동기 실행**한다. `useNaverMap`이 먼저 선언되므로:
+
+```
+1. useNaverMap cleanup → map.destroy()   ← 지도 내부 상태 파괴
+2. useGpxDataLayer cleanup → dataLayer.setMap(null)  ← 💥 이미 파괴된 지도 접근
+3. 기타 cleanup → overlay.setMap(null), marker.setMap(null)  ← 💥 동일
+```
+
+Naver Maps SDK의 `setMap(null)`은 내부적으로 지도의 `getLayer()` 등을 호출하므로, 파괴된 지도에 대해 실행하면 `Cannot read properties of undefined (reading 'getLayer')` 에러가 발생한다.
+
+### 해결: queueMicrotask 지연 파괴 + StrictMode 가드
+
+```typescript
+// useNaverMap.ts cleanup
+return () => {
+  if (mapRef.current) {
+    const mapToDestroy = mapRef.current;
+    mapRef.current = null;
+    queueMicrotask(() => {
+      // StrictMode remount 시 mapRef.current가 새 지도로 채워지므로
+      // null 체크로 이미 교체된 지도의 destroy를 방지
+      if (!mapRef.current) mapToDestroy.destroy();
+    });
+  }
+};
+```
+
+**동작 원리:**
+
+- React cleanup은 동기 실행 → microtask는 모든 cleanup 완료 후 실행 → 다른 훅들이 살아있는 지도에 안전하게 `setMap(null)` 호출
+- **StrictMode (dev)**: unmount → `mapRef = null` → remount → `mapRef = 새 지도` → microtask: `mapRef !== null` → destroy 건너뜀 (동일 컨테이너의 새 지도를 보호)
+- **프로덕션**: unmount → `mapRef = null` → microtask: `mapRef === null` → destroy 정상 실행
+
+### 규칙
+
+1. `useNaverMap`에서 `map.destroy()`는 반드시 `queueMicrotask` + `mapRef.current` null 체크로 감싸야 함
+2. `useNaverMap`을 사용하는 다른 훅/컴포넌트의 cleanup에서 try-catch로 `setMap(null)` 실패를 무시하지 않음 — 근본 원인이 아닌 증상을 숨기는 것
+3. 새 지도 관련 훅 추가 시에도 이 패턴 덕분에 cleanup 순서를 신경 쓸 필요 없음
+
+### ❌ 하지 말 것
+
+- `useNaverMap` cleanup에서 `map.destroy()`를 동기로 즉시 호출하지 않음 → 후속 훅 cleanup 깨짐
+- `queueMicrotask` 내부에서 `mapRef.current` null 체크를 빠뜨리지 않음 → StrictMode에서 새 지도까지 파괴됨
+- 다른 훅에서 `setMap(null)` 실패를 try-catch로 삼키지 않음 → 근본 해결이 아닌 증상 회피
+
 ## 이미지 최적화 가이드
 
 ### 태그 선택 기준 (`<Image>` vs `<img>`)
@@ -697,3 +748,4 @@ useEffect — 마커 동기화
 | **iOS Safe Area 미처리** | `env(safe-area-inset-bottom)` 미적용 — iPhone X 이후 홈 인디케이터 영역(~34px)에 UI가 가려질 수 있음. `BottomNavigation`, `BottomDrawer`, `FloatingControls` 등 하단 고정 요소 전체에 해당. `viewport-fit=cover` 메타 태그 + safe area padding 적용 필요. | 하단 고정 UI 전체 |
 | **GPX 업로드 검증 최소화** | Admin 전용이므로 MIME 타입 검증, difficulty 범위(1~10) 검증 등을 생략. 확장자(`.gpx`) + 크기(5MB) + 기본 콘텐츠(`<gpx>` 태그) 검증만 수행. 공개 업로드 API로 전환 시 강화 필요. | `src/lib/gpx-upload.ts`, `src/app/api/admin/courses/route.ts` |
 | **클라이언트 fetch 비-JSON 응답 미처리** | 클라이언트 fetch 후 `res.ok` 체크 없이 바로 `res.json()` 호출하는 패턴이 프로젝트 전반에 사용됨. 502/503 등 비-JSON 응답 시 파싱 에러가 catch로 빠져 "네트워크 오류"로 표시됨. 서버 오류와 네트워크 오류 구분 불가. | 클라이언트 fetch 전체 (`FeedbackDialog`, `SpotForm`, `admin/courses`, `useGeocode` 등) |
+| **FilterChips 아이콘 색상 미전환** | 필터 칩 활성 시 PNG 아이콘을 CSS `filter: brightness(0) invert(1)`로 흰색 처리하는데, 특정 GPU/드라이버 조합에서 필터가 렌더링되지 않아 색상이 안 바뀌는 현상 발생. 근본 해결은 SVG `currentColor` 전환 또는 흰색 PNG 별도 추가. | `src/components/FilterChips.tsx` |
