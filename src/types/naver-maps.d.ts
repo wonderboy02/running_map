@@ -234,6 +234,8 @@ declare namespace naver.maps {
       strokeOpacity?: number;
       fillColor?: string;
       fillOpacity?: number;
+      strokeLineCap?: string;
+      strokeLineJoin?: string;
       clickable?: boolean;
       visible?: boolean;
       zIndex?: number;
@@ -248,7 +250,9 @@ declare namespace naver.maps {
       getId(): string | number;
       getProperty(key: string): unknown;
       setProperty(key: string, value: unknown): void;
-      getGeometry(): unknown;
+      getGeometries(): unknown[];
+      /** 내부 GeoJSON Feature 객체를 반환 */
+      getRaw(): { geometry?: { type?: string }; [key: string]: unknown };
     }
   }
 
