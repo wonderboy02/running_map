@@ -95,10 +95,14 @@ export function wrapStyleHidingPoints(
   style: naver.maps.Data.StyleOptions,
 ): naver.maps.Data.StylingFunction {
   return (feature: naver.maps.Data.Feature) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const geomType = (feature.getGeometry() as any)?.getType?.();
-    if (geomType === 0 || geomType === 'Point') {
+    const geomType = feature.getRaw()?.geometry?.type;
+    // GPX waypoint(Point)만 숨김 — 이전 코드의 === 0 비교는
+    // 공식 API에 없는 getGeometry().getType() 기반이었으므로 제거
+    if (geomType === 'Point') {
       return { visible: false, clickable: false };
+    }
+    if (!geomType) {
+      console.warn('[wrapStyleHidingPoints] geometry type을 판별할 수 없음:', feature.getId());
     }
     return style;
   };

@@ -42,6 +42,8 @@ function buildGpxStyle(
     strokeColor: isSelected ? GPX_HIGHLIGHT_COLOR : GPX_STROKE_COLOR,
     strokeWeight: getStrokeWeight(zoom, isSelected),
     strokeOpacity: isSelected ? 1.0 : GPX_STROKE_OPACITY,
+    strokeLineCap: 'round',
+    strokeLineJoin: 'round',
     clickable: false,
     zIndex: isSelected ? 100 : 1,
   });
@@ -290,37 +292,23 @@ const NaverMap = memo(function NaverMap({ spots, courses = [], showCourses = tru
       }
     } else if (selection.type === 'course') {
       const course = selection.data;
+      const isMobile = window.innerWidth <= 768;
+      const padding = isMobile ? 60 : 40;
 
       if (course.gpx_file_url) {
-        // GPX 코스: Data Layer bounds
         const layer = courseDataLayersRef.current.get(course.id);
         if (layer) {
           const gpxBounds = computeDataLayerBounds(layer.data);
           if (gpxBounds) {
-            const isMobile = window.innerWidth <= 768;
-            map.fitBounds(gpxBounds, { padding: isMobile ? 60 : 40 });
+            map.fitBounds(gpxBounds, { padding });
           }
         }
       } else {
-        // PNG 코스: NW/SE 기반 (기존 로직 유지)
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
-          const bounds = new naver.maps.LatLngBounds(
-            new naver.maps.LatLng(course.se_lat, course.nw_lng),
-            new naver.maps.LatLng(course.nw_lat, course.se_lng),
-          );
-          map.fitBounds(bounds, { padding: 60 });
-        } else {
-          const latSpan = course.nw_lat - course.se_lat;
-          const lngSpan = course.se_lng - course.nw_lng;
-          const latPad = latSpan * 0.15;
-          const lngPad = lngSpan * 0.15;
-          const bounds = new naver.maps.LatLngBounds(
-            new naver.maps.LatLng(course.se_lat - latPad, course.nw_lng - lngPad),
-            new naver.maps.LatLng(course.nw_lat + latPad, course.se_lng + lngPad),
-          );
-          map.fitBounds(bounds);
-        }
+        const bounds = new naver.maps.LatLngBounds(
+          new naver.maps.LatLng(course.se_lat, course.nw_lng),
+          new naver.maps.LatLng(course.nw_lat, course.se_lng),
+        );
+        map.fitBounds(bounds, { padding });
       }
     }
   }, [map, selection]);
