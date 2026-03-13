@@ -210,7 +210,7 @@ export default function DrawerListView({
             )}
             <p className="text-sm text-text-secondary">
               {activeTab === 'spot'
-                ? '필터에서 러너스팟을 켜면 장소가 표시됩니다.'
+                ? '등록된 러너스팟이 없습니다.'
                 : '등록된 러닝코스가 없습니다.'}
             </p>
           </div>
@@ -263,7 +263,7 @@ export default function DrawerListView({
       {/* 제휴문의 */}
       <div className="px-4 py-4 text-center">
         <a
-          href="mailto:contact@runnersspot.com"
+          href="mailto:info@spotd.page"
           className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors"
         >
           <Mail className="h-3 w-3" />

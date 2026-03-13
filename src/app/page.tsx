@@ -320,7 +320,7 @@ export default function HomePage() {
           />
 
           <BottomDrawer
-            spots={filteredSpots}
+            spots={spots}
             courses={courses}
             selection={selection}
             onSpotClick={handleDrawerSpotClick}
