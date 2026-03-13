@@ -561,6 +561,15 @@ const NaverMap = memo(function NaverMap({ spots, courses = [], showCourses = tru
         dataLayer.setMap(visible ? mapInstance : null);
         courseDataLayersRef.current.set(course.id, { data: dataLayer, features });
 
+        // GPX 로드 완료 후, 현재 선택된 코스면 fitBounds 실행
+        if (isSelected) {
+          const gpxBounds = computeDataLayerBounds(dataLayer);
+          if (gpxBounds) {
+            const isMobile = window.innerWidth <= 768;
+            mapInstance.fitBounds(gpxBounds, { padding: isMobile ? 60 : 40 });
+          }
+        }
+
         // 시작/끝 엔드포인트 마커 생성
         const endpoints = extractGpxEndpoints(dataLayer);
         if (endpoints) {
