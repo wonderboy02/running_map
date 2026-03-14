@@ -104,8 +104,15 @@ export function useNaverMap(
       if (observer) observer.disconnect();
       if (interval) clearInterval(interval);
       if (mapRef.current) {
-        mapRef.current.destroy();
+        const mapToDestroy = mapRef.current;
         mapRef.current = null;
+        // microtask로 지연 → 다른 훅들의 cleanup(setMap(null) 등)이
+        // 동기적으로 먼저 완료된 뒤에 지도를 파괴한다.
+        // StrictMode remount 시 mapRef.current가 새 지도로 채워지므로
+        // null 체크로 이미 교체된 지도의 destroy를 방지한다.
+        queueMicrotask(() => {
+          if (!mapRef.current) mapToDestroy.destroy();
+        });
       }
     };
   }, []);

@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { rewriteStorageUrl } from '@/lib/utils';
 import {
-  computeDataLayerBounds,
   wrapStyleHidingPoints,
   GPX_STROKE_COLOR,
   GPX_STROKE_OPACITY,
@@ -14,19 +13,17 @@ interface UseGpxDataLayerOptions {
   map: naver.maps.Map | null;
   isReady: boolean;
   gpxSource: File | string | null;
-  fitPadding?: number;
 }
 
 /**
  * GPX Data Layer를 네이버 지도에 렌더링하는 공통 훅.
  * gpxSource가 File이면 .text(), string이면 fetch로 GPX 텍스트를 가져온다.
- * DOMParser → naver.maps.Data.addGpx() → setStyle() → setMap() → fitBounds()
+ * DOMParser → naver.maps.Data.addGpx() → setStyle() → setMap() → setCenter()
  */
 export function useGpxDataLayer({
   map,
   isReady,
   gpxSource,
-  fitPadding = 40,
 }: UseGpxDataLayerOptions): void {
   const dataLayerRef = useRef<naver.maps.Data | null>(null);
 
@@ -55,7 +52,7 @@ export function useGpxDataLayer({
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(gpxText, 'text/xml');
       const dataLayer = new naver.maps.Data();
-      const features = dataLayer.addGpx(xmlDoc);
+      dataLayer.addGpx(xmlDoc);
 
       dataLayer.setStyle(wrapStyleHidingPoints({
         strokeColor: GPX_STROKE_COLOR,
@@ -67,9 +64,14 @@ export function useGpxDataLayer({
       dataLayer.setMap(currentMap);
       dataLayerRef.current = dataLayer;
 
-      if (features.length > 0) {
-        const gpxBounds = computeDataLayerBounds(dataLayer);
-        if (gpxBounds) currentMap.fitBounds(gpxBounds, { padding: fitPadding });
+      // GPX 첫 좌표로 지도 중심 이동
+      const firstTrkpt = xmlDoc.querySelector('trkpt');
+      if (firstTrkpt) {
+        const lat = parseFloat(firstTrkpt.getAttribute('lat') || '0');
+        const lng = parseFloat(firstTrkpt.getAttribute('lon') || '0');
+        if (lat && lng) {
+          currentMap.setCenter(new naver.maps.LatLng(lat, lng));
+        }
       }
     }
 
@@ -82,5 +84,5 @@ export function useGpxDataLayer({
         dataLayerRef.current = null;
       }
     };
-  }, [isReady, map, gpxSource, fitPadding]);
+  }, [isReady, map, gpxSource]);
 }
