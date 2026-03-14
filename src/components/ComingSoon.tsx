@@ -2,23 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { Instagram, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
+import { cn } from '@/lib/utils';
 
 const INSTAGRAM_URL = 'https://www.instagram.com/runner.spott';
-const STORAGE_KEY = 'runners_spot_coming_soon_voted';
 const VIEW_SESSION_KEY = 'runners_spot_coming_soon_viewed';
 
 export default function ComingSoon() {
-  const [hasVoted, setHasVoted] = useState(false);
+  const [lastVote, setLastVote] = useState<'up' | 'down' | null>(null);
 
   useEffect(() => {
-    // localStorage에서 투표 여부 복원 (SSR hydration mismatch 방지)
-    try {
-      if (localStorage.getItem(STORAGE_KEY) !== null) setHasVoted(true);
-    } catch {
-      // localStorage 사용 불가 시 무시
-    }
-
     // 세션당 1회만 view 이벤트 발화
     try {
       if (sessionStorage.getItem(VIEW_SESSION_KEY)) return;
@@ -30,13 +24,9 @@ export default function ComingSoon() {
   }, []);
 
   function handleVote(vote: 'up' | 'down') {
-    try {
-      localStorage.setItem(STORAGE_KEY, vote);
-    } catch {
-      // localStorage 사용 불가 시 무시
-    }
     track('coming_soon_vote', { vote });
-    setHasVoted(true);
+    setLastVote(vote);
+    toast.success('의견 감사합니다!');
   }
 
   return (
@@ -68,31 +58,30 @@ export default function ComingSoon() {
 
         <div className="h-px w-full bg-border" />
 
-        {hasVoted ? (
-          <p className="text-sm text-text-secondary">의견 감사합니다!</p>
-        ) : (
-          <div className="flex flex-col items-center gap-3">
-            <p className="text-sm font-medium text-text">이 기능이 필요하신가요?</p>
-            <div className="flex gap-3">
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-sm font-medium text-text">이 기능이 필요하신가요?</p>
+          <div className="flex gap-3">
+            {([
+              { vote: 'up' as const, icon: ThumbsUp, label: '필요해요' },
+              { vote: 'down' as const, icon: ThumbsDown, label: '괜찮아요' },
+            ]).map(({ vote, icon: Icon, label }) => (
               <button
+                key={vote}
                 type="button"
-                onClick={() => handleVote('up')}
-                className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2 text-sm text-text active:bg-surface-dim"
+                onClick={() => handleVote(vote)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors',
+                  lastVote === vote
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-surface text-text active:bg-surface-dim',
+                )}
               >
-                <ThumbsUp className="h-4 w-4" />
-                필요해요
+                <Icon className="h-4 w-4" />
+                {label}
               </button>
-              <button
-                type="button"
-                onClick={() => handleVote('down')}
-                className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2 text-sm text-text active:bg-surface-dim"
-              >
-                <ThumbsDown className="h-4 w-4" />
-                괜찮아요
-              </button>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
