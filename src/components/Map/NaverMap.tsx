@@ -5,7 +5,7 @@ import { useNaverMap } from '@/hooks/useNaverMap';
 import { getSpotMarkerIcon, getCoursePinIcon, getSearchPinIcon, preloadMarkerImages, CAPTION_HEIGHT } from '@/lib/marker-config';
 import { computeVisibleCaptions, type MarkerPixelInfo } from '@/lib/caption-collision';
 import { rewriteStorageUrl } from '@/lib/utils';
-import { computeDataLayerBounds, extractGpxEndpoints, wrapStyleHidingPoints, GPX_STROKE_COLOR, GPX_STROKE_OPACITY, GPX_HIGHLIGHT_COLOR } from '@/lib/naver-map-utils';
+import { computeDataLayerBounds, extractGpxEndpoints, wrapStyleHidingPoints, GPX_STROKE_COLOR, GPX_STROKE_OPACITY, GPX_HIGHLIGHT_COLOR, startGpxPulse, type GpxPulseHandle } from '@/lib/naver-map-utils';
 import {
   MyLocationMarker,
   type MyLocationState,
@@ -49,6 +49,19 @@ function buildGpxStyle(
   });
 }
 
+/** 비선택 pulse 코스의 기본 스타일 생성 */
+function buildPulseBaseStyle(zoom: number): naver.maps.Data.StyleOptions {
+  return {
+    strokeColor: GPX_STROKE_COLOR,
+    strokeWeight: getStrokeWeight(zoom, false),
+    strokeOpacity: GPX_STROKE_OPACITY,
+    strokeLineCap: 'round',
+    strokeLineJoin: 'round',
+    clickable: false,
+    zIndex: 1,
+  };
+}
+
 /** 캡션 충돌 감지 수직 임계값 (아이콘 높이 + 캡션 높이 고려) */
 const CAPTION_COLLISION_THRESHOLD_Y = CAPTION_HEIGHT + 14;
 
@@ -68,6 +81,8 @@ const NaverMap = memo(function NaverMap({ spots, courses = [], showCourses = tru
     features: naver.maps.Data.Feature[];
   }>>(new Map());
   const gpxEndpointMarkersRef = useRef<Map<string, { start: naver.maps.Marker; end: naver.maps.Marker }>>(new Map());
+  // 비선택 상태 pulse 애니메이션 핸들 (courseId → handle)
+  const gpxPulseHandlesRef = useRef<Map<string, GpxPulseHandle>>(new Map());
 
   // map 준비 시 마커 이미지 프리로드 + 부모에게 전달
   useEffect(() => {
@@ -150,11 +165,27 @@ const NaverMap = memo(function NaverMap({ spots, courses = [], showCourses = tru
     if (prev && prev.zoom === zoom && prev.selectedId === selectedCourseId) return;
     lastGpxStateRef.current = { zoom, selectedId: selectedCourseId };
 
+    // 기존 pulse 핸들 전부 정리 후 재설정
+    gpxPulseHandlesRef.current.forEach((h) => h.stop());
+    gpxPulseHandlesRef.current.clear();
+
     courseDataLayersRef.current.forEach(({ data }, courseId) => {
       const isSelected = courseId === selectedCourseId;
-      data.setStyle(buildGpxStyle(zoom, isSelected));
+      const course = courses.find((c) => c.id === courseId);
+
+      if (!isSelected && course?.pulse_group && showCourses) {
+        // 비선택 + pulse_group + 코스 표시 중일 때만 맥동 애니메이션
+        const handle = startGpxPulse(
+          data,
+          buildPulseBaseStyle(zoom),
+          course.pulse_group,
+        );
+        gpxPulseHandlesRef.current.set(courseId, handle);
+      } else {
+        data.setStyle(buildGpxStyle(zoom, isSelected));
+      }
     });
-  }, [map, selection]);
+  }, [map, selection, courses, showCourses]);
 
   // ref 패턴으로 idle listener lifecycle을 callback identity와 분리
   const recalcCaptionsRef = useRef(recalcCaptions);
@@ -497,6 +528,10 @@ const NaverMap = memo(function NaverMap({ spots, courses = [], showCourses = tru
     const gpxCourses = courses.filter((c) => !!c.gpx_file_url);
     const gpxCourseIds = new Set(gpxCourses.map((c) => c.id));
 
+    // 기존 pulse 핸들 전부 정리 (재설정은 아래에서)
+    gpxPulseHandlesRef.current.forEach((h) => h.stop());
+    gpxPulseHandlesRef.current.clear();
+
     // 삭제된 코스의 Data Layer + 엔드포인트 마커 제거
     courseDataLayersRef.current.forEach(({ data }, id) => {
       if (!gpxCourseIds.has(id)) {
@@ -518,7 +553,16 @@ const NaverMap = memo(function NaverMap({ spots, courses = [], showCourses = tru
 
       if (existing) {
         // 이미 로드됨 → 스타일 + 가시성만 업데이트
-        existing.data.setStyle(buildGpxStyle(map.getZoom(), isSelected));
+        if (!isSelected && course.pulse_group && showCourses) {
+          const handle = startGpxPulse(
+            existing.data,
+            buildPulseBaseStyle(map.getZoom()),
+            course.pulse_group,
+          );
+          gpxPulseHandlesRef.current.set(course.id, handle);
+        } else {
+          existing.data.setStyle(buildGpxStyle(map.getZoom(), isSelected));
+        }
         existing.data.setMap(showCourses ? map : null);
 
         // 엔드포인트 마커 아이콘 + 가시성 업데이트
@@ -557,7 +601,17 @@ const NaverMap = memo(function NaverMap({ spots, courses = [], showCourses = tru
         const dataLayer = new naver.maps.Data();
         const features = dataLayer.addGpx(xmlDoc);
 
-        dataLayer.setStyle(buildGpxStyle(mapInstance.getZoom(), isSelected));
+        // 비선택 + pulse_group이 있으면 맥동 애니메이션 시작
+        if (!isSelected && course.pulse_group && visible) {
+          const handle = startGpxPulse(
+            dataLayer,
+            buildPulseBaseStyle(mapInstance.getZoom()),
+            course.pulse_group,
+          );
+          gpxPulseHandlesRef.current.set(course.id, handle);
+        } else {
+          dataLayer.setStyle(buildGpxStyle(mapInstance.getZoom(), isSelected));
+        }
         dataLayer.setMap(visible ? mapInstance : null);
         courseDataLayersRef.current.set(course.id, { data: dataLayer, features });
 
@@ -664,9 +718,11 @@ const NaverMap = memo(function NaverMap({ spots, courses = [], showCourses = tru
     scheduleRecalcCaptions();
   }, [isReady, map, courses, onCoursePinClick, selection, showCourses, scheduleRecalcCaptions]);
 
-  // GPX Data Layer + 엔드포인트 마커 cleanup
+  // GPX Data Layer + 엔드포인트 마커 + pulse 핸들 cleanup
   useEffect(() => {
     return () => {
+      gpxPulseHandlesRef.current.forEach((h) => h.stop());
+      gpxPulseHandlesRef.current.clear();
       courseDataLayersRef.current.forEach(({ data }) => data.setMap(null));
       courseDataLayersRef.current.clear();
       gpxEndpointMarkersRef.current.forEach(({ start, end }) => {

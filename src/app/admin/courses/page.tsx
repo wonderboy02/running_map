@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import TagInput from '@/app/admin/components/TagInput';
 import {
   Dialog,
@@ -55,6 +56,8 @@ interface CourseForm {
   pinpoints: Array<{ lat: number; lng: number }>;
   is_active: boolean;
   search_tags: string[];
+  /** 겹치는 코스 맥동 그룹. 지원 범위는 Course.pulse_group JSDoc 참조. */
+  pulse_group: number | null;
 
   // 코스 썸네일 (thumbnail_url 전용, image_url과 분리)
   thumbnail: File | null;
@@ -80,6 +83,7 @@ const EMPTY_FORM: CourseForm = {
   pinpoints: [],
   is_active: true,
   search_tags: [],
+  pulse_group: null,
 
   // 썸네일
   thumbnail: null,
@@ -1102,6 +1106,7 @@ export default function AdminCoursesPage() {
       pinpoints: course.pinpoints ?? [],
       is_active: course.is_active,
       search_tags: course.search_tags ?? [],
+      pulse_group: course.pulse_group ?? null,
 
       // 썸네일
       thumbnail: null,
@@ -1149,6 +1154,7 @@ export default function AdminCoursesPage() {
     if (form.distance_km !== '') formData.append('distance_km', String(form.distance_km));
     formData.append('pinpoints', JSON.stringify(form.pinpoints));
     formData.append('search_tags', JSON.stringify(form.search_tags));
+    formData.append('pulse_group', form.pulse_group !== null ? String(form.pulse_group) : '');
 
     // GPX 필드
     if (form.gpx_file) {
@@ -1455,6 +1461,33 @@ export default function AdminCoursesPage() {
                   placeholder="1~10"
                 />
               </div>
+            </div>
+
+            {/* 펄스 그룹 — 겹치는 코스 구분용 맥동 타이밍 */}
+            <div className="space-y-1.5">
+              <Label>펄스 그룹</Label>
+              <p className="text-xs text-muted-foreground">
+                겹치는 코스를 번갈아 보여줌 (같은 번호는 같은 타이밍)
+              </p>
+              {/* 현재 1~2만 사용. 그룹 추가 시 SelectItem 추가. (Course 타입 JSDoc 참조) */}
+              <Select
+                value={form.pulse_group !== null ? String(form.pulse_group) : 'none'}
+                onValueChange={(v) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    pulse_group: v === 'none' ? null : parseInt(v, 10),
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="없음" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">없음</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 검색 태그 */}

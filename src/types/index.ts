@@ -52,6 +52,13 @@ export interface Course {
   description: string | null;
   difficulty: number | null;
   distance_km: number | null;
+  /**
+   * GPX 폴리라인 맥동(pulse) 그룹.
+   * null이면 펄스 없음(정적), 1~N이면 같은 값끼리 동일 타이밍에 맥동.
+   * 다른 값의 코스와는 위상(phase)이 달라 겹쳐도 번갈아 보인다.
+   * 현재 1~2만 사용하지만 향후 확장 가능.
+   */
+  pulse_group: number | null;
   pinpoints: CoursePinpoint[];
   search_tags: string[];
   created_at: string;

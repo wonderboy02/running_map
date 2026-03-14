@@ -46,6 +46,7 @@ export const POST = withAuth(async (request: NextRequest) => {
     const distance_km_str = formData.get('distance_km') as string | null;
     const pinpointsStr = formData.get('pinpoints') as string | null;
     const searchTagsStr = formData.get('search_tags') as string | null;
+    const pulseGroupStr = formData.get('pulse_group') as string | null;
 
     if (!name) {
       return NextResponse.json(
@@ -164,6 +165,20 @@ export const POST = withAuth(async (request: NextRequest) => {
         insertData.search_tags = JSON.parse(searchTagsStr);
       } catch {
         insertData.search_tags = [];
+      }
+    }
+    if (pulseGroupStr !== null) {
+      if (!pulseGroupStr) {
+        insertData.pulse_group = null;
+      } else {
+        const pg = parseInt(pulseGroupStr, 10);
+        if (isNaN(pg) || pg < 1) {
+          return NextResponse.json(
+            { success: false, error: '펄스 그룹은 1 이상의 정수여야 합니다.' },
+            { status: 400 },
+          );
+        }
+        insertData.pulse_group = pg;
       }
     }
 
@@ -299,6 +314,22 @@ export const PATCH = withAuth(async (request: NextRequest) => {
         updates.search_tags = JSON.parse(searchTagsStr);
       } catch {
         updates.search_tags = [];
+      }
+    }
+
+    const pulseGroupStr = formData.get('pulse_group') as string | null;
+    if (pulseGroupStr !== null) {
+      if (!pulseGroupStr) {
+        updates.pulse_group = null;
+      } else {
+        const pg = parseInt(pulseGroupStr, 10);
+        if (isNaN(pg) || pg < 1) {
+          return NextResponse.json(
+            { success: false, error: '펄스 그룹은 1 이상의 정수여야 합니다.' },
+            { status: 400 },
+          );
+        }
+        updates.pulse_group = pg;
       }
     }
 

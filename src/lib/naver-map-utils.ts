@@ -143,6 +143,86 @@ export function extractGpxEndpoints(
   };
 }
 
+/** GPX pulse 애니메이션 핸들 */
+export interface GpxPulseHandle {
+  stop: () => void;
+}
+
+/**
+ * 비선택 GPX 코스에 pulse(맥동) 애니메이션을 적용한다.
+ * sine 커브로 strokeOpacity를 MIN↔MAX 반복하여 "숨쉬는" 효과를 준다.
+ *
+ * pulseGroup 값에 따라 위상(phase)을 오프셋하여,
+ * 같은 그룹은 동일 타이밍, 다른 그룹은 엇갈리게 맥동한다.
+ * 지원 범위는 Course.pulse_group JSDoc 참조. N개로 확장 시 maxGroups만 늘리면 된다.
+ *
+ * @param dataLayer - pulse를 적용할 DataLayer
+ * @param baseStyle - 기본 스타일 속성. strokeOpacity는 애니메이션 중 덮어쓰이고, stop() 시 원래 값으로 복원된다.
+ * @param pulseGroup - 맥동 그룹 번호 (1-based). 그룹별로 위상이 다름.
+ * @param maxGroups - 전체 그룹 수 (기본 2). 확장 시 이 값을 늘린다.
+ * @returns stop() 호출로 애니메이션을 중단할 수 있는 핸들
+ */
+export function startGpxPulse(
+  dataLayer: naver.maps.Data,
+  baseStyle: naver.maps.Data.StyleOptions,
+  pulseGroup: number,
+  maxGroups: number = 2,
+): GpxPulseHandle {
+  const MIN_OPACITY = 0.3;
+  const MAX_OPACITY = 1.0;
+  const PERIOD_MS = 1500; // 1 cycle = 1.5초
+  const FRAME_INTERVAL = 33; // ~30fps
+
+  // 그룹별 위상 오프셋: group 1 → 0, group 2 → π, ...
+  const phaseOffset = ((pulseGroup - 1) / maxGroups) * Math.PI * 2;
+
+  let rafId: number | null = null;
+  let startTime: number | null = null;
+  let lastFrameTime = 0;
+  let stopped = false;
+
+  const mutableStyle: naver.maps.Data.StyleOptions = { ...baseStyle };
+  const stylingFn = wrapStyleHidingPoints(mutableStyle);
+
+  function tick(timestamp: number) {
+    if (stopped) return;
+    if (startTime === null) startTime = timestamp;
+
+    if (timestamp - lastFrameTime < FRAME_INTERVAL) {
+      rafId = requestAnimationFrame(tick);
+      return;
+    }
+    lastFrameTime = timestamp;
+
+    const elapsed = timestamp - startTime;
+    const t = (Math.sin((elapsed / PERIOD_MS) * Math.PI * 2 + phaseOffset) + 1) / 2;
+    mutableStyle.strokeOpacity = MIN_OPACITY + t * (MAX_OPACITY - MIN_OPACITY);
+
+    dataLayer.setStyle(stylingFn);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  rafId = requestAnimationFrame(tick);
+
+  return {
+    stop() {
+      if (stopped) return;
+      stopped = true;
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      // DataLayer가 아직 지도에 연결되어 있을 때만 스타일 복원
+      // (언마운트 시 map.destroy() 이후 호출되면 에러 방지)
+      try {
+        dataLayer.setStyle(wrapStyleHidingPoints(baseStyle));
+      } catch {
+        // 지도 파괴 후 호출 — 무시
+      }
+    },
+  };
+}
+
 /** Data Layer의 모든 Feature 좌표에서 LatLngBounds를 계산한다. */
 export function computeDataLayerBounds(
   dataLayer: naver.maps.Data,

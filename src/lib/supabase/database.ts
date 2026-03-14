@@ -45,6 +45,7 @@ export type Database = {
           nw_lng: number
           opacity: number
           pinpoints: Json
+          pulse_group: number | null
           se_lat: number
           se_lng: number
           search_tags: string[]
@@ -65,6 +66,7 @@ export type Database = {
           nw_lng?: number
           opacity?: number
           pinpoints?: Json
+          pulse_group?: number | null
           se_lat?: number
           se_lng?: number
           search_tags?: string[]
@@ -85,6 +87,7 @@ export type Database = {
           nw_lng?: number
           opacity?: number
           pinpoints?: Json
+          pulse_group?: number | null
           se_lat?: number
           se_lng?: number
           search_tags?: string[]
