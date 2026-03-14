@@ -168,10 +168,11 @@ export function startGpxPulse(
   pulseGroup: number,
   maxGroups: number = 2,
 ): GpxPulseHandle {
-  const MIN_OPACITY = 0.3;
+  const MIN_OPACITY = 0.1;
   const MAX_OPACITY = 1.0;
-  const PERIOD_MS = 1500; // 1 cycle = 1.5초
+  const PERIOD_MS = 3000; // 1 cycle = 3초
   const FRAME_INTERVAL = 33; // ~30fps
+  const POWER = 3; // 지수가 높을수록 어두운 상태에 오래 머묾
 
   // 그룹별 위상 오프셋: group 1 → 0, group 2 → π, ...
   const phaseOffset = ((pulseGroup - 1) / maxGroups) * Math.PI * 2;
@@ -195,7 +196,9 @@ export function startGpxPulse(
     lastFrameTime = timestamp;
 
     const elapsed = timestamp - startTime;
-    const t = (Math.sin((elapsed / PERIOD_MS) * Math.PI * 2 + phaseOffset) + 1) / 2;
+    // sin 0→1→0 대칭 커브에 power를 적용해 어두운 구간을 늘림
+    const sine = (Math.sin((elapsed / PERIOD_MS) * Math.PI * 2 + phaseOffset) + 1) / 2;
+    const t = Math.pow(sine, POWER);
     mutableStyle.strokeOpacity = MIN_OPACITY + t * (MAX_OPACITY - MIN_OPACITY);
 
     dataLayer.setStyle(stylingFn);
