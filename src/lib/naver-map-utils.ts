@@ -108,41 +108,6 @@ export function wrapStyleHidingPoints(
   };
 }
 
-/** GPX Data Layer에서 트랙의 시작/끝 좌표를 추출한다. (GeoJSON [lng,lat] → {lat,lng}) */
-export function extractGpxEndpoints(
-  dataLayer: naver.maps.Data,
-): { start: { lat: number; lng: number }; end: { lat: number; lng: number } } | null {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const geoJson = dataLayer.toGeoJson() as any;
-  let firstCoord: [number, number] | null = null;
-  let lastCoord: [number, number] | null = null;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const f of geoJson.features ?? []) {
-    const geom = f.geometry;
-    if (!geom?.coordinates) continue;
-
-    if (geom.type === 'LineString' && geom.coordinates.length > 0) {
-      if (!firstCoord) firstCoord = geom.coordinates[0];
-      lastCoord = geom.coordinates[geom.coordinates.length - 1];
-    } else if (geom.type === 'MultiLineString') {
-      for (const line of geom.coordinates) {
-        if (line.length > 0) {
-          if (!firstCoord) firstCoord = line[0];
-          lastCoord = line[line.length - 1];
-        }
-      }
-    }
-  }
-
-  if (!firstCoord || !lastCoord) return null;
-  // GeoJSON: [lng, lat] → { lat, lng }
-  return {
-    start: { lat: firstCoord[1], lng: firstCoord[0] },
-    end: { lat: lastCoord[1], lng: lastCoord[0] },
-  };
-}
-
 /** GPX pulse 애니메이션 핸들 */
 export interface GpxPulseHandle {
   stop: () => void;
